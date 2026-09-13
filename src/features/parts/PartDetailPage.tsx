@@ -20,10 +20,28 @@ export function PartDetailPage() {
 
   return (
     <div className="flex flex-col gap-6">
-      <div>
-        <h1 className="text-2xl font-semibold">{part.name}</h1>
-        <p className="font-mono text-sm text-muted-foreground">{part.sku}</p>
-        {part.description && <p className="mt-2 text-muted-foreground">{part.description}</p>}
+      <div className="flex gap-4">
+        {part.image_url ? (
+          <img
+            src={part.image_url}
+            alt={part.name}
+            className="h-24 w-24 rounded-md border object-cover"
+          />
+        ) : (
+          <div className="flex h-24 w-24 items-center justify-center rounded-md border border-dashed text-xs text-muted-foreground">
+            Tanpa foto
+          </div>
+        )}
+        <div>
+          <h1 className="text-2xl font-semibold">{part.name}</h1>
+          <p className="font-mono text-sm text-muted-foreground">{part.item_master_no}</p>
+          <p className="mt-1 font-medium">
+            {new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR' }).format(
+              Number(part.price),
+            )}
+          </p>
+          {part.description && <p className="mt-2 text-muted-foreground">{part.description}</p>}
+        </div>
       </div>
 
       <div>

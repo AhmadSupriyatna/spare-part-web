@@ -57,7 +57,7 @@ export function PartStocksPage() {
                     <Link to={`/stock/${stock.id}`} className="font-medium hover:underline">
                       {part?.name ?? `Part #${stock.part_id}`}
                     </Link>
-                    <div className="font-mono text-xs text-muted-foreground">{part?.sku}</div>
+                    <div className="font-mono text-xs text-muted-foreground">{part?.item_master_no}</div>
                   </TableCell>
                   <TableCell className="text-muted-foreground">{stock.location_code ?? '-'}</TableCell>
                   <TableCell className="text-right font-medium">{stock.quantity_on_hand}</TableCell>

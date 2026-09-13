@@ -50,7 +50,7 @@ export function PartStockDetailPage() {
       <div className="flex items-start justify-between">
         <div>
           <h1 className="text-2xl font-semibold">{part?.name ?? `Part #${stock.part_id}`}</h1>
-          <p className="font-mono text-sm text-muted-foreground">{part?.sku}</p>
+          <p className="font-mono text-sm text-muted-foreground">{part?.item_master_no}</p>
         </div>
         {canManage && (
           <div className="flex gap-2">

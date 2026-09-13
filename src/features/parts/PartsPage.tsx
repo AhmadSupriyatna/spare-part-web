@@ -21,6 +21,8 @@ import { Input } from '@/components/ui/input'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 
+const currencyFormatter = new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR' })
+
 export function PartsPage() {
   const [search, setSearch] = useState('')
   const canManage = useCanManage()
@@ -42,7 +44,7 @@ export function PartsPage() {
   const filteredParts = parts?.filter(
     (part) =>
       part.name.toLowerCase().includes(search.toLowerCase()) ||
-      part.sku.toLowerCase().includes(search.toLowerCase()),
+      part.item_master_no.toLowerCase().includes(search.toLowerCase()),
   )
 
   return (
@@ -53,7 +55,7 @@ export function PartsPage() {
       </div>
 
       <Input
-        placeholder="Cari nama atau SKU..."
+        placeholder="Cari nama atau Item Master..."
         value={search}
         onChange={(e) => setSearch(e.target.value)}
         className="max-w-sm"
@@ -69,17 +71,30 @@ export function PartsPage() {
         <Table>
           <TableHeader>
             <TableRow>
-              <TableHead>SKU</TableHead>
+              <TableHead></TableHead>
+              <TableHead>Item Master</TableHead>
               <TableHead>Nama</TableHead>
               <TableHead>Kategori</TableHead>
               <TableHead>Satuan</TableHead>
+              <TableHead className="text-right">Harga</TableHead>
               {canManage && <TableHead className="text-right">Aksi</TableHead>}
             </TableRow>
           </TableHeader>
           <TableBody>
             {filteredParts?.map((part) => (
               <TableRow key={part.id}>
-                <TableCell className="font-mono text-sm">{part.sku}</TableCell>
+                <TableCell>
+                  {part.image_url ? (
+                    <img
+                      src={part.image_url}
+                      alt={part.name}
+                      className="h-10 w-10 rounded object-cover"
+                    />
+                  ) : (
+                    <div className="h-10 w-10 rounded bg-muted" />
+                  )}
+                </TableCell>
+                <TableCell className="font-mono text-sm">{part.item_master_no}</TableCell>
                 <TableCell>
                   <Link to={`/parts/${part.id}`} className="font-medium hover:underline">
                     {part.name}
@@ -87,6 +102,7 @@ export function PartsPage() {
                 </TableCell>
                 <TableCell className="text-muted-foreground">{part.category ?? '-'}</TableCell>
                 <TableCell className="text-muted-foreground">{part.unit}</TableCell>
+                <TableCell className="text-right">{currencyFormatter.format(Number(part.price))}</TableCell>
                 {canManage && (
                   <TableCell className="flex justify-end gap-2">
                     <PartFormDialog

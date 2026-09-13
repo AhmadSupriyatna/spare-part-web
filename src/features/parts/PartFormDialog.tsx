@@ -25,6 +25,8 @@ interface PartFormDialogProps {
 
 export function PartFormDialog({ part, trigger }: PartFormDialogProps) {
   const [open, setOpen] = useState(false)
+  const [imageFile, setImageFile] = useState<File | null>(null)
+  const [imagePreview, setImagePreview] = useState<string | null>(part?.image_url ?? null)
   const queryClient = useQueryClient()
   const isEdit = Boolean(part)
 
@@ -36,28 +38,45 @@ export function PartFormDialog({ part, trigger }: PartFormDialogProps) {
   } = useForm<PartFormValues>({
     resolver: zodResolver(partSchema),
     defaultValues: {
-      sku: part?.sku ?? '',
+      item_master_no: part?.item_master_no ?? '',
       name: part?.name ?? '',
       description: part?.description ?? '',
       unit: part?.unit ?? 'pcs',
       category: part?.category ?? '',
+      price: part?.price ?? '0',
     },
   })
 
   useEffect(() => {
     if (open) {
       reset({
-        sku: part?.sku ?? '',
+        item_master_no: part?.item_master_no ?? '',
         name: part?.name ?? '',
         description: part?.description ?? '',
         unit: part?.unit ?? 'pcs',
         category: part?.category ?? '',
+        price: part?.price ?? '0',
       })
+      setImageFile(null)
+      setImagePreview(part?.image_url ?? null)
     }
   }, [open, part, reset])
 
+  function handleImageChange(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0] ?? null
+    setImageFile(file)
+    setImagePreview(file ? URL.createObjectURL(file) : (part?.image_url ?? null))
+  }
+
   const mutation = useMutation({
-    mutationFn: (values: PartFormValues) => (isEdit ? updatePart(part!.id, values) : createPart(values)),
+    mutationFn: (values: PartFormValues) => {
+      const payload = {
+        ...values,
+        price: values.price ? Number(values.price) : undefined,
+        image: imageFile,
+      }
+      return isEdit ? updatePart(part!.id, payload) : createPart(payload)
+    },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['parts'] })
       toast.success(isEdit ? 'Part berhasil diperbarui.' : 'Part berhasil ditambahkan.')
@@ -76,13 +95,29 @@ export function PartFormDialog({ part, trigger }: PartFormDialogProps) {
           <DialogTitle>{isEdit ? 'Ubah Part' : 'Tambah Part'}</DialogTitle>
         </DialogHeader>
         <form
-          className="flex flex-col gap-4"
+          className="flex max-h-[70vh] flex-col gap-4 overflow-y-auto"
           onSubmit={handleSubmit((values) => mutation.mutate(values))}
         >
+          <div className="flex flex-col items-center gap-2">
+            {imagePreview ? (
+              <img
+                src={imagePreview}
+                alt="Pratinjau"
+                className="h-32 w-32 rounded-md border object-cover"
+              />
+            ) : (
+              <div className="flex h-32 w-32 items-center justify-center rounded-md border border-dashed text-xs text-muted-foreground">
+                Belum ada foto
+              </div>
+            )}
+            <Input type="file" accept="image/*" onChange={handleImageChange} className="max-w-xs" />
+          </div>
           <div className="flex flex-col gap-2">
-            <Label htmlFor="sku">SKU</Label>
-            <Input id="sku" {...register('sku')} />
-            {errors.sku && <p className="text-sm text-destructive">{errors.sku.message}</p>}
+            <Label htmlFor="item_master_no">Item Master</Label>
+            <Input id="item_master_no" {...register('item_master_no')} />
+            {errors.item_master_no && (
+              <p className="text-sm text-destructive">{errors.item_master_no.message}</p>
+            )}
           </div>
           <div className="flex flex-col gap-2">
             <Label htmlFor="name">Nama</Label>
@@ -99,6 +134,11 @@ export function PartFormDialog({ part, trigger }: PartFormDialogProps) {
               <Label htmlFor="category">Kategori</Label>
               <Input id="category" placeholder="Mekanikal" {...register('category')} />
             </div>
+          </div>
+          <div className="flex flex-col gap-2">
+            <Label htmlFor="price">Harga</Label>
+            <Input id="price" type="number" min={0} step="0.01" {...register('price')} />
+            {errors.price && <p className="text-sm text-destructive">{errors.price.message}</p>}
           </div>
           <div className="flex flex-col gap-2">
             <Label htmlFor="description">Deskripsi</Label>

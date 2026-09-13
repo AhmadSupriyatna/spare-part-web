@@ -1,10 +1,12 @@
 export interface Part {
   id: number
-  sku: string
+  item_master_no: string
   name: string
   description: string | null
   unit: string
   category: string | null
+  price: string
+  image_url: string | null
   is_active: boolean
   stocks?: PartStock[]
   created_at: string
