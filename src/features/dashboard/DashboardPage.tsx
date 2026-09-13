@@ -9,6 +9,9 @@ export function DashboardPage() {
       <p className="text-muted-foreground">
         Selamat datang, {user?.name}. Peran: {user?.roles.join(', ') || '-'}
       </p>
+      <p className="text-muted-foreground">
+        Cabang: {user?.branches.map((branch) => branch.name).join(', ') || '-'}
+      </p>
     </div>
   )
 }
