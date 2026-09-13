@@ -1,4 +1,5 @@
 import { BrowserRouter, Navigate, Route, Routes } from 'react-router'
+import { AlertsPage } from '@/features/alerts/AlertsPage'
 import { LoginPage } from '@/features/auth/LoginPage'
 import { DashboardPage } from '@/features/dashboard/DashboardPage'
 import { PartDetailPage } from '@/features/parts/PartDetailPage'
@@ -20,6 +21,7 @@ function App() {
             <Route path="parts/:id" element={<PartDetailPage />} />
             <Route path="stock" element={<PartStocksPage />} />
             <Route path="stock/:id" element={<PartStockDetailPage />} />
+            <Route path="alerts" element={<AlertsPage />} />
           </Route>
         </Route>
         <Route path="*" element={<Navigate to="/" replace />} />

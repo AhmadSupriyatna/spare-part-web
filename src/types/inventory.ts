@@ -62,6 +62,38 @@ export interface StockLedgerEntry {
   occurred_at: string
 }
 
+export interface StockAlert {
+  id: number
+  part_stock_id: number
+  part_name: string
+  item_master_no: string
+  level: 'low' | 'critical'
+  quantity_on_hand_at_trigger: number
+  is_resolved: boolean
+  resolved_at: string | null
+  created_at: string
+}
+
+export type ReorderStatus = 'pending' | 'approved' | 'ordered' | 'completed' | 'cancelled'
+
+export interface ReorderRequest {
+  id: number
+  part_stock_id: number
+  part_name: string
+  item_master_no: string
+  supplier_id: number | null
+  supplier_name: string | null
+  quantity_requested: number
+  status: ReorderStatus
+  requested_by: number | null
+  requested_by_name: string | null
+  approved_by: number | null
+  approved_by_name: string | null
+  approved_at: string | null
+  notes: string | null
+  created_at: string
+}
+
 export interface PaginatedResponse<T> {
   data: T[]
   meta: {

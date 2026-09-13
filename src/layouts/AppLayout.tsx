@@ -11,6 +11,7 @@ const navItems = [
   { to: '/', label: 'Dashboard', end: true },
   { to: '/parts', label: 'Part' },
   { to: '/stock', label: 'Stok' },
+  { to: '/alerts', label: 'Peringatan' },
 ]
 
 export function AppLayout() {
