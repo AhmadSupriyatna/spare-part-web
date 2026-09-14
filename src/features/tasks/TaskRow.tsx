@@ -55,7 +55,7 @@ export function TaskRow({ task, invalidateKey }: TaskRowProps) {
         <Badge
           variant={
             task.status === 'completed'
-              ? 'outline'
+              ? 'success'
               : task.status === 'cancelled'
                 ? 'secondary'
                 : task.is_overdue

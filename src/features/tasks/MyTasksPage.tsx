@@ -1,6 +1,9 @@
 import { useQuery } from '@tanstack/react-query'
+import { ClipboardCheck } from 'lucide-react'
 import { fetchMyTasks } from '@/features/tasks/api'
 import { TaskRow } from '@/features/tasks/TaskRow'
+import { EmptyState } from '@/components/EmptyState'
+import { PageHeader } from '@/components/PageHeader'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Table, TableBody, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 
@@ -12,12 +15,16 @@ export function MyTasksPage() {
 
   return (
     <div className="flex flex-col gap-4">
-      <h1 className="text-2xl font-semibold">Tugas Saya</h1>
+      <PageHeader title="Tugas Saya" description="Pekerjaan yang ditugaskan ke kamu." />
 
       {isLoading ? (
         <Skeleton className="h-40 w-full" />
       ) : tasks?.length === 0 ? (
-        <p className="text-muted-foreground">Tidak ada tugas yang ditugaskan ke kamu saat ini.</p>
+        <EmptyState
+          icon={ClipboardCheck}
+          title="Tidak ada tugas untukmu saat ini"
+          description="Tugas baru akan muncul di sini begitu ditugaskan atau dijadwalkan."
+        />
       ) : (
         <Table>
           <TableHeader>

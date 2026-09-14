@@ -7,6 +7,7 @@ import { fetchCompanySetting } from '@/features/settings/api'
 import { useAuthStore } from '@/stores/auth-store'
 import { useBranchStore } from '@/stores/branch-store'
 import type { Part } from '@/types/inventory'
+import { PageHeader } from '@/components/PageHeader'
 import { Button } from '@/components/ui/button'
 import { Checkbox } from '@/components/ui/checkbox'
 import {
@@ -118,20 +119,19 @@ export function PrintQrCodesPage() {
         }
       `}</style>
 
-      <div className="flex items-center justify-between print:hidden">
-        <div>
-          <h1 className="text-2xl font-semibold">Cetak QR Code Part</h1>
-          <p className="text-sm text-muted-foreground">
-            Centang part yang mau dicetak QR-nya, lalu tentukan berapa lembar per part.
-          </p>
-        </div>
-        <Button
-          onClick={() => openQuantityDialogFor(Array.from(selectedIds))}
-          disabled={selectedIds.size === 0}
-        >
-          Cetak Terpilih ({selectedIds.size})
-        </Button>
-      </div>
+      <PageHeader
+        className="print:hidden"
+        title="Cetak QR Code Part"
+        description="Centang part yang mau dicetak QR-nya, lalu tentukan berapa lembar per part."
+        action={
+          <Button
+            onClick={() => openQuantityDialogFor(Array.from(selectedIds))}
+            disabled={selectedIds.size === 0}
+          >
+            Cetak Terpilih ({selectedIds.size})
+          </Button>
+        }
+      />
 
       {!activeBranchId && (
         <p className="text-sm text-destructive print:hidden">

@@ -332,7 +332,7 @@ export function EquipmentDetailPage() {
                   </TableCell>
                   <TableCell>
                     {installation.is_active ? (
-                      <Badge variant="outline">Terpasang</Badge>
+                      <Badge variant="success">Terpasang</Badge>
                     ) : (
                       <Badge variant="secondary">Dilepas</Badge>
                     )}

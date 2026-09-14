@@ -3,6 +3,7 @@ import { Pencil } from 'lucide-react'
 import { BranchFormDialog } from '@/features/branches/BranchFormDialog'
 import { fetchBranches } from '@/features/branches/api'
 import { useCanManage } from '@/stores/use-has-role'
+import { PageHeader } from '@/components/PageHeader'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Skeleton } from '@/components/ui/skeleton'
@@ -18,10 +19,11 @@ export function BranchesPage() {
 
   return (
     <div className="flex flex-col gap-4">
-      <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-semibold">Cabang</h1>
-        {canManage && <BranchFormDialog trigger={<Button>Tambah Cabang</Button>} />}
-      </div>
+      <PageHeader
+        title="Cabang"
+        description="Daftar cabang/pabrik yang terdaftar dalam sistem."
+        action={canManage && <BranchFormDialog trigger={<Button>Tambah Cabang</Button>} />}
+      />
 
       {isLoading ? (
         <div className="flex flex-col gap-2">
@@ -50,7 +52,7 @@ export function BranchesPage() {
                   {branch.is_active === false ? (
                     <Badge variant="secondary">Nonaktif</Badge>
                   ) : (
-                    <Badge variant="outline">Aktif</Badge>
+                    <Badge variant="success">Aktif</Badge>
                   )}
                 </TableCell>
                 {canManage && (

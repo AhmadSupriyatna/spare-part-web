@@ -1,4 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { AlertTriangle, PackageSearch } from 'lucide-react'
 import { useState } from 'react'
 import { toast } from 'sonner'
 import {
@@ -11,6 +12,8 @@ import {
 import { useBranchStore } from '@/stores/branch-store'
 import { useCanManage } from '@/stores/use-has-role'
 import type { ReorderStatus } from '@/types/inventory'
+import { EmptyState } from '@/components/EmptyState'
+import { PageHeader } from '@/components/PageHeader'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
@@ -24,6 +27,14 @@ const statusLabels: Record<ReorderStatus, string> = {
   ordered: 'Sudah Dipesan',
   completed: 'Selesai',
   cancelled: 'Dibatalkan',
+}
+
+const statusBadgeVariants: Record<ReorderStatus, 'warning' | 'outline' | 'success' | 'secondary'> = {
+  pending: 'warning',
+  approved: 'outline',
+  ordered: 'outline',
+  completed: 'success',
+  cancelled: 'secondary',
 }
 
 export function AlertsPage() {
@@ -79,7 +90,10 @@ export function AlertsPage() {
 
   return (
     <div className="flex flex-col gap-4">
-      <h1 className="text-2xl font-semibold">Peringatan &amp; Pemesanan Ulang</h1>
+      <PageHeader
+        title="Peringatan & Pemesanan Ulang"
+        description="Part yang stoknya menipis di cabang ini, dan status pemesanan ulangnya."
+      />
 
       <Tabs defaultValue="alerts">
         <TabsList>
@@ -91,7 +105,11 @@ export function AlertsPage() {
           {alertsLoading ? (
             <Skeleton className="h-40 w-full" />
           ) : alerts?.length === 0 ? (
-            <p className="text-muted-foreground">Tidak ada peringatan stok aktif.</p>
+            <EmptyState
+              icon={AlertTriangle}
+              title="Tidak ada peringatan stok aktif"
+              description="Semua part di cabang ini masih di atas titik reorder-nya."
+            />
           ) : (
             <Table>
               <TableHeader>
@@ -147,7 +165,7 @@ export function AlertsPage() {
           {reorderLoading ? (
             <Skeleton className="h-40 w-full" />
           ) : reorderRequests?.length === 0 ? (
-            <p className="text-muted-foreground">Tidak ada permintaan pemesanan ulang.</p>
+            <EmptyState icon={PackageSearch} title="Tidak ada permintaan pemesanan ulang" />
           ) : (
             <Table>
               <TableHeader>
@@ -173,7 +191,7 @@ export function AlertsPage() {
                     </TableCell>
                     <TableCell className="text-right">{req.quantity_requested}</TableCell>
                     <TableCell>
-                      <Badge variant="outline">{statusLabels[req.status]}</Badge>
+                      <Badge variant={statusBadgeVariants[req.status]}>{statusLabels[req.status]}</Badge>
                     </TableCell>
                     {canManage && (
                       <TableCell className="flex justify-end gap-2">

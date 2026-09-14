@@ -1,11 +1,13 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { Eye, Pencil, Trash2 } from 'lucide-react'
+import { Eye, MapPin, Pencil, Trash2 } from 'lucide-react'
 import { Link } from 'react-router'
 import { toast } from 'sonner'
 import { deleteLocation, fetchLocations } from '@/features/locations/api'
 import { LocationFormDialog } from '@/features/locations/LocationFormDialog'
 import { useBranchStore } from '@/stores/branch-store'
 import { useCanManage } from '@/stores/use-has-role'
+import { EmptyState } from '@/components/EmptyState'
+import { PageHeader } from '@/components/PageHeader'
 import {
   AlertDialog,
   AlertDialogAction,
@@ -47,12 +49,15 @@ export function LocationsPage() {
 
   return (
     <div className="flex flex-col gap-4">
-      <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-semibold">Lokasi (Rak/Bin)</h1>
-        {canManage && (
-          <LocationFormDialog branchId={activeBranchId} trigger={<Button>Tambah Lokasi</Button>} />
-        )}
-      </div>
+      <PageHeader
+        title="Lokasi (Rak/Bin)"
+        description="Titik simpan fisik part di cabang ini."
+        action={
+          canManage && (
+            <LocationFormDialog branchId={activeBranchId} trigger={<Button>Tambah Lokasi</Button>} />
+          )
+        }
+      />
 
       {isLoading ? (
         <div className="flex flex-col gap-2">
@@ -61,7 +66,19 @@ export function LocationsPage() {
           ))}
         </div>
       ) : locations?.length === 0 ? (
-        <p className="text-muted-foreground">Belum ada lokasi di cabang ini.</p>
+        <EmptyState
+          icon={MapPin}
+          title="Belum ada lokasi di cabang ini"
+          description="Tambahkan rak/bin supaya part bisa ditempatkan dan mudah dicari saat pengambilan."
+          action={
+            canManage && (
+              <LocationFormDialog
+                branchId={activeBranchId}
+                trigger={<Button size="sm">Tambah Lokasi</Button>}
+              />
+            )
+          }
+        />
       ) : (
         <Table>
           <TableHeader>
@@ -83,7 +100,7 @@ export function LocationsPage() {
                 <TableCell className="text-muted-foreground">{location.description ?? '-'}</TableCell>
                 <TableCell>
                   {location.is_active ? (
-                    <Badge variant="outline">Aktif</Badge>
+                    <Badge variant="success">Aktif</Badge>
                   ) : (
                     <Badge variant="secondary">Nonaktif</Badge>
                   )}

@@ -1,13 +1,15 @@
 import { zodResolver } from '@hookform/resolvers/zod'
 import { useMutation } from '@tanstack/react-query'
+import { Wrench } from 'lucide-react'
 import { useForm } from 'react-hook-form'
 import { useNavigate } from 'react-router'
 import { toast } from 'sonner'
 import { login } from '@/features/auth/api'
 import { loginSchema, type LoginFormValues } from '@/features/auth/schema'
 import { useAuthStore } from '@/stores/auth-store'
+import { ThemeToggle } from '@/components/ThemeToggle'
 import { Button } from '@/components/ui/button'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import { Card, CardContent, CardHeader } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 
@@ -36,11 +38,19 @@ export function LoginPage() {
   })
 
   return (
-    <div className="flex min-h-svh items-center justify-center bg-muted/40 p-4">
+    <div className="relative flex min-h-svh items-center justify-center bg-muted/40 p-4">
+      <div className="absolute top-4 right-4">
+        <ThemeToggle />
+      </div>
       <Card className="w-full max-w-sm">
-        <CardHeader>
-          <CardTitle>Masuk</CardTitle>
-          <CardDescription>Sistem Manajemen Spare Part</CardDescription>
+        <CardHeader className="items-center text-center">
+          <div className="flex size-11 items-center justify-center rounded-xl bg-primary text-primary-foreground">
+            <Wrench className="size-5" />
+          </div>
+          <div>
+            <h1 className="font-heading text-lg font-semibold">Masuk</h1>
+            <p className="text-sm text-muted-foreground">Sistem Manajemen Spare Part</p>
+          </div>
         </CardHeader>
         <CardContent>
           <form

@@ -12,6 +12,7 @@ import { fetchMachines } from '@/features/machines/api'
 import { useBranchStore } from '@/stores/branch-store'
 import { useCanManage } from '@/stores/use-has-role'
 import { cn } from '@/lib/utils'
+import { PageHeader } from '@/components/PageHeader'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Skeleton } from '@/components/ui/skeleton'
@@ -73,17 +74,21 @@ export function LineHierarchyPage() {
 
   return (
     <div className="flex flex-col gap-4">
-      <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-semibold">Line Produksi</h1>
-        {selectedLine && (
-          <div className="flex items-center gap-3">
-            <p className="text-sm text-muted-foreground">
-              Jam operasi {selectedLine.name}: <span className="font-medium text-foreground">{selectedLine.runtime_hours}</span>
-            </p>
-            {canManage && <AddRuntimeDialog lineId={selectedLine.id} branchId={activeBranchId} />}
-          </div>
-        )}
-      </div>
+      <PageHeader
+        title="Line Produksi"
+        description="Hierarki Line, Mesin, dan Equipment untuk cabang ini."
+        action={
+          selectedLine && (
+            <div className="flex items-center gap-3">
+              <p className="text-sm text-muted-foreground">
+                Jam operasi {selectedLine.name}:{' '}
+                <span className="font-medium text-foreground tabular-nums">{selectedLine.runtime_hours}</span>
+              </p>
+              {canManage && <AddRuntimeDialog lineId={selectedLine.id} branchId={activeBranchId} />}
+            </div>
+          )
+        }
+      />
 
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
         <HierarchyColumn
@@ -111,7 +116,7 @@ export function LineHierarchyPage() {
               onClick={() => selectLine(line.id)}
               title={line.name}
               subtitle={line.code}
-              badge={!line.is_active ? <Badge variant="outline">Nonaktif</Badge> : undefined}
+              badge={!line.is_active ? <Badge variant="secondary">Nonaktif</Badge> : undefined}
               editAction={
                 canManage && (
                   <LineFormDialog
@@ -155,7 +160,7 @@ export function LineHierarchyPage() {
               onClick={() => selectMachine(machine.id)}
               title={machine.name}
               subtitle={machine.category ?? machine.code}
-              badge={!machine.is_active ? <Badge variant="outline">Nonaktif</Badge> : undefined}
+              badge={!machine.is_active ? <Badge variant="secondary">Nonaktif</Badge> : undefined}
               editAction={
                 canManage &&
                 selectedLineId && (

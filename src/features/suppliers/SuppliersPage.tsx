@@ -1,11 +1,13 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { Eye, Pencil, Trash2 } from 'lucide-react'
+import { Eye, Pencil, Trash2, Truck } from 'lucide-react'
 import { Link } from 'react-router'
 import { toast } from 'sonner'
 import { deleteSupplier, fetchSuppliers } from '@/features/suppliers/api'
 import { SupplierFormDialog } from '@/features/suppliers/SupplierFormDialog'
 import { useBranchStore } from '@/stores/branch-store'
 import { useCanManage } from '@/stores/use-has-role'
+import { EmptyState } from '@/components/EmptyState'
+import { PageHeader } from '@/components/PageHeader'
 import {
   AlertDialog,
   AlertDialogAction,
@@ -47,12 +49,15 @@ export function SuppliersPage() {
 
   return (
     <div className="flex flex-col gap-4">
-      <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-semibold">Supplier</h1>
-        {canManage && (
-          <SupplierFormDialog branchId={activeBranchId} trigger={<Button>Tambah Supplier</Button>} />
-        )}
-      </div>
+      <PageHeader
+        title="Supplier"
+        description="Daftar pemasok yang terdaftar untuk cabang ini."
+        action={
+          canManage && (
+            <SupplierFormDialog branchId={activeBranchId} trigger={<Button>Tambah Supplier</Button>} />
+          )
+        }
+      />
 
       {isLoading ? (
         <div className="flex flex-col gap-2">
@@ -61,7 +66,19 @@ export function SuppliersPage() {
           ))}
         </div>
       ) : suppliers?.length === 0 ? (
-        <p className="text-muted-foreground">Belum ada supplier di cabang ini.</p>
+        <EmptyState
+          icon={Truck}
+          title="Belum ada supplier di cabang ini"
+          description="Tambahkan supplier supaya bisa dipilih saat menerima stok atau mengelola part."
+          action={
+            canManage && (
+              <SupplierFormDialog
+                branchId={activeBranchId}
+                trigger={<Button size="sm">Tambah Supplier</Button>}
+              />
+            )
+          }
+        />
       ) : (
         <Table>
           <TableHeader>
@@ -83,7 +100,7 @@ export function SuppliersPage() {
                 <TableCell className="text-muted-foreground">{supplier.email ?? '-'}</TableCell>
                 <TableCell>
                   {supplier.is_active ? (
-                    <Badge variant="outline">Aktif</Badge>
+                    <Badge variant="success">Aktif</Badge>
                   ) : (
                     <Badge variant="secondary">Nonaktif</Badge>
                   )}

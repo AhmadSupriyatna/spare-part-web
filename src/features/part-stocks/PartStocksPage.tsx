@@ -1,5 +1,5 @@
 import { useQuery } from '@tanstack/react-query'
-import { MapPin, PackagePlus, SlidersHorizontal } from 'lucide-react'
+import { Boxes, MapPin, PackagePlus, SlidersHorizontal } from 'lucide-react'
 import { useState } from 'react'
 import { Link } from 'react-router'
 import { AdjustStockDialog } from '@/features/part-stocks/AdjustStockDialog'
@@ -9,6 +9,8 @@ import { SetPartLocationDialog } from '@/features/part-stocks/SetPartLocationDia
 import { fetchParts } from '@/features/parts/api'
 import { useBranchStore } from '@/stores/branch-store'
 import { useCanManage } from '@/stores/use-has-role'
+import { EmptyState } from '@/components/EmptyState'
+import { PageHeader } from '@/components/PageHeader'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -49,7 +51,7 @@ export function PartStocksPage() {
 
   return (
     <div className="flex flex-col gap-4">
-      <h1 className="text-2xl font-semibold">Stok Part</h1>
+      <PageHeader title="Stok Part" description="Posisi stok part di cabang yang sedang aktif." />
 
       <Input
         placeholder="Cari nama part, Item Master, atau lokasi..."
@@ -64,6 +66,16 @@ export function PartStocksPage() {
             <Skeleton key={i} className="h-10 w-full" />
           ))}
         </div>
+      ) : filteredStocks?.length === 0 ? (
+        <EmptyState
+          icon={Boxes}
+          title={search ? 'Tidak ada stok yang cocok' : 'Belum ada stok di cabang ini'}
+          description={
+            search
+              ? 'Coba kata kunci lain, atau hapus pencarian untuk melihat semua stok.'
+              : 'Stok akan muncul di sini setelah part diterima untuk cabang ini.'
+          }
+        />
       ) : (
         <Table>
           <TableHeader>
@@ -88,15 +100,15 @@ export function PartStocksPage() {
                     <div className="font-mono text-xs text-muted-foreground">{part?.item_master_no}</div>
                   </TableCell>
                   <TableCell className="text-muted-foreground">{stock.location_code ?? '-'}</TableCell>
-                  <TableCell className="text-right font-medium">{stock.quantity_on_hand}</TableCell>
-                  <TableCell className="text-right text-muted-foreground">{stock.reorder_point}</TableCell>
+                  <TableCell className="text-right font-medium tabular-nums">{stock.quantity_on_hand}</TableCell>
+                  <TableCell className="text-right text-muted-foreground tabular-nums">{stock.reorder_point}</TableCell>
                   <TableCell>
                     {stock.is_critical ? (
                       <Badge variant="destructive">Kritis</Badge>
                     ) : stock.is_below_reorder_point ? (
                       <Badge variant="warning">Rendah</Badge>
                     ) : (
-                      <Badge variant="outline">Normal</Badge>
+                      <Badge variant="success">Normal</Badge>
                     )}
                   </TableCell>
                   {canManage && (

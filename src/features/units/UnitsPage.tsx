@@ -1,9 +1,11 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { Pencil, Trash2 } from 'lucide-react'
+import { Pencil, Ruler, Trash2 } from 'lucide-react'
 import { toast } from 'sonner'
 import { deleteUnit, fetchUnits } from '@/features/units/api'
 import { UnitFormDialog } from '@/features/units/UnitFormDialog'
 import { useCanManage } from '@/stores/use-has-role'
+import { EmptyState } from '@/components/EmptyState'
+import { PageHeader } from '@/components/PageHeader'
 import {
   AlertDialog,
   AlertDialogAction,
@@ -41,15 +43,11 @@ export function UnitsPage() {
 
   return (
     <div className="flex flex-col gap-4">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-semibold">Satuan Part</h1>
-          <p className="text-sm text-muted-foreground">
-            Daftar satuan yang muncul di dropdown saat menambah atau mengubah part.
-          </p>
-        </div>
-        {canManage && <UnitFormDialog trigger={<Button>Tambah Satuan</Button>} />}
-      </div>
+      <PageHeader
+        title="Satuan Part"
+        description="Daftar satuan yang muncul di dropdown saat menambah atau mengubah part."
+        action={canManage && <UnitFormDialog trigger={<Button>Tambah Satuan</Button>} />}
+      />
 
       {isLoading ? (
         <div className="flex flex-col gap-2">
@@ -58,7 +56,12 @@ export function UnitsPage() {
           ))}
         </div>
       ) : units?.length === 0 ? (
-        <p className="text-muted-foreground">Belum ada satuan.</p>
+        <EmptyState
+          icon={Ruler}
+          title="Belum ada satuan"
+          description="Tambahkan satuan seperti pcs, meter, atau liter supaya muncul di dropdown form Part."
+          action={canManage && <UnitFormDialog trigger={<Button size="sm">Tambah Satuan</Button>} />}
+        />
       ) : (
         <Table>
           <TableHeader>

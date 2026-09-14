@@ -1,9 +1,12 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { Inbox } from 'lucide-react'
 import { toast } from 'sonner'
 import { approveReplacementRequest, fetchReplacementRequests } from '@/features/breakdown/api'
 import { RejectRequestDialog } from '@/features/breakdown/RejectRequestDialog'
 import { useBranchStore } from '@/stores/branch-store'
 import type { ReplacementRequestStatus } from '@/types/breakdown'
+import { EmptyState } from '@/components/EmptyState'
+import { PageHeader } from '@/components/PageHeader'
 import { Button } from '@/components/ui/button'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
@@ -39,7 +42,12 @@ function RequestsTable({ branchId, status }: { branchId: number; status: Replace
 
   if (isLoading) return <Skeleton className="h-40 w-full" />
   if (requests?.length === 0) {
-    return <p className="text-sm text-muted-foreground">Tidak ada permintaan {statusLabels[status].toLowerCase()}.</p>
+    return (
+      <EmptyState
+        icon={Inbox}
+        title={`Tidak ada permintaan ${statusLabels[status].toLowerCase()}`}
+      />
+    )
   }
 
   return (
@@ -103,12 +111,10 @@ export function BreakdownApprovalBoardPage() {
 
   return (
     <div className="flex flex-col gap-4">
-      <div>
-        <h1 className="text-2xl font-semibold">Papan Kerja Approval Penggantian</h1>
-        <p className="text-sm text-muted-foreground">
-          Permintaan penggantian part dari lapangan (scan QR breakdown) menunggu keputusan di sini.
-        </p>
-      </div>
+      <PageHeader
+        title="Papan Kerja Approval Penggantian"
+        description="Permintaan penggantian part dari lapangan (scan QR breakdown) menunggu keputusan di sini."
+      />
 
       <Tabs defaultValue="pending">
         <TabsList>

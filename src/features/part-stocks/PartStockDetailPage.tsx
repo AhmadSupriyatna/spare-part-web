@@ -127,7 +127,7 @@ export function PartStockDetailPage() {
                 </TableCell>
                 <TableCell>{ledgerTypeLabels[entry.type] ?? entry.type}</TableCell>
                 <TableCell
-                  className={`text-right font-medium ${entry.quantity_change < 0 ? 'text-destructive' : 'text-green-600'}`}
+                  className={`text-right font-medium tabular-nums ${entry.quantity_change < 0 ? 'text-destructive' : 'text-success'}`}
                 >
                   {entry.quantity_change > 0 ? '+' : ''}
                   {entry.quantity_change}

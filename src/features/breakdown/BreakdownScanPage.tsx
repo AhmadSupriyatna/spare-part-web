@@ -73,7 +73,7 @@ export function BreakdownScanPage() {
       <div className="flex min-h-svh items-center justify-center bg-muted/40 p-4">
         <Card className="w-full max-w-sm text-center">
           <CardContent className="flex flex-col items-center gap-3 pt-6">
-            <div className="flex size-14 items-center justify-center rounded-full bg-green-100 text-2xl text-green-700">
+            <div className="flex size-14 items-center justify-center rounded-full bg-success/15 text-2xl text-success">
               ✓
             </div>
             <h1 className="text-lg font-semibold">Permintaan Terkirim</h1>

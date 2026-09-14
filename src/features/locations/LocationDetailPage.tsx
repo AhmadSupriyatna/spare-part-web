@@ -38,7 +38,7 @@ export function LocationDetailPage() {
         {location.description && <p className="mt-1 text-muted-foreground">{location.description}</p>}
         <div className="mt-2">
           {location.is_active ? (
-            <Badge variant="outline">Aktif</Badge>
+            <Badge variant="success">Aktif</Badge>
           ) : (
             <Badge variant="secondary">Nonaktif</Badge>
           )}

@@ -1,11 +1,13 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { Eye, Pencil, Trash2 } from 'lucide-react'
+import { Eye, Package, Pencil, Trash2 } from 'lucide-react'
 import { useState } from 'react'
 import { Link } from 'react-router'
 import { toast } from 'sonner'
 import { deletePart, fetchParts } from '@/features/parts/api'
 import { PartFormDialog } from '@/features/parts/PartFormDialog'
 import { useCanManage } from '@/stores/use-has-role'
+import { EmptyState } from '@/components/EmptyState'
+import { PageHeader } from '@/components/PageHeader'
 import {
   AlertDialog,
   AlertDialogAction,
@@ -48,10 +50,11 @@ export function PartsPage() {
 
   return (
     <div className="flex flex-col gap-4">
-      <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-semibold">Part</h1>
-        {canManage && <PartFormDialog trigger={<Button>Tambah Part</Button>} />}
-      </div>
+      <PageHeader
+        title="Part"
+        description="Katalog part bersama, dipakai di seluruh cabang."
+        action={canManage && <PartFormDialog trigger={<Button>Tambah Part</Button>} />}
+      />
 
       <Input
         placeholder="Cari nama atau Item Master..."
@@ -66,6 +69,17 @@ export function PartsPage() {
             <Skeleton key={i} className="h-10 w-full" />
           ))}
         </div>
+      ) : filteredParts?.length === 0 ? (
+        <EmptyState
+          icon={Package}
+          title={search ? 'Tidak ada part yang cocok' : 'Belum ada part'}
+          description={
+            search
+              ? 'Coba kata kunci lain, atau hapus pencarian untuk melihat semua part.'
+              : 'Tambahkan part pertama untuk mulai mengelola katalog dan stok.'
+          }
+          action={!search && canManage && <PartFormDialog trigger={<Button size="sm">Tambah Part</Button>} />}
+        />
       ) : (
         <Table>
           <TableHeader>

@@ -6,6 +6,7 @@ import { toast } from 'sonner'
 import { z } from 'zod'
 import { fetchCompanySetting, updateCompanySetting } from '@/features/settings/api'
 import { useCanManage } from '@/stores/use-has-role'
+import { PageHeader } from '@/components/PageHeader'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
@@ -73,12 +74,10 @@ export function CompanySettingsPage() {
 
   return (
     <div className="flex flex-col gap-4">
-      <div>
-        <h1 className="text-2xl font-semibold">Profil Perusahaan</h1>
-        <p className="text-sm text-muted-foreground">
-          Nama dan logo di sini akan muncul pada label QR yang dicetak untuk modul breakdown.
-        </p>
-      </div>
+      <PageHeader
+        title="Profil Perusahaan"
+        description="Nama dan logo di sini akan muncul pada label QR yang dicetak untuk modul breakdown."
+      />
 
       <Card className="max-w-lg">
         <CardHeader>
