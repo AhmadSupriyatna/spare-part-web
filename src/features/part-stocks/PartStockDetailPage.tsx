@@ -68,7 +68,7 @@ export function PartStockDetailPage() {
           <CardContent className="flex items-center gap-2">
             <span className="text-2xl font-semibold">{stock.quantity_on_hand}</span>
             {stock.is_critical && <Badge variant="destructive">Kritis</Badge>}
-            {!stock.is_critical && stock.is_below_reorder_point && <Badge variant="secondary">Rendah</Badge>}
+            {!stock.is_critical && stock.is_below_reorder_point && <Badge variant="warning">Rendah</Badge>}
           </CardContent>
         </Card>
         <Card>

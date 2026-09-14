@@ -104,7 +104,12 @@ export function PartsPage() {
                 <TableCell className="text-muted-foreground">{part.unit}</TableCell>
                 <TableCell className="text-right">{currencyFormatter.format(Number(part.price))}</TableCell>
                 <TableCell className="flex justify-end gap-2">
-                  <Button variant="outline" size="sm" render={<Link to={`/parts/${part.id}`} />}>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    nativeButton={false}
+                    render={<Link to={`/parts/${part.id}`} />}
+                  >
                     Lihat
                   </Button>
                   {canManage && (

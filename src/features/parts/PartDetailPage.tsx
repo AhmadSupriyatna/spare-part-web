@@ -136,7 +136,7 @@ export function PartDetailPage() {
                     {stock.is_critical ? (
                       <Badge variant="destructive">Kritis</Badge>
                     ) : stock.is_below_reorder_point ? (
-                      <Badge variant="secondary">Rendah</Badge>
+                      <Badge variant="warning">Rendah</Badge>
                     ) : (
                       <Badge variant="outline">Normal</Badge>
                     )}
@@ -315,7 +315,7 @@ export function PartDetailPage() {
                             installation.percent_used >= 100
                               ? 'destructive'
                               : installation.percent_used >= 80
-                                ? 'secondary'
+                                ? 'warning'
                                 : 'outline'
                           }
                         >

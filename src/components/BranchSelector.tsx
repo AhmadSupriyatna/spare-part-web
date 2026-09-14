@@ -20,7 +20,7 @@ export function BranchSelector() {
 
   return (
     <Select
-      value={activeBranchId ? String(activeBranchId) : undefined}
+      value={activeBranchId ? String(activeBranchId) : ''}
       onValueChange={(value) => setActiveBranchId(Number(value))}
     >
       <SelectTrigger className="w-[180px]">

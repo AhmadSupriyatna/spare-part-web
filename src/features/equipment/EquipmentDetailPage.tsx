@@ -292,7 +292,7 @@ export function EquipmentDetailPage() {
                           installation.percent_used >= 100
                             ? 'destructive'
                             : installation.percent_used >= 80
-                              ? 'secondary'
+                              ? 'warning'
                               : 'outline'
                         }
                       >

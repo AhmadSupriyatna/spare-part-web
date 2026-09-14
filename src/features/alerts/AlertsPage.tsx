@@ -115,7 +115,7 @@ export function AlertsPage() {
                       {alert.level === 'critical' ? (
                         <Badge variant="destructive">Kritis</Badge>
                       ) : (
-                        <Badge variant="secondary">Rendah</Badge>
+                        <Badge variant="warning">Rendah</Badge>
                       )}
                     </TableCell>
                     <TableCell className="text-right">{alert.quantity_on_hand_at_trigger}</TableCell>

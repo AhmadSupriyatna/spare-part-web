@@ -66,7 +66,7 @@ export function PartStocksPage() {
                     {stock.is_critical ? (
                       <Badge variant="destructive">Kritis</Badge>
                     ) : stock.is_below_reorder_point ? (
-                      <Badge variant="secondary">Rendah</Badge>
+                      <Badge variant="warning">Rendah</Badge>
                     ) : (
                       <Badge variant="outline">Normal</Badge>
                     )}
