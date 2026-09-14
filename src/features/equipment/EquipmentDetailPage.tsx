@@ -1,5 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { Trash2 } from 'lucide-react'
+import { Pencil, Trash2 } from 'lucide-react'
 import { Link, useParams } from 'react-router'
 import { toast } from 'sonner'
 import { Breadcrumb } from '@/components/Breadcrumb'
@@ -8,6 +8,14 @@ import { fetchEquipmentParts, removeEquipmentPart } from '@/features/equipment-p
 import { fetchEquipment } from '@/features/equipment/api'
 import { PartInstallationFormDialog } from '@/features/part-installations/PartInstallationFormDialog'
 import { fetchPartInstallations, removePartInstallation } from '@/features/part-installations/api'
+import { ScheduleTaskLibraryDialog } from '@/features/task-libraries/ScheduleTaskLibraryDialog'
+import { TaskLibraryFormDialog } from '@/features/task-libraries/TaskLibraryFormDialog'
+import { TaskLibraryPartFormDialog } from '@/features/task-libraries/TaskLibraryPartFormDialog'
+import {
+  deleteTaskLibrary,
+  fetchTaskLibrariesForEquipment,
+  removeTaskLibraryPart,
+} from '@/features/task-libraries/api'
 import { TaskFormDialog } from '@/features/tasks/TaskFormDialog'
 import { TaskRow } from '@/features/tasks/TaskRow'
 import { fetchTasksForEquipment } from '@/features/tasks/api'
@@ -81,6 +89,27 @@ export function EquipmentDetailPage() {
   const { data: installations, isLoading: installationsLoading } = useQuery({
     queryKey: ['part-installations', equipmentId],
     queryFn: () => fetchPartInstallations(equipmentId),
+  })
+
+  const { data: taskLibraries, isLoading: taskLibrariesLoading } = useQuery({
+    queryKey: ['task-libraries', equipmentId],
+    queryFn: () => fetchTaskLibrariesForEquipment(equipmentId),
+  })
+
+  const deleteTaskLibraryMutation = useMutation({
+    mutationFn: deleteTaskLibrary,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['task-libraries', equipmentId] })
+      toast.success('Task Library berhasil dihapus.')
+    },
+  })
+
+  const removeTaskLibraryPartMutation = useMutation({
+    mutationFn: removeTaskLibraryPart,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['task-libraries', equipmentId] })
+      toast.success('Part berhasil dihapus dari checklist.')
+    },
   })
 
   const removeInstallationMutation = useMutation({
@@ -164,6 +193,143 @@ export function EquipmentDetailPage() {
               ))}
             </TableBody>
           </Table>
+        )}
+      </div>
+
+      <div className="flex flex-col gap-3">
+        <div className="flex items-center justify-between">
+          <h2 className="text-lg font-medium">Task Library (PM)</h2>
+          {canManage && (
+            <TaskLibraryFormDialog
+              equipmentId={equipmentId}
+              trigger={<Button size="sm">Tambah Task Library</Button>}
+            />
+          )}
+        </div>
+        {taskLibrariesLoading ? (
+          <Skeleton className="h-24 w-full" />
+        ) : taskLibraries?.length === 0 ? (
+          <p className="text-sm text-muted-foreground">
+            Belum ada resep kegiatan PM untuk equipment ini.
+          </p>
+        ) : (
+          <div className="flex flex-col gap-3">
+            {taskLibraries?.map((library) => (
+              <div key={library.id} className="rounded-md border p-3">
+                <div className="flex items-start justify-between gap-2">
+                  <div>
+                    <p className="font-medium">{library.title}</p>
+                    {library.description && (
+                      <p className="text-sm text-muted-foreground">{library.description}</p>
+                    )}
+                  </div>
+                  {canManage && (
+                    <div className="flex shrink-0 gap-1">
+                      <ScheduleTaskLibraryDialog
+                        libraries={[library]}
+                        defaultLibraryId={library.id}
+                        invalidateKeys={[['tasks', equipmentId]]}
+                        trigger={<Button size="sm">Jadwalkan</Button>}
+                      />
+                      <TaskLibraryFormDialog
+                        equipmentId={equipmentId}
+                        library={library}
+                        trigger={
+                          <Button
+                            variant="ghost"
+                            size="icon-sm"
+                            aria-label="Ubah Task Library"
+                            title="Ubah Task Library"
+                          >
+                            <Pencil />
+                          </Button>
+                        }
+                      />
+                      <AlertDialog>
+                        <AlertDialogTrigger
+                          render={
+                            <Button
+                              variant="ghost"
+                              size="icon-sm"
+                              aria-label="Hapus Task Library"
+                              title="Hapus Task Library"
+                            />
+                          }
+                        >
+                          <Trash2 />
+                        </AlertDialogTrigger>
+                        <AlertDialogContent>
+                          <AlertDialogHeader>
+                            <AlertDialogTitle>Hapus Task Library ini?</AlertDialogTitle>
+                            <AlertDialogDescription>
+                              "{library.title}" beserta checklist part-nya akan dihapus permanen. WO yang
+                              sudah pernah dijadwalkan dari sini tidak ikut terhapus.
+                            </AlertDialogDescription>
+                          </AlertDialogHeader>
+                          <AlertDialogFooter>
+                            <AlertDialogCancel>Batal</AlertDialogCancel>
+                            <AlertDialogAction onClick={() => deleteTaskLibraryMutation.mutate(library.id)}>
+                              Hapus
+                            </AlertDialogAction>
+                          </AlertDialogFooter>
+                        </AlertDialogContent>
+                      </AlertDialog>
+                    </div>
+                  )}
+                </div>
+
+                <div className="mt-3 flex flex-col gap-1">
+                  <div className="flex items-center justify-between">
+                    <p className="text-xs font-medium tracking-wide text-muted-foreground uppercase">
+                      Checklist Part
+                    </p>
+                    {canManage && (
+                      <TaskLibraryPartFormDialog
+                        taskLibraryId={library.id}
+                        equipmentId={equipmentId}
+                        trigger={
+                          <Button variant="ghost" size="xs">
+                            + Part
+                          </Button>
+                        }
+                      />
+                    )}
+                  </div>
+                  {library.parts.length === 0 ? (
+                    <p className="text-sm text-muted-foreground">Belum ada part di checklist ini.</p>
+                  ) : (
+                    <ul className="flex flex-col gap-1">
+                      {library.parts.map((part) => (
+                        <li
+                          key={part.id}
+                          className="flex items-center justify-between gap-2 rounded-md bg-muted/50 px-3 py-1.5 text-sm"
+                        >
+                          <span>
+                            {part.part_name}{' '}
+                            <span className="font-mono text-xs text-muted-foreground">
+                              ({part.item_master_no})
+                            </span>{' '}
+                            × {part.quantity_required}
+                          </span>
+                          {canManage && (
+                            <Button
+                              variant="ghost"
+                              size="icon-xs"
+                              aria-label="Hapus dari checklist"
+                              title="Hapus dari checklist"
+                              onClick={() => removeTaskLibraryPartMutation.mutate(part.id)}
+                            >
+                              <Trash2 />
+                            </Button>
+                          )}
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+                </div>
+              </div>
+            ))}
+          </div>
         )}
       </div>
 

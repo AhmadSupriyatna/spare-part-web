@@ -1,7 +1,11 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query'
+import { Printer } from 'lucide-react'
+import { Link } from 'react-router'
 import { toast } from 'sonner'
+import { CompleteChecklistDialog } from '@/features/tasks/CompleteChecklistDialog'
 import { CompleteTaskDialog } from '@/features/tasks/CompleteTaskDialog'
 import { cancelTask, startTask } from '@/features/tasks/api'
+import { useAuthStore } from '@/stores/auth-store'
 import type { Task } from '@/types/tasks'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -22,6 +26,17 @@ interface TaskRowProps {
 
 export function TaskRow({ task, invalidateKey }: TaskRowProps) {
   const queryClient = useQueryClient()
+  const currentUserId = useAuthStore((state) => state.user?.id)
+  // The server only lets the assignee start/complete/cancel a task — mirror
+  // that here so the buttons don't invite a 403 for everyone else viewing
+  // this equipment's task list.
+  const isMine = task.assigned_to === currentUserId
+
+  function reportError(error: unknown, fallback: string) {
+    const message =
+      (error as { response?: { data?: { message?: string } } })?.response?.data?.message ?? fallback
+    toast.error(message)
+  }
 
   const startMutation = useMutation({
     mutationFn: () => startTask(task.id),
@@ -29,6 +44,7 @@ export function TaskRow({ task, invalidateKey }: TaskRowProps) {
       queryClient.invalidateQueries({ queryKey: invalidateKey })
       toast.success('Tugas dimulai.')
     },
+    onError: (error: unknown) => reportError(error, 'Gagal memulai tugas.'),
   })
 
   const cancelMutation = useMutation({
@@ -37,6 +53,7 @@ export function TaskRow({ task, invalidateKey }: TaskRowProps) {
       queryClient.invalidateQueries({ queryKey: invalidateKey })
       toast.success('Tugas dibatalkan.')
     },
+    onError: (error: unknown) => reportError(error, 'Gagal membatalkan tugas.'),
   })
 
   return (
@@ -48,6 +65,11 @@ export function TaskRow({ task, invalidateKey }: TaskRowProps) {
           <div className="text-xs text-muted-foreground">
             Part: {task.part_name ?? `#${task.part_stock_id}`}
             {task.quantity_used ? ` × ${task.quantity_used}` : ''}
+          </div>
+        )}
+        {task.task_library_id && (
+          <div className="text-xs text-muted-foreground">
+            {task.part_checks?.length ?? 0} part di checklist PM
           </div>
         )}
       </TableCell>
@@ -73,15 +95,30 @@ export function TaskRow({ task, invalidateKey }: TaskRowProps) {
       </TableCell>
       <TableCell className="text-muted-foreground">{task.assignee_name ?? '-'}</TableCell>
       <TableCell className="flex justify-end gap-2">
-        {task.status === 'pending' && (
+        {task.task_library_id && (
+          <Button
+            variant="ghost"
+            size="icon-sm"
+            nativeButton={false}
+            aria-label="Cetak checklist WO"
+            title="Cetak checklist WO"
+            render={<Link to={`/pm/tasks/${task.id}/print`} />}
+          >
+            <Printer />
+          </Button>
+        )}
+        {isMine && task.status === 'pending' && (
           <Button size="sm" variant="outline" onClick={() => startMutation.mutate()}>
             Mulai
           </Button>
         )}
-        {task.status === 'in_progress' && (
+        {isMine && task.status === 'in_progress' && task.task_library_id && (
+          <CompleteChecklistDialog task={task} invalidateKey={invalidateKey} />
+        )}
+        {isMine && task.status === 'in_progress' && !task.task_library_id && (
           <CompleteTaskDialog task={task} invalidateKey={invalidateKey} />
         )}
-        {(task.status === 'pending' || task.status === 'in_progress') && (
+        {isMine && (task.status === 'pending' || task.status === 'in_progress') && (
           <Button size="sm" variant="outline" onClick={() => cancelMutation.mutate()}>
             Batal
           </Button>

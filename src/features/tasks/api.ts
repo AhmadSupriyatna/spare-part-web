@@ -16,8 +16,22 @@ export async function fetchTasksForEquipment(equipmentId: number): Promise<Task[
   return data.data
 }
 
+export async function fetchTask(id: number): Promise<Task> {
+  const { data } = await apiClient.get<{ data: Task }>(`/tasks/${id}`)
+  return data.data
+}
+
 export async function fetchMyTasks(): Promise<Task[]> {
   const { data } = await apiClient.get<{ data: Task[] }>('/tasks/mine')
+  return data.data
+}
+
+/**
+ * Every task ever scheduled from a Task Library, across the branch — backs
+ * both the WO Ledger tab and the PM calendar.
+ */
+export async function fetchPmTasksForBranch(branchId: number): Promise<Task[]> {
+  const { data } = await apiClient.get<{ data: Task[] }>(`/branches/${branchId}/pm-tasks`)
   return data.data
 }
 
@@ -42,7 +56,20 @@ export interface CompleteTaskPayload {
   quantity_used?: number | null
 }
 
-export async function completeTask(id: number, payload: CompleteTaskPayload): Promise<Task> {
+export interface CompleteChecklistPayload {
+  notes?: string
+  checks: Array<{
+    part_id: number
+    is_replaced: boolean
+    quantity_used?: number | null
+    reason?: string | null
+  }>
+}
+
+export async function completeTask(
+  id: number,
+  payload: CompleteTaskPayload | CompleteChecklistPayload,
+): Promise<Task> {
   const { data } = await apiClient.post<{ data: Task }>(`/tasks/${id}/complete`, payload)
   return data.data
 }

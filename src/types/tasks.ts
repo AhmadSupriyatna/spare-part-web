@@ -1,3 +1,5 @@
+import type { TaskPartCheck } from '@/types/pm'
+
 export interface ProductionLine {
   id: number
   branch_id: number
@@ -50,7 +52,12 @@ export type TaskStatus = 'pending' | 'in_progress' | 'completed' | 'cancelled'
 export interface Task {
   id: number
   work_order_id: number | null
+  task_library_id: number | null
   equipment_id: number
+  equipment_name?: string
+  machine_name?: string
+  line_name?: string
+  branch_name?: string
   assigned_to: number | null
   assignee_name?: string | null
   title: string
@@ -66,6 +73,7 @@ export interface Task {
   part_name?: string | null
   item_master_no?: string | null
   quantity_used: number | null
+  part_checks?: TaskPartCheck[]
   is_overdue: boolean
   created_at: string
 }

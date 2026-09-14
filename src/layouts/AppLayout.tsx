@@ -3,6 +3,7 @@ import {
   AlertTriangle,
   Boxes,
   Building2,
+  CalendarClock,
   ChevronLeft,
   ChevronRight,
   ClipboardList,
@@ -10,6 +11,7 @@ import {
   LayoutDashboard,
   LogOut,
   MapPin,
+  NotebookText,
   Package,
   QrCode,
   Ruler,
@@ -64,6 +66,13 @@ const navSections: NavSection[] = [
   {
     label: 'Kerja Saya',
     items: [{ to: '/my-tasks', label: 'Tugas Saya', icon: ClipboardList }],
+  },
+  {
+    label: 'PM Terjadwal',
+    items: [
+      { to: '/pm/calendar', label: 'Kalender PM', icon: CalendarClock },
+      { to: '/pm/ledger', label: 'Ledger WO', icon: NotebookText },
+    ],
   },
   {
     label: 'Breakdown',

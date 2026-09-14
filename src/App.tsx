@@ -14,6 +14,9 @@ import { PartDetailPage } from '@/features/parts/PartDetailPage'
 import { PartsPage } from '@/features/parts/PartsPage'
 import { PartStockDetailPage } from '@/features/part-stocks/PartStockDetailPage'
 import { PartStocksPage } from '@/features/part-stocks/PartStocksPage'
+import { PmCalendarPage } from '@/features/pm/PmCalendarPage'
+import { PmLedgerPage } from '@/features/pm/PmLedgerPage'
+import { PrintWoChecklistPage } from '@/features/pm/PrintWoChecklistPage'
 import { CompanySettingsPage } from '@/features/settings/CompanySettingsPage'
 import { SupplierDetailPage } from '@/features/suppliers/SupplierDetailPage'
 import { SuppliersPage } from '@/features/suppliers/SuppliersPage'
@@ -51,6 +54,9 @@ function App() {
             <Route path="breakdown/print-qr" element={<PrintQrCodesPage />} />
             <Route path="settings/company" element={<CompanySettingsPage />} />
             <Route path="settings/units" element={<UnitsPage />} />
+            <Route path="pm/calendar" element={<PmCalendarPage />} />
+            <Route path="pm/ledger" element={<PmLedgerPage />} />
+            <Route path="pm/tasks/:id/print" element={<PrintWoChecklistPage />} />
           </Route>
         </Route>
         <Route path="*" element={<Navigate to="/" replace />} />
