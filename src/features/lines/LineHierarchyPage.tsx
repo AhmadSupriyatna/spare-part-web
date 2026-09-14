@@ -92,7 +92,16 @@ export function LineHierarchyPage() {
           isEmpty={lines?.length === 0}
           emptyMessage="Belum ada line di cabang ini."
           addAction={
-            canManage && <LineFormDialog branchId={activeBranchId} trigger={<ColumnAddButton label="Tambah Line" />} />
+            canManage && (
+              <LineFormDialog
+                branchId={activeBranchId}
+                trigger={
+                  <Button variant="ghost" size="icon-xs" aria-label="Tambah Line" title="Tambah Line">
+                    <Plus />
+                  </Button>
+                }
+              />
+            )
           }
         >
           {lines?.map((line) => (
@@ -115,7 +124,14 @@ export function LineHierarchyPage() {
           addAction={
             canManage &&
             selectedLineId && (
-              <MachineFormDialog lineId={selectedLineId} trigger={<ColumnAddButton label="Tambah Mesin" />} />
+              <MachineFormDialog
+                lineId={selectedLineId}
+                trigger={
+                  <Button variant="ghost" size="icon-xs" aria-label="Tambah Mesin" title="Tambah Mesin">
+                    <Plus />
+                  </Button>
+                }
+              />
             )
           }
         >
@@ -141,7 +157,11 @@ export function LineHierarchyPage() {
             selectedMachineId && (
               <EquipmentFormDialog
                 machineId={selectedMachineId}
-                trigger={<ColumnAddButton label="Tambah Equipment" />}
+                trigger={
+                  <Button variant="ghost" size="icon-xs" aria-label="Tambah Equipment" title="Tambah Equipment">
+                    <Plus />
+                  </Button>
+                }
               />
             )
           }
@@ -194,14 +214,6 @@ function HierarchyColumn({ title, isLoading, isEmpty, emptyMessage, addAction, c
         )}
       </div>
     </div>
-  )
-}
-
-function ColumnAddButton({ label }: { label: string }) {
-  return (
-    <Button variant="ghost" size="icon-xs" aria-label={label} title={label}>
-      <Plus />
-    </Button>
   )
 }
 
