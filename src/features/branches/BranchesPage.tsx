@@ -1,4 +1,5 @@
 import { useQuery } from '@tanstack/react-query'
+import { Pencil } from 'lucide-react'
 import { BranchFormDialog } from '@/features/branches/BranchFormDialog'
 import { fetchBranches } from '@/features/branches/api'
 import { useCanManage } from '@/stores/use-has-role'
@@ -57,8 +58,8 @@ export function BranchesPage() {
                     <BranchFormDialog
                       branch={branch}
                       trigger={
-                        <Button variant="outline" size="sm">
-                          Ubah
+                        <Button variant="ghost" size="icon-sm" aria-label="Ubah cabang" title="Ubah cabang">
+                          <Pencil />
                         </Button>
                       }
                     />

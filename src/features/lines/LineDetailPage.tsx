@@ -1,5 +1,6 @@
 import { useQuery } from '@tanstack/react-query'
 import { Link, useParams } from 'react-router'
+import { Breadcrumb } from '@/components/Breadcrumb'
 import { AddRuntimeDialog } from '@/features/lines/AddRuntimeDialog'
 import { fetchLine } from '@/features/lines/api'
 import { fetchMachines } from '@/features/machines/api'
@@ -27,6 +28,9 @@ export function LineDetailPage() {
 
   return (
     <div className="flex flex-col gap-4">
+      <Breadcrumb
+        segments={[{ label: 'Line Produksi', to: '/lines' }, { label: line?.name ?? 'Line' }]}
+      />
       <div>
         <h1 className="text-2xl font-semibold">{line?.name ?? 'Line'}</h1>
         {line && (

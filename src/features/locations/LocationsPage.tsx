@@ -1,4 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { Eye, Pencil, Trash2 } from 'lucide-react'
 import { Link } from 'react-router'
 import { toast } from 'sonner'
 import { deleteLocation, fetchLocations } from '@/features/locations/api'
@@ -70,17 +71,13 @@ export function LocationsPage() {
               <TableHead>Bin</TableHead>
               <TableHead>Deskripsi</TableHead>
               <TableHead>Status</TableHead>
-              {canManage && <TableHead className="text-right">Aksi</TableHead>}
+              <TableHead className="text-right">Aksi</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {locations?.map((location) => (
               <TableRow key={location.id}>
-                <TableCell className="font-mono font-medium">
-                  <Link to={`/locations/${location.id}`} className="hover:underline">
-                    {location.code}
-                  </Link>
-                </TableCell>
+                <TableCell className="font-mono font-medium">{location.code}</TableCell>
                 <TableCell className="text-muted-foreground">{location.rack}</TableCell>
                 <TableCell className="text-muted-foreground">{location.bin}</TableCell>
                 <TableCell className="text-muted-foreground">{location.description ?? '-'}</TableCell>
@@ -91,38 +88,64 @@ export function LocationsPage() {
                     <Badge variant="secondary">Nonaktif</Badge>
                   )}
                 </TableCell>
-                {canManage && (
-                  <TableCell className="flex justify-end gap-2">
-                    <LocationFormDialog
-                      branchId={activeBranchId}
-                      location={location}
-                      trigger={
-                        <Button variant="outline" size="sm">
-                          Ubah
-                        </Button>
-                      }
-                    />
-                    <AlertDialog>
-                      <AlertDialogTrigger render={<Button variant="outline" size="sm" />}>
-                        Hapus
-                      </AlertDialogTrigger>
-                      <AlertDialogContent>
-                        <AlertDialogHeader>
-                          <AlertDialogTitle>Hapus lokasi ini?</AlertDialogTitle>
-                          <AlertDialogDescription>
-                            "{location.code}" akan dihapus permanen.
-                          </AlertDialogDescription>
-                        </AlertDialogHeader>
-                        <AlertDialogFooter>
-                          <AlertDialogCancel>Batal</AlertDialogCancel>
-                          <AlertDialogAction onClick={() => deleteMutation.mutate(location.id)}>
-                            Hapus
-                          </AlertDialogAction>
-                        </AlertDialogFooter>
-                      </AlertDialogContent>
-                    </AlertDialog>
-                  </TableCell>
-                )}
+                <TableCell className="flex justify-end gap-1">
+                  <Button
+                    variant="ghost"
+                    size="icon-sm"
+                    nativeButton={false}
+                    aria-label="Lihat detail"
+                    title="Lihat detail"
+                    render={<Link to={`/locations/${location.id}`} />}
+                  >
+                    <Eye />
+                  </Button>
+                  {canManage && (
+                    <>
+                      <LocationFormDialog
+                        branchId={activeBranchId}
+                        location={location}
+                        trigger={
+                          <Button
+                            variant="ghost"
+                            size="icon-sm"
+                            aria-label="Ubah lokasi"
+                            title="Ubah lokasi"
+                          >
+                            <Pencil />
+                          </Button>
+                        }
+                      />
+                      <AlertDialog>
+                        <AlertDialogTrigger
+                          render={
+                            <Button
+                              variant="ghost"
+                              size="icon-sm"
+                              aria-label="Hapus lokasi"
+                              title="Hapus lokasi"
+                            />
+                          }
+                        >
+                          <Trash2 />
+                        </AlertDialogTrigger>
+                        <AlertDialogContent>
+                          <AlertDialogHeader>
+                            <AlertDialogTitle>Hapus lokasi ini?</AlertDialogTitle>
+                            <AlertDialogDescription>
+                              "{location.code}" akan dihapus permanen.
+                            </AlertDialogDescription>
+                          </AlertDialogHeader>
+                          <AlertDialogFooter>
+                            <AlertDialogCancel>Batal</AlertDialogCancel>
+                            <AlertDialogAction onClick={() => deleteMutation.mutate(location.id)}>
+                              Hapus
+                            </AlertDialogAction>
+                          </AlertDialogFooter>
+                        </AlertDialogContent>
+                      </AlertDialog>
+                    </>
+                  )}
+                </TableCell>
               </TableRow>
             ))}
           </TableBody>

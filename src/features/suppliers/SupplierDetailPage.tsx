@@ -1,4 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { Pencil, Trash2 } from 'lucide-react'
 import { Link, useParams } from 'react-router'
 import { toast } from 'sonner'
 import { AddPartToSupplierDialog } from '@/features/part-suppliers/AddPartToSupplierDialog'
@@ -110,20 +111,34 @@ export function SupplierDetailPage() {
                     {ps.is_preferred ? <Badge>Utama</Badge> : <Badge variant="outline">Alternatif</Badge>}
                   </TableCell>
                   {canManage && (
-                    <TableCell className="flex justify-end gap-2">
+                    <TableCell className="flex justify-end gap-1">
                       <PartSupplierFormDialog
                         partId={ps.part_id}
                         branchId={supplier.branch_id}
                         partSupplier={ps}
                         trigger={
-                          <Button variant="outline" size="sm">
-                            Ubah
+                          <Button
+                            variant="ghost"
+                            size="icon-sm"
+                            aria-label="Ubah supplier"
+                            title="Ubah supplier"
+                          >
+                            <Pencil />
                           </Button>
                         }
                       />
                       <AlertDialog>
-                        <AlertDialogTrigger render={<Button variant="outline" size="sm" />}>
-                          Hapus
+                        <AlertDialogTrigger
+                          render={
+                            <Button
+                              variant="ghost"
+                              size="icon-sm"
+                              aria-label="Hapus part"
+                              title="Hapus part"
+                            />
+                          }
+                        >
+                          <Trash2 />
                         </AlertDialogTrigger>
                         <AlertDialogContent>
                           <AlertDialogHeader>

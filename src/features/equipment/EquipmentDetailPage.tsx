@@ -1,6 +1,8 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { Trash2 } from 'lucide-react'
 import { Link, useParams } from 'react-router'
 import { toast } from 'sonner'
+import { Breadcrumb } from '@/components/Breadcrumb'
 import { EquipmentPartFormDialog } from '@/features/equipment-parts/EquipmentPartFormDialog'
 import { fetchEquipmentParts, removeEquipmentPart } from '@/features/equipment-parts/api'
 import { fetchEquipment } from '@/features/equipment/api'
@@ -92,7 +94,19 @@ export function EquipmentDetailPage() {
   return (
     <div className="flex flex-col gap-8">
       <div>
-        <h1 className="text-2xl font-semibold">{equipment?.name ?? 'Equipment'}</h1>
+        <Breadcrumb
+          segments={[
+            { label: 'Line Produksi', to: '/lines' },
+            ...(equipment
+              ? [
+                  { label: equipment.line_name ?? 'Line', to: `/lines/${equipment.line_id}` },
+                  { label: equipment.machine_name ?? 'Mesin', to: `/machines/${equipment.machine_id}` },
+                ]
+              : []),
+            { label: equipment?.name ?? 'Equipment' },
+          ]}
+        />
+        <h1 className="mt-1 text-2xl font-semibold">{equipment?.name ?? 'Equipment'}</h1>
         <p className="font-mono text-sm text-muted-foreground">{equipment?.code}</p>
       </div>
 
@@ -216,8 +230,17 @@ export function EquipmentDetailPage() {
                   {canManage && (
                     <TableCell className="text-right">
                       <AlertDialog>
-                        <AlertDialogTrigger render={<Button variant="outline" size="sm" />}>
-                          Hapus
+                        <AlertDialogTrigger
+                          render={
+                            <Button
+                              variant="ghost"
+                              size="icon-sm"
+                              aria-label="Hapus part dari BOM"
+                              title="Hapus part dari BOM"
+                            />
+                          }
+                        >
+                          <Trash2 />
                         </AlertDialogTrigger>
                         <AlertDialogContent>
                           <AlertDialogHeader>

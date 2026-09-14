@@ -17,7 +17,9 @@ export interface EquipmentPart {
   id: number
   equipment_id: number
   equipment_name?: string
+  machine_id?: number
   machine_name?: string
+  line_id?: number
   line_name?: string
   part_id: number
   part_name?: string
@@ -30,7 +32,9 @@ export interface PartInstallation {
   id: number
   equipment_id: number
   equipment_name?: string
+  machine_id?: number
   machine_name?: string
+  line_id?: number
   line_name?: string
   part_id: number
   part_name: string

@@ -1,6 +1,8 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { Pencil, Trash2 } from 'lucide-react'
 import { Link, useParams } from 'react-router'
 import { toast } from 'sonner'
+import { Breadcrumb } from '@/components/Breadcrumb'
 import { fetchEquipmentForPart } from '@/features/equipment-parts/api'
 import { fetchInstallationsForPart } from '@/features/part-installations/api'
 import { fetchPart } from '@/features/parts/api'
@@ -26,11 +28,6 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 
 const currencyFormatter = new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR' })
-
-function equipmentPath(...segments: Array<string | undefined>): string {
-  const parts = segments.filter((segment): segment is string => Boolean(segment))
-  return parts.length > 0 ? parts.join(' → ') : '-'
-}
 
 export function PartDetailPage() {
   const { id } = useParams<{ id: string }>()
@@ -192,22 +189,36 @@ export function PartDetailPage() {
                       {ps.is_preferred ? <Badge>Utama</Badge> : <Badge variant="outline">Alternatif</Badge>}
                     </TableCell>
                     {canManage && (
-                      <TableCell className="flex justify-end gap-2">
+                      <TableCell className="flex justify-end gap-1">
                         {activeBranchId && (
                           <PartSupplierFormDialog
                             partId={partId}
                             branchId={activeBranchId}
                             partSupplier={ps}
                             trigger={
-                              <Button variant="outline" size="sm">
-                                Ubah
+                              <Button
+                                variant="ghost"
+                                size="icon-sm"
+                                aria-label="Ubah supplier"
+                                title="Ubah supplier"
+                              >
+                                <Pencil />
                               </Button>
                             }
                           />
                         )}
                         <AlertDialog>
-                          <AlertDialogTrigger render={<Button variant="outline" size="sm" />}>
-                            Hapus
+                          <AlertDialogTrigger
+                            render={
+                              <Button
+                                variant="ghost"
+                                size="icon-sm"
+                                aria-label="Hapus supplier"
+                                title="Hapus supplier"
+                              />
+                            }
+                          >
+                            <Trash2 />
                           </AlertDialogTrigger>
                           <AlertDialogContent>
                             <AlertDialogHeader>
@@ -254,12 +265,16 @@ export function PartDetailPage() {
                 {equipmentUsage?.map((ep) => (
                   <TableRow key={ep.id}>
                     <TableCell>
-                      <Link to={`/equipment/${ep.equipment_id}`} className="font-medium hover:underline">
-                        {ep.equipment_name ?? `Equipment #${ep.equipment_id}`}
-                      </Link>
-                      <p className="text-xs text-muted-foreground">
-                        {equipmentPath(ep.line_name, ep.machine_name)}
-                      </p>
+                      <Breadcrumb
+                        segments={[
+                          { label: ep.line_name ?? 'Line', to: ep.line_id ? `/lines/${ep.line_id}` : undefined },
+                          {
+                            label: ep.machine_name ?? 'Mesin',
+                            to: ep.machine_id ? `/machines/${ep.machine_id}` : undefined,
+                          },
+                          { label: ep.equipment_name ?? `Equipment #${ep.equipment_id}`, to: `/equipment/${ep.equipment_id}` },
+                        ]}
+                      />
                     </TableCell>
                     <TableCell className="text-right">{ep.quantity_required ?? '-'}</TableCell>
                     <TableCell className="text-muted-foreground">{ep.notes ?? '-'}</TableCell>
@@ -292,15 +307,22 @@ export function PartDetailPage() {
                 {installations?.map((installation) => (
                   <TableRow key={installation.id}>
                     <TableCell>
-                      <Link
-                        to={`/equipment/${installation.equipment_id}`}
-                        className="font-medium hover:underline"
-                      >
-                        {installation.equipment_name ?? `Equipment #${installation.equipment_id}`}
-                      </Link>
-                      <p className="text-xs text-muted-foreground">
-                        {equipmentPath(installation.line_name, installation.machine_name)}
-                      </p>
+                      <Breadcrumb
+                        segments={[
+                          {
+                            label: installation.line_name ?? 'Line',
+                            to: installation.line_id ? `/lines/${installation.line_id}` : undefined,
+                          },
+                          {
+                            label: installation.machine_name ?? 'Mesin',
+                            to: installation.machine_id ? `/machines/${installation.machine_id}` : undefined,
+                          },
+                          {
+                            label: installation.equipment_name ?? `Equipment #${installation.equipment_id}`,
+                            to: `/equipment/${installation.equipment_id}`,
+                          },
+                        ]}
+                      />
                     </TableCell>
                     <TableCell className="text-muted-foreground">
                       {new Date(installation.installed_at).toLocaleDateString('id-ID')}

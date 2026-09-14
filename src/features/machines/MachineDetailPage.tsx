@@ -1,5 +1,6 @@
 import { useQuery } from '@tanstack/react-query'
 import { Link, useParams } from 'react-router'
+import { Breadcrumb } from '@/components/Breadcrumb'
 import { EquipmentFormDialog } from '@/features/equipment/EquipmentFormDialog'
 import { fetchEquipmentList } from '@/features/equipment/api'
 import { fetchMachine } from '@/features/machines/api'
@@ -26,6 +27,13 @@ export function MachineDetailPage() {
 
   return (
     <div className="flex flex-col gap-4">
+      <Breadcrumb
+        segments={[
+          { label: 'Line Produksi', to: '/lines' },
+          ...(machine ? [{ label: machine.line_name ?? 'Line', to: `/lines/${machine.line_id}` }] : []),
+          { label: machine?.name ?? 'Mesin' },
+        ]}
+      />
       <div>
         <h1 className="text-2xl font-semibold">{machine?.name ?? 'Mesin'}</h1>
         {machine?.category && <p className="text-muted-foreground">{machine.category}</p>}

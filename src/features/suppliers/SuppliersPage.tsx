@@ -1,4 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { Eye, Pencil, Trash2 } from 'lucide-react'
 import { Link } from 'react-router'
 import { toast } from 'sonner'
 import { deleteSupplier, fetchSuppliers } from '@/features/suppliers/api'
@@ -70,17 +71,13 @@ export function SuppliersPage() {
               <TableHead>Telepon</TableHead>
               <TableHead>Email</TableHead>
               <TableHead>Status</TableHead>
-              {canManage && <TableHead className="text-right">Aksi</TableHead>}
+              <TableHead className="text-right">Aksi</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {suppliers?.map((supplier) => (
               <TableRow key={supplier.id}>
-                <TableCell className="font-medium">
-                  <Link to={`/suppliers/${supplier.id}`} className="hover:underline">
-                    {supplier.name}
-                  </Link>
-                </TableCell>
+                <TableCell className="font-medium">{supplier.name}</TableCell>
                 <TableCell className="text-muted-foreground">{supplier.contact_person ?? '-'}</TableCell>
                 <TableCell className="text-muted-foreground">{supplier.phone ?? '-'}</TableCell>
                 <TableCell className="text-muted-foreground">{supplier.email ?? '-'}</TableCell>
@@ -91,38 +88,64 @@ export function SuppliersPage() {
                     <Badge variant="secondary">Nonaktif</Badge>
                   )}
                 </TableCell>
-                {canManage && (
-                  <TableCell className="flex justify-end gap-2">
-                    <SupplierFormDialog
-                      branchId={activeBranchId}
-                      supplier={supplier}
-                      trigger={
-                        <Button variant="outline" size="sm">
-                          Ubah
-                        </Button>
-                      }
-                    />
-                    <AlertDialog>
-                      <AlertDialogTrigger render={<Button variant="outline" size="sm" />}>
-                        Hapus
-                      </AlertDialogTrigger>
-                      <AlertDialogContent>
-                        <AlertDialogHeader>
-                          <AlertDialogTitle>Hapus supplier ini?</AlertDialogTitle>
-                          <AlertDialogDescription>
-                            "{supplier.name}" akan dihapus permanen.
-                          </AlertDialogDescription>
-                        </AlertDialogHeader>
-                        <AlertDialogFooter>
-                          <AlertDialogCancel>Batal</AlertDialogCancel>
-                          <AlertDialogAction onClick={() => deleteMutation.mutate(supplier.id)}>
-                            Hapus
-                          </AlertDialogAction>
-                        </AlertDialogFooter>
-                      </AlertDialogContent>
-                    </AlertDialog>
-                  </TableCell>
-                )}
+                <TableCell className="flex justify-end gap-1">
+                  <Button
+                    variant="ghost"
+                    size="icon-sm"
+                    nativeButton={false}
+                    aria-label="Lihat detail"
+                    title="Lihat detail"
+                    render={<Link to={`/suppliers/${supplier.id}`} />}
+                  >
+                    <Eye />
+                  </Button>
+                  {canManage && (
+                    <>
+                      <SupplierFormDialog
+                        branchId={activeBranchId}
+                        supplier={supplier}
+                        trigger={
+                          <Button
+                            variant="ghost"
+                            size="icon-sm"
+                            aria-label="Ubah supplier"
+                            title="Ubah supplier"
+                          >
+                            <Pencil />
+                          </Button>
+                        }
+                      />
+                      <AlertDialog>
+                        <AlertDialogTrigger
+                          render={
+                            <Button
+                              variant="ghost"
+                              size="icon-sm"
+                              aria-label="Hapus supplier"
+                              title="Hapus supplier"
+                            />
+                          }
+                        >
+                          <Trash2 />
+                        </AlertDialogTrigger>
+                        <AlertDialogContent>
+                          <AlertDialogHeader>
+                            <AlertDialogTitle>Hapus supplier ini?</AlertDialogTitle>
+                            <AlertDialogDescription>
+                              "{supplier.name}" akan dihapus permanen.
+                            </AlertDialogDescription>
+                          </AlertDialogHeader>
+                          <AlertDialogFooter>
+                            <AlertDialogCancel>Batal</AlertDialogCancel>
+                            <AlertDialogAction onClick={() => deleteMutation.mutate(supplier.id)}>
+                              Hapus
+                            </AlertDialogAction>
+                          </AlertDialogFooter>
+                        </AlertDialogContent>
+                      </AlertDialog>
+                    </>
+                  )}
+                </TableCell>
               </TableRow>
             ))}
           </TableBody>

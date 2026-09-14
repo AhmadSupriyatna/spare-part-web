@@ -1,4 +1,5 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
+import { Eye, Pencil, Trash2 } from 'lucide-react'
 import { useState } from 'react'
 import { Link } from 'react-router'
 import { toast } from 'sonner'
@@ -95,36 +96,48 @@ export function PartsPage() {
                   )}
                 </TableCell>
                 <TableCell className="font-mono text-sm">{part.item_master_no}</TableCell>
-                <TableCell>
-                  <Link to={`/parts/${part.id}`} className="font-medium hover:underline">
-                    {part.name}
-                  </Link>
-                </TableCell>
+                <TableCell className="font-medium">{part.name}</TableCell>
                 <TableCell className="text-muted-foreground">{part.category ?? '-'}</TableCell>
                 <TableCell className="text-muted-foreground">{part.unit}</TableCell>
                 <TableCell className="text-right">{currencyFormatter.format(Number(part.price))}</TableCell>
-                <TableCell className="flex justify-end gap-2">
+                <TableCell className="flex justify-end gap-1">
                   <Button
-                    variant="outline"
-                    size="sm"
+                    variant="ghost"
+                    size="icon-sm"
                     nativeButton={false}
+                    aria-label="Lihat detail"
+                    title="Lihat detail"
                     render={<Link to={`/parts/${part.id}`} />}
                   >
-                    Lihat
+                    <Eye />
                   </Button>
                   {canManage && (
                     <>
                       <PartFormDialog
                         part={part}
                         trigger={
-                          <Button variant="outline" size="sm">
-                            Ubah
+                          <Button
+                            variant="ghost"
+                            size="icon-sm"
+                            aria-label="Ubah part"
+                            title="Ubah part"
+                          >
+                            <Pencil />
                           </Button>
                         }
                       />
                       <AlertDialog>
-                        <AlertDialogTrigger render={<Button variant="outline" size="sm" />}>
-                          Hapus
+                        <AlertDialogTrigger
+                          render={
+                            <Button
+                              variant="ghost"
+                              size="icon-sm"
+                              aria-label="Hapus part"
+                              title="Hapus part"
+                            />
+                          }
+                        >
+                          <Trash2 />
                         </AlertDialogTrigger>
                         <AlertDialogContent>
                           <AlertDialogHeader>

@@ -10,6 +10,7 @@ export interface ProductionLine {
 export interface Machine {
   id: number
   line_id: number
+  line_name?: string
   code: string
   name: string
   category: string | null
@@ -19,6 +20,9 @@ export interface Machine {
 export interface Equipment {
   id: number
   machine_id: number
+  machine_name?: string
+  line_id?: number
+  line_name?: string
   code: string
   name: string
   category: string | null
