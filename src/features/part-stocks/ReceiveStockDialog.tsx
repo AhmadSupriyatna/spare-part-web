@@ -27,6 +27,7 @@ interface ReceiveStockDialogProps {
   branchId: number
   currentQuantity: number
   currentUnitCost: string
+  trigger?: React.ReactNode
 }
 
 export function ReceiveStockDialog({
@@ -34,6 +35,7 @@ export function ReceiveStockDialog({
   branchId,
   currentQuantity,
   currentUnitCost,
+  trigger,
 }: ReceiveStockDialogProps) {
   const [open, setOpen] = useState(false)
   const queryClient = useQueryClient()
@@ -85,7 +87,7 @@ export function ReceiveStockDialog({
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
-      <DialogTrigger render={<Button />}>Terima Barang</DialogTrigger>
+      <DialogTrigger render={(trigger ?? <Button>Terima Barang</Button>) as React.ReactElement} />
       <DialogContent>
         <DialogHeader>
           <DialogTitle>Terima Barang</DialogTitle>

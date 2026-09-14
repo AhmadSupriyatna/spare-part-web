@@ -1,11 +1,13 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { MapPin, Pencil, Trash2 } from 'lucide-react'
+import { MapPin, PackagePlus, Pencil, SlidersHorizontal, Trash2 } from 'lucide-react'
 import { Link, useParams } from 'react-router'
 import { toast } from 'sonner'
 import { Breadcrumb } from '@/components/Breadcrumb'
 import { fetchEquipmentForPart } from '@/features/equipment-parts/api'
 import { fetchInstallationsForPart } from '@/features/part-installations/api'
 import { fetchPart } from '@/features/parts/api'
+import { AdjustStockDialog } from '@/features/part-stocks/AdjustStockDialog'
+import { ReceiveStockDialog } from '@/features/part-stocks/ReceiveStockDialog'
 import { SetPartLocationDialog } from '@/features/part-stocks/SetPartLocationDialog'
 import { PartSupplierFormDialog } from '@/features/part-suppliers/PartSupplierFormDialog'
 import { fetchPartSuppliers, removePartSupplier } from '@/features/part-suppliers/api'
@@ -144,7 +146,37 @@ export function PartDetailPage() {
                     )}
                   </TableCell>
                   {canManage && (
-                    <TableCell className="text-right">
+                    <TableCell className="flex justify-end gap-1">
+                      <ReceiveStockDialog
+                        partStockId={stock.id}
+                        branchId={stock.branch_id}
+                        currentQuantity={stock.quantity_on_hand}
+                        currentUnitCost={stock.unit_cost}
+                        trigger={
+                          <Button
+                            variant="ghost"
+                            size="icon-sm"
+                            aria-label="Terima barang"
+                            title="Terima barang"
+                          >
+                            <PackagePlus />
+                          </Button>
+                        }
+                      />
+                      <AdjustStockDialog
+                        partStockId={stock.id}
+                        branchId={stock.branch_id}
+                        trigger={
+                          <Button
+                            variant="ghost"
+                            size="icon-sm"
+                            aria-label="Sesuaikan stok"
+                            title="Sesuaikan stok"
+                          >
+                            <SlidersHorizontal />
+                          </Button>
+                        }
+                      />
                       <SetPartLocationDialog
                         partId={partId}
                         partStockId={stock.id}

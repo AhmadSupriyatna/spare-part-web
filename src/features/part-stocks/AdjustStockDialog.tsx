@@ -21,9 +21,10 @@ import { Textarea } from '@/components/ui/textarea'
 interface AdjustStockDialogProps {
   partStockId: number
   branchId: number
+  trigger?: React.ReactNode
 }
 
-export function AdjustStockDialog({ partStockId, branchId }: AdjustStockDialogProps) {
+export function AdjustStockDialog({ partStockId, branchId, trigger }: AdjustStockDialogProps) {
   const [open, setOpen] = useState(false)
   const queryClient = useQueryClient()
 
@@ -60,7 +61,9 @@ export function AdjustStockDialog({ partStockId, branchId }: AdjustStockDialogPr
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
-      <DialogTrigger render={<Button variant="outline" />}>Sesuaikan Stok</DialogTrigger>
+      <DialogTrigger
+        render={(trigger ?? <Button variant="outline">Sesuaikan Stok</Button>) as React.ReactElement}
+      />
       <DialogContent>
         <DialogHeader>
           <DialogTitle>Penyesuaian Stok</DialogTitle>
