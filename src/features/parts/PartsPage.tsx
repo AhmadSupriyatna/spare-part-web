@@ -77,7 +77,7 @@ export function PartsPage() {
               <TableHead>Kategori</TableHead>
               <TableHead>Satuan</TableHead>
               <TableHead className="text-right">Harga</TableHead>
-              {canManage && <TableHead className="text-right">Aksi</TableHead>}
+              <TableHead className="text-right">Aksi</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -103,37 +103,42 @@ export function PartsPage() {
                 <TableCell className="text-muted-foreground">{part.category ?? '-'}</TableCell>
                 <TableCell className="text-muted-foreground">{part.unit}</TableCell>
                 <TableCell className="text-right">{currencyFormatter.format(Number(part.price))}</TableCell>
-                {canManage && (
-                  <TableCell className="flex justify-end gap-2">
-                    <PartFormDialog
-                      part={part}
-                      trigger={
-                        <Button variant="outline" size="sm">
-                          Ubah
-                        </Button>
-                      }
-                    />
-                    <AlertDialog>
-                      <AlertDialogTrigger render={<Button variant="outline" size="sm" />}>
-                        Hapus
-                      </AlertDialogTrigger>
-                      <AlertDialogContent>
-                        <AlertDialogHeader>
-                          <AlertDialogTitle>Hapus part ini?</AlertDialogTitle>
-                          <AlertDialogDescription>
-                            "{part.name}" akan dihapus permanen beserta data stoknya di semua cabang.
-                          </AlertDialogDescription>
-                        </AlertDialogHeader>
-                        <AlertDialogFooter>
-                          <AlertDialogCancel>Batal</AlertDialogCancel>
-                          <AlertDialogAction onClick={() => deleteMutation.mutate(part.id)}>
-                            Hapus
-                          </AlertDialogAction>
-                        </AlertDialogFooter>
-                      </AlertDialogContent>
-                    </AlertDialog>
-                  </TableCell>
-                )}
+                <TableCell className="flex justify-end gap-2">
+                  <Button variant="outline" size="sm" render={<Link to={`/parts/${part.id}`} />}>
+                    Lihat
+                  </Button>
+                  {canManage && (
+                    <>
+                      <PartFormDialog
+                        part={part}
+                        trigger={
+                          <Button variant="outline" size="sm">
+                            Ubah
+                          </Button>
+                        }
+                      />
+                      <AlertDialog>
+                        <AlertDialogTrigger render={<Button variant="outline" size="sm" />}>
+                          Hapus
+                        </AlertDialogTrigger>
+                        <AlertDialogContent>
+                          <AlertDialogHeader>
+                            <AlertDialogTitle>Hapus part ini?</AlertDialogTitle>
+                            <AlertDialogDescription>
+                              "{part.name}" akan dihapus permanen beserta data stoknya di semua cabang.
+                            </AlertDialogDescription>
+                          </AlertDialogHeader>
+                          <AlertDialogFooter>
+                            <AlertDialogCancel>Batal</AlertDialogCancel>
+                            <AlertDialogAction onClick={() => deleteMutation.mutate(part.id)}>
+                              Hapus
+                            </AlertDialogAction>
+                          </AlertDialogFooter>
+                        </AlertDialogContent>
+                      </AlertDialog>
+                    </>
+                  )}
+                </TableCell>
               </TableRow>
             ))}
           </TableBody>

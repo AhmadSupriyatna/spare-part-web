@@ -26,14 +26,12 @@ type AssignPartToLocationFormValues = z.infer<typeof assignPartToLocationSchema>
 interface AssignPartToLocationDialogProps {
   branchId: number
   locationId: number
-  excludePartStockIds: number[]
   trigger: React.ReactNode
 }
 
 export function AssignPartToLocationDialog({
   branchId,
   locationId,
-  excludePartStockIds,
   trigger,
 }: AssignPartToLocationDialogProps) {
   const [open, setOpen] = useState(false)
@@ -45,7 +43,9 @@ export function AssignPartToLocationDialog({
     enabled: open,
   })
 
-  const options = partStocks?.filter((stock) => !excludePartStockIds.includes(stock.id))
+  // Safety rule: a part already placed in a bin can't be picked here — it
+  // must be released from its current bin first. Only unassigned parts show up.
+  const options = partStocks?.filter((stock) => stock.location_id === null)
 
   const {
     control,
@@ -92,7 +92,6 @@ export function AssignPartToLocationDialog({
                     {options?.map((stock) => (
                       <SelectItem key={stock.id} value={String(stock.id)}>
                         {stock.part_name ?? `Part #${stock.part_id}`}
-                        {stock.location_code ? ` (saat ini di ${stock.location_code})` : ''}
                       </SelectItem>
                     ))}
                   </SelectContent>
@@ -103,7 +102,8 @@ export function AssignPartToLocationDialog({
               <p className="text-sm text-destructive">{errors.part_stock_id.message}</p>
             )}
             <p className="text-xs text-muted-foreground">
-              Kalau part sudah ada di lokasi lain, memindahkannya ke sini akan menggantikan lokasi lamanya.
+              Hanya part yang belum punya lokasi yang bisa dipilih. Part yang sudah ada di lokasi lain
+              harus dilepas dulu dari sana sebelum bisa ditempatkan di sini.
             </p>
           </div>
           <DialogFooter>

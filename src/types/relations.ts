@@ -17,6 +17,8 @@ export interface EquipmentPart {
   id: number
   equipment_id: number
   equipment_name?: string
+  machine_name?: string
+  line_name?: string
   part_id: number
   part_name?: string
   item_master_no?: string
@@ -27,6 +29,9 @@ export interface EquipmentPart {
 export interface PartInstallation {
   id: number
   equipment_id: number
+  equipment_name?: string
+  machine_name?: string
+  line_name?: string
   part_id: number
   part_name: string
   item_master_no: string

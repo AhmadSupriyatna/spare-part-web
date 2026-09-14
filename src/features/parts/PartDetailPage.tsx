@@ -2,6 +2,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { Link, useParams } from 'react-router'
 import { toast } from 'sonner'
 import { fetchEquipmentForPart } from '@/features/equipment-parts/api'
+import { fetchInstallationsForPart } from '@/features/part-installations/api'
 import { fetchPart } from '@/features/parts/api'
 import { PartSupplierFormDialog } from '@/features/part-suppliers/PartSupplierFormDialog'
 import { fetchPartSuppliers, removePartSupplier } from '@/features/part-suppliers/api'
@@ -22,6 +23,14 @@ import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
+
+const currencyFormatter = new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR' })
+
+function equipmentPath(...segments: Array<string | undefined>): string {
+  const parts = segments.filter((segment): segment is string => Boolean(segment))
+  return parts.length > 0 ? parts.join(' → ') : '-'
+}
 
 export function PartDetailPage() {
   const { id } = useParams<{ id: string }>()
@@ -45,6 +54,11 @@ export function PartDetailPage() {
     queryFn: () => fetchEquipmentForPart(partId),
   })
 
+  const { data: installations, isLoading: installationsLoading } = useQuery({
+    queryKey: ['installations-for-part', partId],
+    queryFn: () => fetchInstallationsForPart(partId),
+  })
+
   const removeSupplierMutation = useMutation({
     mutationFn: removePartSupplier,
     onSuccess: () => {
@@ -58,7 +72,7 @@ export function PartDetailPage() {
   }
 
   return (
-    <div className="flex flex-col gap-8">
+    <div className="flex flex-col gap-6">
       <div className="flex gap-4">
         {part.image_url ? (
           <img
@@ -72,171 +86,259 @@ export function PartDetailPage() {
           </div>
         )}
         <div>
-          <h1 className="text-2xl font-semibold">{part.name}</h1>
+          <div className="flex items-center gap-2">
+            <h1 className="text-2xl font-semibold">{part.name}</h1>
+            {!part.is_active && <Badge variant="secondary">Nonaktif</Badge>}
+          </div>
           <p className="font-mono text-sm text-muted-foreground">{part.item_master_no}</p>
-          <p className="mt-1 font-medium">
-            {new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR' }).format(
-              Number(part.price),
-            )}
-          </p>
+          <p className="mt-1 font-medium">{currencyFormatter.format(Number(part.price))}</p>
           {part.description && <p className="mt-2 text-muted-foreground">{part.description}</p>}
         </div>
       </div>
 
-      <div>
-        <h2 className="mb-3 text-lg font-medium">Stok per Cabang</h2>
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead>Cabang</TableHead>
-              <TableHead className="text-right">Jumlah</TableHead>
-              <TableHead>Status</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {part.stocks?.map((stock) => (
-              <TableRow key={stock.id}>
-                <TableCell>
-                  <Link to={`/stock/${stock.id}`} className="font-medium hover:underline">
-                    {stock.branch_name ?? `Cabang #${stock.branch_id}`}
-                  </Link>
-                </TableCell>
-                <TableCell className="text-right font-medium">{stock.quantity_on_hand}</TableCell>
-                <TableCell>
-                  {stock.is_critical ? (
-                    <Badge variant="destructive">Kritis</Badge>
-                  ) : stock.is_below_reorder_point ? (
-                    <Badge variant="secondary">Rendah</Badge>
-                  ) : (
-                    <Badge variant="outline">Normal</Badge>
-                  )}
-                </TableCell>
-              </TableRow>
-            ))}
-          </TableBody>
-        </Table>
-      </div>
+      <Tabs defaultValue="stock">
+        <TabsList>
+          <TabsTrigger value="stock">Stok &amp; Lokasi</TabsTrigger>
+          <TabsTrigger value="suppliers">Supplier</TabsTrigger>
+          <TabsTrigger value="usage">Digunakan di Equipment</TabsTrigger>
+          <TabsTrigger value="lifetime">Riwayat Pemasangan</TabsTrigger>
+        </TabsList>
 
-      <div className="flex flex-col gap-3">
-        <div className="flex items-center justify-between">
-          <h2 className="text-lg font-medium">Supplier yang Disetujui</h2>
-          {canManage && activeBranchId && (
-            <PartSupplierFormDialog
-              partId={partId}
-              branchId={activeBranchId}
-              trigger={<Button size="sm">Tambah Supplier</Button>}
-            />
-          )}
-        </div>
-        {suppliersLoading ? (
-          <Skeleton className="h-24 w-full" />
-        ) : partSuppliers?.length === 0 ? (
-          <p className="text-sm text-muted-foreground">Belum ada supplier yang disetujui untuk part ini.</p>
-        ) : (
+        <TabsContent value="stock" className="pt-4">
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead>Supplier</TableHead>
                 <TableHead>Cabang</TableHead>
-                <TableHead className="text-right">Harga</TableHead>
-                <TableHead className="text-right">Lead Time</TableHead>
+                <TableHead>Lokasi</TableHead>
+                <TableHead className="text-right">Jumlah</TableHead>
                 <TableHead>Status</TableHead>
-                {canManage && <TableHead className="text-right">Aksi</TableHead>}
               </TableRow>
             </TableHeader>
             <TableBody>
-              {partSuppliers?.map((ps) => (
-                <TableRow key={ps.id}>
-                  <TableCell className="font-medium">{ps.supplier_name}</TableCell>
-                  <TableCell className="text-muted-foreground">{ps.branch_name}</TableCell>
-                  <TableCell className="text-right">
-                    {ps.price
-                      ? new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR' }).format(
-                          Number(ps.price),
-                        )
-                      : '-'}
-                  </TableCell>
-                  <TableCell className="text-right text-muted-foreground">
-                    {ps.lead_time_days != null ? `${ps.lead_time_days} hari` : '-'}
-                  </TableCell>
+              {part.stocks?.map((stock) => (
+                <TableRow key={stock.id}>
                   <TableCell>
-                    {ps.is_preferred ? <Badge>Utama</Badge> : <Badge variant="outline">Alternatif</Badge>}
-                  </TableCell>
-                  {canManage && (
-                    <TableCell className="flex justify-end gap-2">
-                      {activeBranchId && (
-                        <PartSupplierFormDialog
-                          partId={partId}
-                          branchId={activeBranchId}
-                          partSupplier={ps}
-                          trigger={
-                            <Button variant="outline" size="sm">
-                              Ubah
-                            </Button>
-                          }
-                        />
-                      )}
-                      <AlertDialog>
-                        <AlertDialogTrigger render={<Button variant="outline" size="sm" />}>
-                          Hapus
-                        </AlertDialogTrigger>
-                        <AlertDialogContent>
-                          <AlertDialogHeader>
-                            <AlertDialogTitle>Hapus supplier ini dari part?</AlertDialogTitle>
-                            <AlertDialogDescription>
-                              "{ps.supplier_name}" tidak akan lagi terdaftar sebagai supplier untuk part ini.
-                            </AlertDialogDescription>
-                          </AlertDialogHeader>
-                          <AlertDialogFooter>
-                            <AlertDialogCancel>Batal</AlertDialogCancel>
-                            <AlertDialogAction onClick={() => removeSupplierMutation.mutate(ps.id)}>
-                              Hapus
-                            </AlertDialogAction>
-                          </AlertDialogFooter>
-                        </AlertDialogContent>
-                      </AlertDialog>
-                    </TableCell>
-                  )}
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        )}
-      </div>
-
-      <div className="flex flex-col gap-3">
-        <h2 className="text-lg font-medium">Digunakan di Equipment (BOM)</h2>
-        {equipmentUsageLoading ? (
-          <Skeleton className="h-24 w-full" />
-        ) : equipmentUsage?.length === 0 ? (
-          <p className="text-sm text-muted-foreground">
-            Part ini belum terdaftar sebagai komponen di equipment manapun.
-          </p>
-        ) : (
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Equipment</TableHead>
-                <TableHead className="text-right">Jumlah Dibutuhkan</TableHead>
-                <TableHead>Catatan</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {equipmentUsage?.map((ep) => (
-                <TableRow key={ep.id}>
-                  <TableCell>
-                    <Link to={`/equipment/${ep.equipment_id}`} className="font-medium hover:underline">
-                      {ep.equipment_name ?? `Equipment #${ep.equipment_id}`}
+                    <Link to={`/stock/${stock.id}`} className="font-medium hover:underline">
+                      {stock.branch_name ?? `Cabang #${stock.branch_id}`}
                     </Link>
                   </TableCell>
-                  <TableCell className="text-right">{ep.quantity_required ?? '-'}</TableCell>
-                  <TableCell className="text-muted-foreground">{ep.notes ?? '-'}</TableCell>
+                  <TableCell className="text-muted-foreground">
+                    {stock.location_id ? (
+                      <Link to={`/locations/${stock.location_id}`} className="font-mono hover:underline">
+                        {stock.location_code}
+                      </Link>
+                    ) : (
+                      'Belum ditempatkan'
+                    )}
+                  </TableCell>
+                  <TableCell className="text-right font-medium">{stock.quantity_on_hand}</TableCell>
+                  <TableCell>
+                    {stock.is_critical ? (
+                      <Badge variant="destructive">Kritis</Badge>
+                    ) : stock.is_below_reorder_point ? (
+                      <Badge variant="secondary">Rendah</Badge>
+                    ) : (
+                      <Badge variant="outline">Normal</Badge>
+                    )}
+                  </TableCell>
                 </TableRow>
               ))}
             </TableBody>
           </Table>
-        )}
-      </div>
+        </TabsContent>
+
+        <TabsContent value="suppliers" className="pt-4">
+          <div className="mb-3 flex justify-end">
+            {canManage && activeBranchId && (
+              <PartSupplierFormDialog
+                partId={partId}
+                branchId={activeBranchId}
+                trigger={<Button size="sm">Tambah Supplier</Button>}
+              />
+            )}
+          </div>
+          {suppliersLoading ? (
+            <Skeleton className="h-24 w-full" />
+          ) : partSuppliers?.length === 0 ? (
+            <p className="text-sm text-muted-foreground">Belum ada supplier yang disetujui untuk part ini.</p>
+          ) : (
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Supplier</TableHead>
+                  <TableHead>Cabang</TableHead>
+                  <TableHead className="text-right">Harga</TableHead>
+                  <TableHead className="text-right">Lead Time</TableHead>
+                  <TableHead>Status</TableHead>
+                  {canManage && <TableHead className="text-right">Aksi</TableHead>}
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {partSuppliers?.map((ps) => (
+                  <TableRow key={ps.id}>
+                    <TableCell className="font-medium">
+                      <Link to={`/suppliers/${ps.supplier_id}`} className="hover:underline">
+                        {ps.supplier_name}
+                      </Link>
+                    </TableCell>
+                    <TableCell className="text-muted-foreground">{ps.branch_name}</TableCell>
+                    <TableCell className="text-right">
+                      {ps.price ? currencyFormatter.format(Number(ps.price)) : '-'}
+                    </TableCell>
+                    <TableCell className="text-right text-muted-foreground">
+                      {ps.lead_time_days != null ? `${ps.lead_time_days} hari` : '-'}
+                    </TableCell>
+                    <TableCell>
+                      {ps.is_preferred ? <Badge>Utama</Badge> : <Badge variant="outline">Alternatif</Badge>}
+                    </TableCell>
+                    {canManage && (
+                      <TableCell className="flex justify-end gap-2">
+                        {activeBranchId && (
+                          <PartSupplierFormDialog
+                            partId={partId}
+                            branchId={activeBranchId}
+                            partSupplier={ps}
+                            trigger={
+                              <Button variant="outline" size="sm">
+                                Ubah
+                              </Button>
+                            }
+                          />
+                        )}
+                        <AlertDialog>
+                          <AlertDialogTrigger render={<Button variant="outline" size="sm" />}>
+                            Hapus
+                          </AlertDialogTrigger>
+                          <AlertDialogContent>
+                            <AlertDialogHeader>
+                              <AlertDialogTitle>Hapus supplier ini dari part?</AlertDialogTitle>
+                              <AlertDialogDescription>
+                                "{ps.supplier_name}" tidak akan lagi terdaftar sebagai supplier untuk part
+                                ini.
+                              </AlertDialogDescription>
+                            </AlertDialogHeader>
+                            <AlertDialogFooter>
+                              <AlertDialogCancel>Batal</AlertDialogCancel>
+                              <AlertDialogAction onClick={() => removeSupplierMutation.mutate(ps.id)}>
+                                Hapus
+                              </AlertDialogAction>
+                            </AlertDialogFooter>
+                          </AlertDialogContent>
+                        </AlertDialog>
+                      </TableCell>
+                    )}
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          )}
+        </TabsContent>
+
+        <TabsContent value="usage" className="pt-4">
+          {equipmentUsageLoading ? (
+            <Skeleton className="h-24 w-full" />
+          ) : equipmentUsage?.length === 0 ? (
+            <p className="text-sm text-muted-foreground">
+              Part ini belum terdaftar sebagai komponen di equipment manapun.
+            </p>
+          ) : (
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Line &rarr; Machine &rarr; Equipment</TableHead>
+                  <TableHead className="text-right">Jumlah Dibutuhkan</TableHead>
+                  <TableHead>Catatan</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {equipmentUsage?.map((ep) => (
+                  <TableRow key={ep.id}>
+                    <TableCell>
+                      <Link to={`/equipment/${ep.equipment_id}`} className="font-medium hover:underline">
+                        {ep.equipment_name ?? `Equipment #${ep.equipment_id}`}
+                      </Link>
+                      <p className="text-xs text-muted-foreground">
+                        {equipmentPath(ep.line_name, ep.machine_name)}
+                      </p>
+                    </TableCell>
+                    <TableCell className="text-right">{ep.quantity_required ?? '-'}</TableCell>
+                    <TableCell className="text-muted-foreground">{ep.notes ?? '-'}</TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          )}
+        </TabsContent>
+
+        <TabsContent value="lifetime" className="pt-4">
+          {installationsLoading ? (
+            <Skeleton className="h-24 w-full" />
+          ) : installations?.length === 0 ? (
+            <p className="text-sm text-muted-foreground">
+              Part ini belum pernah tercatat terpasang di equipment manapun.
+            </p>
+          ) : (
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Line &rarr; Machine &rarr; Equipment</TableHead>
+                  <TableHead>Tanggal Pasang</TableHead>
+                  <TableHead className="text-right">Usia</TableHead>
+                  <TableHead className="text-right">Pemakaian</TableHead>
+                  <TableHead>Status</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {installations?.map((installation) => (
+                  <TableRow key={installation.id}>
+                    <TableCell>
+                      <Link
+                        to={`/equipment/${installation.equipment_id}`}
+                        className="font-medium hover:underline"
+                      >
+                        {installation.equipment_name ?? `Equipment #${installation.equipment_id}`}
+                      </Link>
+                      <p className="text-xs text-muted-foreground">
+                        {equipmentPath(installation.line_name, installation.machine_name)}
+                      </p>
+                    </TableCell>
+                    <TableCell className="text-muted-foreground">
+                      {new Date(installation.installed_at).toLocaleDateString('id-ID')}
+                    </TableCell>
+                    <TableCell className="text-right text-muted-foreground">
+                      {installation.age_in_days} hari
+                    </TableCell>
+                    <TableCell className="text-right">
+                      {installation.percent_used != null ? (
+                        <Badge
+                          variant={
+                            installation.percent_used >= 100
+                              ? 'destructive'
+                              : installation.percent_used >= 80
+                                ? 'secondary'
+                                : 'outline'
+                          }
+                        >
+                          {Math.round(installation.percent_used)}%
+                        </Badge>
+                      ) : (
+                        '-'
+                      )}
+                    </TableCell>
+                    <TableCell>
+                      {installation.is_active ? (
+                        <Badge variant="outline">Terpasang</Badge>
+                      ) : (
+                        <Badge variant="secondary">Dilepas</Badge>
+                      )}
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          )}
+        </TabsContent>
+      </Tabs>
     </div>
   )
 }

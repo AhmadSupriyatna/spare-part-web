@@ -14,6 +14,11 @@ export async function fetchPartInstallations(equipmentId: number): Promise<PartI
   return data.data
 }
 
+export async function fetchInstallationsForPart(partId: number): Promise<PartInstallation[]> {
+  const { data } = await apiClient.get<{ data: PartInstallation[] }>(`/parts/${partId}/part-installations`)
+  return data.data
+}
+
 export async function installPart(
   equipmentId: number,
   payload: PartInstallationPayload,
