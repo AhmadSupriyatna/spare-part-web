@@ -1,4 +1,5 @@
 import { zodResolver } from '@hookform/resolvers/zod'
+import { isAxiosError } from 'axios'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useState } from 'react'
 import { Controller, useForm } from 'react-hook-form'
@@ -20,14 +21,32 @@ import { Label } from '@/components/ui/label'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Textarea } from '@/components/ui/textarea'
 
-const workOrderSchema = z.object({
-  title: z.string().min(1, 'Judul wajib diisi').max(255),
-  description: z.string().optional(),
-  schedule_type: z.enum(['calendar', 'runtime', 'unscheduled']),
-  interval_days: z.string().optional(),
-  interval_hours: z.string().optional(),
-  part_id: z.string().optional(),
-})
+const workOrderSchema = z
+  .object({
+    title: z.string().min(1, 'Judul wajib diisi').max(255),
+    description: z.string().optional(),
+    schedule_type: z.enum(['calendar', 'runtime', 'unscheduled']),
+    interval_days: z.string().optional(),
+    interval_hours: z.string().optional(),
+    part_id: z.string().optional(),
+  })
+  .refine((values) => values.schedule_type !== 'calendar' || !!values.interval_days, {
+    message: 'Interval hari wajib diisi untuk jadwal berdasarkan kalender',
+    path: ['interval_days'],
+  })
+  .refine((values) => values.schedule_type !== 'runtime' || !!values.interval_hours, {
+    message: 'Interval jam wajib diisi untuk jadwal berdasarkan jam operasi',
+    path: ['interval_hours'],
+  })
+
+function extractErrorMessage(error: unknown, fallback: string): string {
+  if (isAxiosError(error)) {
+    const data = error.response?.data as { message?: string; errors?: Record<string, string[]> } | undefined
+    const firstFieldError = data?.errors ? Object.values(data.errors)[0]?.[0] : undefined
+    return firstFieldError ?? data?.message ?? fallback
+  }
+  return fallback
+}
 
 type WorkOrderFormValues = z.infer<typeof workOrderSchema>
 
@@ -76,7 +95,7 @@ export function WorkOrderFormDialog({ equipmentId, trigger }: WorkOrderFormDialo
       toast.success('Work order berhasil ditambahkan.')
       setOpen(false)
     },
-    onError: () => toast.error('Gagal menyimpan work order.'),
+    onError: (error) => toast.error(extractErrorMessage(error, 'Gagal menyimpan work order.')),
   })
 
   return (
@@ -121,12 +140,18 @@ export function WorkOrderFormDialog({ equipmentId, trigger }: WorkOrderFormDialo
             <div className="flex flex-col gap-2">
               <Label htmlFor="interval_days">Interval (hari)</Label>
               <Input id="interval_days" type="number" min={1} {...register('interval_days')} />
+              {errors.interval_days && (
+                <p className="text-sm text-destructive">{errors.interval_days.message}</p>
+              )}
             </div>
           )}
           {scheduleType === 'runtime' && (
             <div className="flex flex-col gap-2">
               <Label htmlFor="interval_hours">Interval (jam operasi mesin)</Label>
               <Input id="interval_hours" type="number" min={1} {...register('interval_hours')} />
+              {errors.interval_hours && (
+                <p className="text-sm text-destructive">{errors.interval_hours.message}</p>
+              )}
             </div>
           )}
           <div className="flex flex-col gap-2">
