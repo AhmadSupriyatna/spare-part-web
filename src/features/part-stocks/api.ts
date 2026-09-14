@@ -3,7 +3,7 @@ import type { PaginatedResponse, PartStock, StockLedgerEntry } from '@/types/inv
 
 export interface ReceiveStockPayload {
   quantity: number
-  unit_cost?: number
+  total_price: number
   supplier_id?: number
   notes?: string
 }

@@ -10,6 +10,8 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 
+const currencyFormatter = new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR' })
+
 const ledgerTypeLabels: Record<string, string> = {
   receiving: 'Penerimaan',
   issue: 'Pemakaian',
@@ -55,12 +57,17 @@ export function PartStockDetailPage() {
         {canManage && (
           <div className="flex gap-2">
             <AdjustStockDialog partStockId={stock.id} branchId={stock.branch_id} />
-            <ReceiveStockDialog partStockId={stock.id} branchId={stock.branch_id} />
+            <ReceiveStockDialog
+              partStockId={stock.id}
+              branchId={stock.branch_id}
+              currentQuantity={stock.quantity_on_hand}
+              currentUnitCost={stock.unit_cost}
+            />
           </div>
         )}
       </div>
 
-      <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
+      <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-5">
         <Card>
           <CardHeader className="pb-2">
             <CardTitle className="text-sm font-normal text-muted-foreground">Stok Saat Ini</CardTitle>
@@ -69,6 +76,14 @@ export function PartStockDetailPage() {
             <span className="text-2xl font-semibold">{stock.quantity_on_hand}</span>
             {stock.is_critical && <Badge variant="destructive">Kritis</Badge>}
             {!stock.is_critical && stock.is_below_reorder_point && <Badge variant="warning">Rendah</Badge>}
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm font-normal text-muted-foreground">Harga Modal</CardTitle>
+          </CardHeader>
+          <CardContent className="text-2xl font-semibold">
+            {currencyFormatter.format(Number(stock.unit_cost))}
           </CardContent>
         </Card>
         <Card>
