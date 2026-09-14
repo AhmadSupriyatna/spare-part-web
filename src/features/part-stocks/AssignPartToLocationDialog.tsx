@@ -5,6 +5,16 @@ import { Controller, useForm } from 'react-hook-form'
 import { toast } from 'sonner'
 import { z } from 'zod'
 import { fetchPartStocksForBranch, updatePartStockLocation } from '@/features/part-stocks/api'
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog'
 import { Button } from '@/components/ui/button'
 import {
   Dialog,
@@ -35,6 +45,7 @@ export function AssignPartToLocationDialog({
   trigger,
 }: AssignPartToLocationDialogProps) {
   const [open, setOpen] = useState(false)
+  const [confirmValues, setConfirmValues] = useState<AssignPartToLocationFormValues | null>(null)
   const queryClient = useQueryClient()
 
   const { data: partStocks } = useQuery({
@@ -43,19 +54,20 @@ export function AssignPartToLocationDialog({
     enabled: open,
   })
 
-  // Safety rule: a part already placed in a bin can't be picked here — it
-  // must be released from its current bin first. Only unassigned parts show up.
-  const options = partStocks?.filter((stock) => stock.location_id === null)
-
   const {
     control,
     handleSubmit,
+    watch,
     reset,
     formState: { errors },
   } = useForm<AssignPartToLocationFormValues>({
     resolver: zodResolver(assignPartToLocationSchema),
     defaultValues: { part_stock_id: '' },
   })
+
+  const selectedStock = partStocks?.find((stock) => stock.id === Number(watch('part_stock_id')))
+  const movingFromElsewhere =
+    !!selectedStock?.location_id && selectedStock.location_id !== locationId
 
   const mutation = useMutation({
     mutationFn: (values: AssignPartToLocationFormValues) =>
@@ -65,54 +77,89 @@ export function AssignPartToLocationDialog({
       queryClient.invalidateQueries({ queryKey: ['part-stocks', branchId] })
       toast.success('Part berhasil ditempatkan di lokasi ini.')
       setOpen(false)
+      setConfirmValues(null)
       reset()
     },
     onError: () => toast.error('Gagal menempatkan part ke lokasi ini.'),
   })
 
+  const onSubmit = (values: AssignPartToLocationFormValues) => {
+    if (movingFromElsewhere) {
+      setConfirmValues(values)
+      return
+    }
+    mutation.mutate(values)
+  }
+
   return (
-    <Dialog open={open} onOpenChange={setOpen}>
-      <DialogTrigger render={trigger as React.ReactElement} />
-      <DialogContent>
-        <DialogHeader>
-          <DialogTitle>Tambah Part ke Lokasi Ini</DialogTitle>
-        </DialogHeader>
-        <form className="flex flex-col gap-4" onSubmit={handleSubmit((values) => mutation.mutate(values))}>
-          <div className="flex flex-col gap-2">
-            <Label>Part</Label>
-            <Controller
-              control={control}
-              name="part_stock_id"
-              render={({ field }) => (
-                <Select value={field.value} onValueChange={field.onChange}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Pilih part" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {options?.map((stock) => (
-                      <SelectItem key={stock.id} value={String(stock.id)}>
-                        {stock.part_name ?? `Part #${stock.part_id}`}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+    <>
+      <Dialog open={open} onOpenChange={setOpen}>
+        <DialogTrigger render={trigger as React.ReactElement} />
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Tambah Part ke Lokasi Ini</DialogTitle>
+          </DialogHeader>
+          <form className="flex flex-col gap-4" onSubmit={handleSubmit(onSubmit)}>
+            <div className="flex flex-col gap-2">
+              <Label>Part</Label>
+              <Controller
+                control={control}
+                name="part_stock_id"
+                render={({ field }) => (
+                  <Select value={field.value} onValueChange={field.onChange}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Pilih part" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {partStocks?.map((stock) => (
+                        <SelectItem key={stock.id} value={String(stock.id)}>
+                          {stock.part_name ?? `Part #${stock.part_id}`}
+                          {stock.location_code ? ` (saat ini di ${stock.location_code})` : ''}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                )}
+              />
+              {errors.part_stock_id && (
+                <p className="text-sm text-destructive">{errors.part_stock_id.message}</p>
               )}
-            />
-            {errors.part_stock_id && (
-              <p className="text-sm text-destructive">{errors.part_stock_id.message}</p>
-            )}
-            <p className="text-xs text-muted-foreground">
-              Hanya part yang belum punya lokasi yang bisa dipilih. Part yang sudah ada di lokasi lain
-              harus dilepas dulu dari sana sebelum bisa ditempatkan di sini.
-            </p>
-          </div>
-          <DialogFooter>
-            <Button type="submit" disabled={mutation.isPending}>
-              {mutation.isPending ? 'Menyimpan...' : 'Simpan'}
-            </Button>
-          </DialogFooter>
-        </form>
-      </DialogContent>
-    </Dialog>
+              {movingFromElsewhere && (
+                <p className="text-xs text-muted-foreground">
+                  Part ini sedang ada di lokasi {selectedStock?.location_code} — akan dipindahkan ke sini.
+                </p>
+              )}
+            </div>
+            <DialogFooter>
+              <Button type="submit" disabled={mutation.isPending}>
+                {mutation.isPending ? 'Menyimpan...' : 'Simpan'}
+              </Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
+
+      <AlertDialog open={confirmValues !== null} onOpenChange={(next) => !next && setConfirmValues(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Pindahkan part ke lokasi ini?</AlertDialogTitle>
+            <AlertDialogDescription>
+              "{selectedStock?.part_name}" sedang tercatat di lokasi {selectedStock?.location_code}. Part
+              akan dipindahkan dari sana ke lokasi ini.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Batal</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => {
+                if (confirmValues) mutation.mutate(confirmValues)
+              }}
+            >
+              Pindahkan
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+    </>
   )
 }

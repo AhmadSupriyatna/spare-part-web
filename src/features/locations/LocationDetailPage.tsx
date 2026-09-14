@@ -1,21 +1,9 @@
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { useQuery } from '@tanstack/react-query'
 import { Link, useParams } from 'react-router'
-import { toast } from 'sonner'
 import { fetchLocation } from '@/features/locations/api'
 import { AssignPartToLocationDialog } from '@/features/part-stocks/AssignPartToLocationDialog'
-import { fetchPartStocksForLocation, removePartStockLocation } from '@/features/part-stocks/api'
+import { fetchPartStocksForLocation } from '@/features/part-stocks/api'
 import { useCanManage } from '@/stores/use-has-role'
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-  AlertDialogTrigger,
-} from '@/components/ui/alert-dialog'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Skeleton } from '@/components/ui/skeleton'
@@ -25,7 +13,6 @@ export function LocationDetailPage() {
   const { id } = useParams<{ id: string }>()
   const locationId = Number(id)
   const canManage = useCanManage()
-  const queryClient = useQueryClient()
 
   const { data: location, isLoading } = useQuery({
     queryKey: ['location', locationId],
@@ -35,15 +22,6 @@ export function LocationDetailPage() {
   const { data: partStocks, isLoading: partStocksLoading } = useQuery({
     queryKey: ['part-stocks-for-location', locationId],
     queryFn: () => fetchPartStocksForLocation(locationId),
-  })
-
-  const releaseMutation = useMutation({
-    mutationFn: removePartStockLocation,
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['part-stocks-for-location', locationId] })
-      queryClient.invalidateQueries({ queryKey: ['part-stocks', location?.branch_id] })
-      toast.success('Part berhasil dilepas dari lokasi ini.')
-    },
   })
 
   if (isLoading || !location) {
@@ -89,7 +67,6 @@ export function LocationDetailPage() {
                 <TableHead>Part</TableHead>
                 <TableHead className="text-right">Jumlah</TableHead>
                 <TableHead>Status</TableHead>
-                {canManage && <TableHead className="text-right">Aksi</TableHead>}
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -111,30 +88,6 @@ export function LocationDetailPage() {
                       <Badge variant="outline">Normal</Badge>
                     )}
                   </TableCell>
-                  {canManage && (
-                    <TableCell className="text-right">
-                      <AlertDialog>
-                        <AlertDialogTrigger render={<Button variant="outline" size="sm" />}>
-                          Lepas
-                        </AlertDialogTrigger>
-                        <AlertDialogContent>
-                          <AlertDialogHeader>
-                            <AlertDialogTitle>Lepas part dari lokasi ini?</AlertDialogTitle>
-                            <AlertDialogDescription>
-                              "{stock.part_name ?? `Part #${stock.part_id}`}" tidak akan lagi tercatat di
-                              lokasi manapun sampai ditempatkan ulang.
-                            </AlertDialogDescription>
-                          </AlertDialogHeader>
-                          <AlertDialogFooter>
-                            <AlertDialogCancel>Batal</AlertDialogCancel>
-                            <AlertDialogAction onClick={() => releaseMutation.mutate(stock.id)}>
-                              Lepas
-                            </AlertDialogAction>
-                          </AlertDialogFooter>
-                        </AlertDialogContent>
-                      </AlertDialog>
-                    </TableCell>
-                  )}
                 </TableRow>
               ))}
             </TableBody>

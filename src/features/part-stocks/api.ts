@@ -50,7 +50,3 @@ export async function updatePartStockLocation(id: number, locationId: number): P
   return data.data
 }
 
-export async function removePartStockLocation(id: number): Promise<PartStock> {
-  const { data } = await apiClient.delete<{ data: PartStock }>(`/part-stocks/${id}/location`)
-  return data.data
-}
