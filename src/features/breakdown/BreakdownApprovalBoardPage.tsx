@@ -37,6 +37,9 @@ function RequestsTable({ branchId, status }: { branchId: number; status: Replace
         (error as { response?: { data?: { message?: string } } })?.response?.data?.message ??
         'Gagal menyetujui permintaan.'
       toast.error(message)
+      // If this failed because someone else already reviewed it, refresh so
+      // the stale "pending" row doesn't invite another retry.
+      queryClient.invalidateQueries({ queryKey: ['replacement-requests', branchId] })
     },
   })
 

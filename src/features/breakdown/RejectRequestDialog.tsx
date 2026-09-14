@@ -32,6 +32,15 @@ export function RejectRequestDialog({ requestId, branchId }: RejectRequestDialog
       setNotes('')
       setOpen(false)
     },
+    onError: (error: unknown) => {
+      const message =
+        (error as { response?: { data?: { message?: string } } })?.response?.data?.message ??
+        'Gagal menolak permintaan.'
+      toast.error(message)
+      // If this failed because someone else already reviewed it, refresh so
+      // the stale "pending" row doesn't invite another retry.
+      queryClient.invalidateQueries({ queryKey: ['replacement-requests', branchId] })
+    },
   })
 
   return (
