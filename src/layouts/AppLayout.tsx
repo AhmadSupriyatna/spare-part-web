@@ -9,6 +9,7 @@ import {
   ChevronRight,
   ClipboardList,
   Factory,
+  HeartPulse,
   LayoutDashboard,
   LogOut,
   MapPin,
@@ -74,6 +75,7 @@ const navSections: NavSection[] = [
     items: [
       { to: '/work-orders', label: 'Work Order', icon: CalendarCog },
       { to: '/task-libraries', label: 'Task Library', icon: NotebookPen },
+      { to: '/part-lifetime', label: 'Part Lifetime', icon: HeartPulse },
       { to: '/pm/calendar', label: 'Kalender PM', icon: CalendarClock },
       { to: '/pm/ledger', label: 'Ledger WO', icon: NotebookText },
     ],
