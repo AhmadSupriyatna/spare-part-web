@@ -1,0 +1,31 @@
+import { apiClient } from '@/lib/api-client'
+import type { PartInstallation } from '@/types/relations'
+
+export interface PartInstallationPayload {
+  part_id: number
+  installed_at?: string | null
+  notes?: string | null
+}
+
+export async function fetchPartInstallations(equipmentId: number): Promise<PartInstallation[]> {
+  const { data } = await apiClient.get<{ data: PartInstallation[] }>(
+    `/equipment/${equipmentId}/part-installations`,
+  )
+  return data.data
+}
+
+export async function installPart(
+  equipmentId: number,
+  payload: PartInstallationPayload,
+): Promise<PartInstallation> {
+  const { data } = await apiClient.post<{ data: PartInstallation }>(
+    `/equipment/${equipmentId}/part-installations`,
+    payload,
+  )
+  return data.data
+}
+
+export async function removePartInstallation(id: number): Promise<PartInstallation> {
+  const { data } = await apiClient.post<{ data: PartInstallation }>(`/part-installations/${id}/remove`)
+  return data.data
+}

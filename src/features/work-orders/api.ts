@@ -37,3 +37,8 @@ export async function generateTaskFromWorkOrder(id: number): Promise<Task> {
   const { data } = await apiClient.post<{ data: Task }>(`/work-orders/${id}/generate-task`)
   return data.data
 }
+
+export async function fetchWorkOrdersForPart(partId: number): Promise<WorkOrder[]> {
+  const { data } = await apiClient.get<{ data: WorkOrder[] }>(`/parts/${partId}/work-orders`)
+  return data.data
+}

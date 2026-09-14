@@ -30,7 +30,9 @@ export type ScheduleType = 'calendar' | 'runtime' | 'unscheduled'
 export interface WorkOrder {
   id: number
   equipment_id: number
+  equipment_name?: string
   part_id: number | null
+  part_name?: string | null
   title: string
   description: string | null
   schedule_type: ScheduleType
