@@ -1,5 +1,6 @@
 import { useQuery } from '@tanstack/react-query'
 import { MapPin, PackagePlus, SlidersHorizontal } from 'lucide-react'
+import { useState } from 'react'
 import { Link } from 'react-router'
 import { AdjustStockDialog } from '@/features/part-stocks/AdjustStockDialog'
 import { fetchPartStocksForBranch } from '@/features/part-stocks/api'
@@ -10,10 +11,12 @@ import { useBranchStore } from '@/stores/branch-store'
 import { useCanManage } from '@/stores/use-has-role'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 
 export function PartStocksPage() {
+  const [search, setSearch] = useState('')
   const activeBranchId = useBranchStore((state) => state.activeBranchId)
   const canManage = useCanManage()
 
@@ -30,6 +33,16 @@ export function PartStocksPage() {
 
   const partNameById = new Map(parts?.map((part) => [part.id, part]))
 
+  const filteredStocks = stocks?.filter((stock) => {
+    const part = partNameById.get(stock.part_id)
+    const query = search.toLowerCase()
+    return (
+      part?.name.toLowerCase().includes(query) ||
+      part?.item_master_no.toLowerCase().includes(query) ||
+      stock.location_code?.toLowerCase().includes(query)
+    )
+  })
+
   if (!activeBranchId) {
     return <p className="text-muted-foreground">Pilih cabang terlebih dahulu.</p>
   }
@@ -37,6 +50,13 @@ export function PartStocksPage() {
   return (
     <div className="flex flex-col gap-4">
       <h1 className="text-2xl font-semibold">Stok Part</h1>
+
+      <Input
+        placeholder="Cari nama part, Item Master, atau lokasi..."
+        value={search}
+        onChange={(e) => setSearch(e.target.value)}
+        className="max-w-sm"
+      />
 
       {isLoading ? (
         <div className="flex flex-col gap-2">
@@ -57,7 +77,7 @@ export function PartStocksPage() {
             </TableRow>
           </TableHeader>
           <TableBody>
-            {stocks?.map((stock) => {
+            {filteredStocks?.map((stock) => {
               const part = partNameById.get(stock.part_id)
               return (
                 <TableRow key={stock.id}>
