@@ -1,4 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { Link } from 'react-router'
 import { toast } from 'sonner'
 import { deleteLocation, fetchLocations } from '@/features/locations/api'
 import { LocationFormDialog } from '@/features/locations/LocationFormDialog'
@@ -75,7 +76,11 @@ export function LocationsPage() {
           <TableBody>
             {locations?.map((location) => (
               <TableRow key={location.id}>
-                <TableCell className="font-mono font-medium">{location.code}</TableCell>
+                <TableCell className="font-mono font-medium">
+                  <Link to={`/locations/${location.id}`} className="hover:underline">
+                    {location.code}
+                  </Link>
+                </TableCell>
                 <TableCell className="text-muted-foreground">{location.rack}</TableCell>
                 <TableCell className="text-muted-foreground">{location.bin}</TableCell>
                 <TableCell className="text-muted-foreground">{location.description ?? '-'}</TableCell>

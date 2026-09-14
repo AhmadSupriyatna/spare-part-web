@@ -37,3 +37,15 @@ export async function adjustStock(id: number, payload: AdjustStockPayload): Prom
   const { data } = await apiClient.post<{ data: PartStock }>(`/part-stocks/${id}/adjust`, payload)
   return data.data
 }
+
+export async function fetchPartStocksForLocation(locationId: number): Promise<PartStock[]> {
+  const { data } = await apiClient.get<{ data: PartStock[] }>(`/locations/${locationId}/part-stocks`)
+  return data.data
+}
+
+export async function updatePartStockLocation(id: number, locationId: number): Promise<PartStock> {
+  const { data } = await apiClient.put<{ data: PartStock }>(`/part-stocks/${id}/location`, {
+    location_id: locationId,
+  })
+  return data.data
+}

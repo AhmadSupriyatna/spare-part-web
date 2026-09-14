@@ -1,6 +1,8 @@
 export interface PartSupplier {
   id: number
   part_id: number
+  part_name?: string
+  item_master_no?: string
   supplier_id: number
   supplier_name: string
   branch_id: number

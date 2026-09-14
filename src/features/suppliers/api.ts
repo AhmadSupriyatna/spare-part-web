@@ -16,6 +16,11 @@ export async function fetchSuppliers(branchId: number): Promise<Supplier[]> {
   return data.data
 }
 
+export async function fetchSupplier(id: number): Promise<Supplier> {
+  const { data } = await apiClient.get<{ data: Supplier }>(`/suppliers/${id}`)
+  return data.data
+}
+
 export async function createSupplier(branchId: number, payload: SupplierPayload): Promise<Supplier> {
   const { data } = await apiClient.post<{ data: Supplier }>(`/branches/${branchId}/suppliers`, payload)
   return data.data

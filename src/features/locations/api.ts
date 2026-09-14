@@ -14,6 +14,11 @@ export async function fetchLocations(branchId: number): Promise<Location[]> {
   return data.data
 }
 
+export async function fetchLocation(id: number): Promise<Location> {
+  const { data } = await apiClient.get<{ data: Location }>(`/locations/${id}`)
+  return data.data
+}
+
 export async function createLocation(branchId: number, payload: LocationPayload): Promise<Location> {
   const { data } = await apiClient.post<{ data: Location }>(`/branches/${branchId}/locations`, payload)
   return data.data

@@ -14,6 +14,11 @@ export async function fetchPartSuppliers(partId: number): Promise<PartSupplier[]
   return data.data
 }
 
+export async function fetchPartsForSupplier(supplierId: number): Promise<PartSupplier[]> {
+  const { data } = await apiClient.get<{ data: PartSupplier[] }>(`/suppliers/${supplierId}/parts`)
+  return data.data
+}
+
 export async function addPartSupplier(partId: number, payload: PartSupplierPayload): Promise<PartSupplier> {
   const { data } = await apiClient.post<{ data: PartSupplier }>(`/parts/${partId}/suppliers`, payload)
   return data.data

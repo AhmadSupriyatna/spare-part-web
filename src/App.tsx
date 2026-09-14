@@ -6,12 +6,14 @@ import { DashboardPage } from '@/features/dashboard/DashboardPage'
 import { EquipmentDetailPage } from '@/features/equipment/EquipmentDetailPage'
 import { LineDetailPage } from '@/features/lines/LineDetailPage'
 import { LinesPage } from '@/features/lines/LinesPage'
+import { LocationDetailPage } from '@/features/locations/LocationDetailPage'
 import { LocationsPage } from '@/features/locations/LocationsPage'
 import { MachineDetailPage } from '@/features/machines/MachineDetailPage'
 import { PartDetailPage } from '@/features/parts/PartDetailPage'
 import { PartsPage } from '@/features/parts/PartsPage'
 import { PartStockDetailPage } from '@/features/part-stocks/PartStockDetailPage'
 import { PartStocksPage } from '@/features/part-stocks/PartStocksPage'
+import { SupplierDetailPage } from '@/features/suppliers/SupplierDetailPage'
 import { SuppliersPage } from '@/features/suppliers/SuppliersPage'
 import { MyTasksPage } from '@/features/tasks/MyTasksPage'
 import { AppLayout } from '@/layouts/AppLayout'
@@ -32,7 +34,9 @@ function App() {
             <Route path="alerts" element={<AlertsPage />} />
             <Route path="branches" element={<BranchesPage />} />
             <Route path="suppliers" element={<SuppliersPage />} />
+            <Route path="suppliers/:id" element={<SupplierDetailPage />} />
             <Route path="locations" element={<LocationsPage />} />
+            <Route path="locations/:id" element={<LocationDetailPage />} />
             <Route path="lines" element={<LinesPage />} />
             <Route path="lines/:id" element={<LineDetailPage />} />
             <Route path="machines/:id" element={<MachineDetailPage />} />

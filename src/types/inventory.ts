@@ -16,6 +16,8 @@ export interface Part {
 export interface PartStock {
   id: number
   part_id: number
+  part_name?: string
+  item_master_no?: string
   branch_id: number
   branch_name?: string
   supplier_id: number | null

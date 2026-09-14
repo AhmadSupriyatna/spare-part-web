@@ -1,4 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { Link } from 'react-router'
 import { toast } from 'sonner'
 import { deleteSupplier, fetchSuppliers } from '@/features/suppliers/api'
 import { SupplierFormDialog } from '@/features/suppliers/SupplierFormDialog'
@@ -75,7 +76,11 @@ export function SuppliersPage() {
           <TableBody>
             {suppliers?.map((supplier) => (
               <TableRow key={supplier.id}>
-                <TableCell className="font-medium">{supplier.name}</TableCell>
+                <TableCell className="font-medium">
+                  <Link to={`/suppliers/${supplier.id}`} className="hover:underline">
+                    {supplier.name}
+                  </Link>
+                </TableCell>
                 <TableCell className="text-muted-foreground">{supplier.contact_person ?? '-'}</TableCell>
                 <TableCell className="text-muted-foreground">{supplier.phone ?? '-'}</TableCell>
                 <TableCell className="text-muted-foreground">{supplier.email ?? '-'}</TableCell>
