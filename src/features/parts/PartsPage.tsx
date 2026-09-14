@@ -22,8 +22,6 @@ import { Input } from '@/components/ui/input'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 
-const currencyFormatter = new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR' })
-
 export function PartsPage() {
   const [search, setSearch] = useState('')
   const canManage = useCanManage()
@@ -77,7 +75,6 @@ export function PartsPage() {
               <TableHead>Nama</TableHead>
               <TableHead>Kategori</TableHead>
               <TableHead>Satuan</TableHead>
-              <TableHead className="text-right">Harga</TableHead>
               <TableHead className="text-right">Aksi</TableHead>
             </TableRow>
           </TableHeader>
@@ -99,7 +96,6 @@ export function PartsPage() {
                 <TableCell className="font-medium">{part.name}</TableCell>
                 <TableCell className="text-muted-foreground">{part.category ?? '-'}</TableCell>
                 <TableCell className="text-muted-foreground">{part.unit}</TableCell>
-                <TableCell className="text-right">{currencyFormatter.format(Number(part.price))}</TableCell>
                 <TableCell className="flex justify-end gap-1">
                   <Button
                     variant="ghost"

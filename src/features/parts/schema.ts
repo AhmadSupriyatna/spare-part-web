@@ -6,10 +6,6 @@ export const partSchema = z.object({
   description: z.string().optional(),
   unit: z.string().min(1, 'Satuan wajib diisi').max(50),
   category: z.string().optional(),
-  price: z
-    .string()
-    .optional()
-    .refine((val) => !val || Number(val) >= 0, 'Harga tidak boleh negatif'),
 })
 
 export type PartFormValues = z.infer<typeof partSchema>

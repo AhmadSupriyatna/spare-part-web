@@ -7,7 +7,6 @@ export interface PartPayload {
   description?: string | null
   unit: string
   category?: string | null
-  price?: number
   image?: File | null
   is_active?: boolean
 }

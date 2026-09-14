@@ -43,7 +43,6 @@ export function PartFormDialog({ part, trigger }: PartFormDialogProps) {
       description: part?.description ?? '',
       unit: part?.unit ?? 'pcs',
       category: part?.category ?? '',
-      price: part?.price ?? '0',
     },
   })
 
@@ -55,7 +54,6 @@ export function PartFormDialog({ part, trigger }: PartFormDialogProps) {
         description: part?.description ?? '',
         unit: part?.unit ?? 'pcs',
         category: part?.category ?? '',
-        price: part?.price ?? '0',
       })
       setImageFile(null)
       setImagePreview(part?.image_url ?? null)
@@ -70,11 +68,7 @@ export function PartFormDialog({ part, trigger }: PartFormDialogProps) {
 
   const mutation = useMutation({
     mutationFn: (values: PartFormValues) => {
-      const payload = {
-        ...values,
-        price: values.price ? Number(values.price) : undefined,
-        image: imageFile,
-      }
+      const payload = { ...values, image: imageFile }
       return isEdit ? updatePart(part!.id, payload) : createPart(payload)
     },
     onSuccess: () => {
@@ -134,11 +128,6 @@ export function PartFormDialog({ part, trigger }: PartFormDialogProps) {
               <Label htmlFor="category">Kategori</Label>
               <Input id="category" placeholder="Mekanikal" {...register('category')} />
             </div>
-          </div>
-          <div className="flex flex-col gap-2">
-            <Label htmlFor="price">Harga</Label>
-            <Input id="price" type="number" min={0} step="0.01" {...register('price')} />
-            {errors.price && <p className="text-sm text-destructive">{errors.price.message}</p>}
           </div>
           <div className="flex flex-col gap-2">
             <Label htmlFor="description">Deskripsi</Label>

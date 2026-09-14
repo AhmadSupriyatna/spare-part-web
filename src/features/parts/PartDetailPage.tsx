@@ -89,7 +89,6 @@ export function PartDetailPage() {
             {!part.is_active && <Badge variant="secondary">Nonaktif</Badge>}
           </div>
           <p className="font-mono text-sm text-muted-foreground">{part.item_master_no}</p>
-          <p className="mt-1 font-medium">{currencyFormatter.format(Number(part.price))}</p>
           {part.description && <p className="mt-2 text-muted-foreground">{part.description}</p>}
         </div>
       </div>
@@ -109,6 +108,7 @@ export function PartDetailPage() {
                 <TableHead>Cabang</TableHead>
                 <TableHead>Lokasi</TableHead>
                 <TableHead className="text-right">Jumlah</TableHead>
+                <TableHead className="text-right">Harga Modal</TableHead>
                 <TableHead>Status</TableHead>
                 {canManage && <TableHead className="text-right">Aksi</TableHead>}
               </TableRow>
@@ -131,6 +131,9 @@ export function PartDetailPage() {
                     )}
                   </TableCell>
                   <TableCell className="text-right font-medium">{stock.quantity_on_hand}</TableCell>
+                  <TableCell className="text-right text-muted-foreground">
+                    {currencyFormatter.format(Number(stock.unit_cost))}
+                  </TableCell>
                   <TableCell>
                     {stock.is_critical ? (
                       <Badge variant="destructive">Kritis</Badge>
