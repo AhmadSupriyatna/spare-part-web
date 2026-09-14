@@ -1,5 +1,5 @@
 import { useQuery } from '@tanstack/react-query'
-import { Plus } from 'lucide-react'
+import { Pencil, Plus } from 'lucide-react'
 import { useEffect } from 'react'
 import { Link, useSearchParams } from 'react-router'
 import { AddRuntimeDialog } from '@/features/lines/AddRuntimeDialog'
@@ -112,6 +112,19 @@ export function LineHierarchyPage() {
               title={line.name}
               subtitle={line.code}
               badge={!line.is_active ? <Badge variant="outline">Nonaktif</Badge> : undefined}
+              editAction={
+                canManage && (
+                  <LineFormDialog
+                    branchId={activeBranchId}
+                    line={line}
+                    trigger={
+                      <Button variant="ghost" size="icon-xs" aria-label="Ubah Line" title="Ubah Line">
+                        <Pencil />
+                      </Button>
+                    }
+                  />
+                )
+              }
             />
           ))}
         </HierarchyColumn>
@@ -143,6 +156,20 @@ export function LineHierarchyPage() {
               title={machine.name}
               subtitle={machine.category ?? machine.code}
               badge={!machine.is_active ? <Badge variant="outline">Nonaktif</Badge> : undefined}
+              editAction={
+                canManage &&
+                selectedLineId && (
+                  <MachineFormDialog
+                    lineId={selectedLineId}
+                    machine={machine}
+                    trigger={
+                      <Button variant="ghost" size="icon-xs" aria-label="Ubah Mesin" title="Ubah Mesin">
+                        <Pencil />
+                      </Button>
+                    }
+                  />
+                )
+              }
             />
           ))}
         </HierarchyColumn>
@@ -167,16 +194,31 @@ export function LineHierarchyPage() {
           }
         >
           {equipmentList?.map((equipment) => (
-            <Link
+            <div
               key={equipment.id}
-              to={`/equipment/${equipment.id}`}
-              className="flex flex-col gap-0.5 border-b px-3 py-2 text-left text-sm last:border-b-0 hover:bg-muted"
+              className="flex items-center gap-1 border-b pr-1 last:border-b-0 hover:bg-muted"
             >
-              <span className="font-medium">{equipment.name}</span>
-              <span className="font-mono text-xs text-muted-foreground">
-                {equipment.category ?? equipment.code}
-              </span>
-            </Link>
+              <Link
+                to={`/equipment/${equipment.id}`}
+                className="flex flex-1 flex-col gap-0.5 px-3 py-2 text-left text-sm"
+              >
+                <span className="font-medium">{equipment.name}</span>
+                <span className="font-mono text-xs text-muted-foreground">
+                  {equipment.category ?? equipment.code}
+                </span>
+              </Link>
+              {canManage && selectedMachineId && (
+                <EquipmentFormDialog
+                  machineId={selectedMachineId}
+                  equipment={equipment}
+                  trigger={
+                    <Button variant="ghost" size="icon-xs" aria-label="Ubah Equipment" title="Ubah Equipment">
+                      <Pencil />
+                    </Button>
+                  }
+                />
+              )}
+            </div>
           ))}
         </HierarchyColumn>
       </div>
@@ -223,22 +265,25 @@ interface ColumnRowProps {
   isSelected: boolean
   onClick: () => void
   badge?: React.ReactNode
+  editAction?: React.ReactNode
 }
 
-function ColumnRow({ title, subtitle, isSelected, onClick, badge }: ColumnRowProps) {
+function ColumnRow({ title, subtitle, isSelected, onClick, badge, editAction }: ColumnRowProps) {
   return (
-    <button
-      onClick={onClick}
+    <div
       className={cn(
-        'flex items-center justify-between gap-2 border-b px-3 py-2 text-left text-sm last:border-b-0 hover:bg-muted',
+        'flex items-center gap-1 border-b pr-1 last:border-b-0 hover:bg-muted',
         isSelected && 'bg-primary/10',
       )}
     >
-      <span className="flex flex-col gap-0.5">
-        <span className={cn('font-medium', isSelected && 'text-primary')}>{title}</span>
-        {subtitle && <span className="font-mono text-xs text-muted-foreground">{subtitle}</span>}
-      </span>
-      {badge}
-    </button>
+      <button onClick={onClick} className="flex flex-1 items-center justify-between gap-2 px-3 py-2 text-left text-sm">
+        <span className="flex flex-col gap-0.5">
+          <span className={cn('font-medium', isSelected && 'text-primary')}>{title}</span>
+          {subtitle && <span className="font-mono text-xs text-muted-foreground">{subtitle}</span>}
+        </span>
+        {badge}
+      </button>
+      {editAction}
+    </div>
   )
 }
