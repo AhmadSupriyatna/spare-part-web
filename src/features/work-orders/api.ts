@@ -16,6 +16,11 @@ export async function fetchWorkOrders(equipmentId: number): Promise<WorkOrder[]>
   return data.data
 }
 
+export async function fetchWorkOrdersForBranch(branchId: number): Promise<WorkOrder[]> {
+  const { data } = await apiClient.get<{ data: WorkOrder[] }>(`/branches/${branchId}/work-orders`)
+  return data.data
+}
+
 export async function createWorkOrder(equipmentId: number, payload: WorkOrderPayload): Promise<WorkOrder> {
   const { data } = await apiClient.post<{ data: WorkOrder }>(
     `/equipment/${equipmentId}/work-orders`,

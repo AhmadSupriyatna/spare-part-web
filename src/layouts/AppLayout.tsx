@@ -4,6 +4,7 @@ import {
   Boxes,
   Building2,
   CalendarClock,
+  CalendarCog,
   ChevronLeft,
   ChevronRight,
   ClipboardList,
@@ -11,6 +12,7 @@ import {
   LayoutDashboard,
   LogOut,
   MapPin,
+  NotebookPen,
   NotebookText,
   Package,
   QrCode,
@@ -68,8 +70,10 @@ const navSections: NavSection[] = [
     items: [{ to: '/my-tasks', label: 'Tugas Saya', icon: ClipboardList }],
   },
   {
-    label: 'PM Terjadwal',
+    label: 'Perawatan (PM & WO)',
     items: [
+      { to: '/work-orders', label: 'Work Order', icon: CalendarCog },
+      { to: '/task-libraries', label: 'Task Library', icon: NotebookPen },
       { to: '/pm/calendar', label: 'Kalender PM', icon: CalendarClock },
       { to: '/pm/ledger', label: 'Ledger WO', icon: NotebookText },
     ],
