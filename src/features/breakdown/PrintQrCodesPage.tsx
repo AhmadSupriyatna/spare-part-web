@@ -1,4 +1,5 @@
 import { useQuery } from '@tanstack/react-query'
+import { PrinterIcon } from 'lucide-react'
 import { QRCodeSVG } from 'qrcode.react'
 import { useMemo, useState } from 'react'
 import { fetchParts } from '@/features/parts/api'
@@ -28,6 +29,7 @@ export function PrintQrCodesPage() {
   const [search, setSearch] = useState('')
   const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set())
   const [quantityDialogOpen, setQuantityDialogOpen] = useState(false)
+  const [dialogPartIds, setDialogPartIds] = useState<number[]>([])
   const [quantities, setQuantities] = useState<Record<number, string>>({})
   const [printEntries, setPrintEntries] = useState<PrintEntry[] | null>(null)
 
@@ -71,20 +73,22 @@ export function PrintQrCodesPage() {
     })
   }
 
-  function openQuantityDialog() {
-    const selectedParts = parts?.filter((p) => selectedIds.has(p.id)) ?? []
-    const initial: Record<number, string> = {}
-    selectedParts.forEach((p) => {
-      initial[p.id] = quantities[p.id] ?? '1'
+  function openQuantityDialogFor(ids: number[]) {
+    setQuantities((prev) => {
+      const next = { ...prev }
+      ids.forEach((id) => {
+        next[id] = next[id] ?? '1'
+      })
+      return next
     })
-    setQuantities(initial)
+    setDialogPartIds(ids)
     setQuantityDialogOpen(true)
   }
 
   function confirmPrint() {
-    const selectedParts = parts?.filter((p) => selectedIds.has(p.id)) ?? []
+    const dialogParts = parts?.filter((p) => dialogPartIds.includes(p.id)) ?? []
     const entries: PrintEntry[] = []
-    selectedParts.forEach((part) => {
+    dialogParts.forEach((part) => {
       const qty = Math.max(1, Number(quantities[part.id]) || 1)
       for (let i = 0; i < qty; i++) {
         entries.push({ part, copy: i + 1 })
@@ -95,7 +99,7 @@ export function PrintQrCodesPage() {
     requestAnimationFrame(() => window.print())
   }
 
-  const selectedParts = parts?.filter((p) => selectedIds.has(p.id)) ?? []
+  const dialogParts = parts?.filter((p) => dialogPartIds.includes(p.id)) ?? []
   const scanBaseUrl = `${window.location.origin}/breakdown/scan`
 
   return (
@@ -115,7 +119,10 @@ export function PrintQrCodesPage() {
             Centang part yang mau dicetak QR-nya, lalu tentukan berapa lembar per part.
           </p>
         </div>
-        <Button onClick={openQuantityDialog} disabled={selectedIds.size === 0}>
+        <Button
+          onClick={() => openQuantityDialogFor(Array.from(selectedIds))}
+          disabled={selectedIds.size === 0}
+        >
           Cetak Terpilih ({selectedIds.size})
         </Button>
       </div>
@@ -151,6 +158,7 @@ export function PrintQrCodesPage() {
                 <TableHead>Nama Part</TableHead>
                 <TableHead>Item Master</TableHead>
                 <TableHead>Kategori</TableHead>
+                <TableHead className="w-10" />
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -168,11 +176,22 @@ export function PrintQrCodesPage() {
                     {part.item_master_no}
                   </TableCell>
                   <TableCell className="text-muted-foreground">{part.category ?? '-'}</TableCell>
+                  <TableCell>
+                    <Button
+                      size="icon-sm"
+                      variant="ghost"
+                      title={`Cetak QR ${part.name}`}
+                      aria-label={`Cetak QR ${part.name}`}
+                      onClick={() => openQuantityDialogFor([part.id])}
+                    >
+                      <PrinterIcon />
+                    </Button>
+                  </TableCell>
                 </TableRow>
               ))}
               {filteredParts?.length === 0 && (
                 <TableRow>
-                  <TableCell colSpan={4} className="text-center text-muted-foreground">
+                  <TableCell colSpan={5} className="text-center text-muted-foreground">
                     Tidak ada part yang cocok.
                   </TableCell>
                 </TableRow>
@@ -191,7 +210,7 @@ export function PrintQrCodesPage() {
             </DialogDescription>
           </DialogHeader>
           <div className="flex max-h-80 flex-col gap-3 overflow-y-auto">
-            {selectedParts.map((part) => (
+            {dialogParts.map((part) => (
               <div key={part.id} className="flex items-center justify-between gap-3">
                 <div className="min-w-0">
                   <p className="truncate text-sm font-medium">{part.name}</p>
