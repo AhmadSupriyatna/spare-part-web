@@ -1,3 +1,8 @@
+export interface Unit {
+  id: number
+  name: string
+}
+
 export interface Part {
   id: number
   item_master_no: string

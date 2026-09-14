@@ -10,6 +10,8 @@ import {
   MapPin,
   Package,
   QrCode,
+  Ruler,
+  Settings,
   ShieldCheck,
   Truck,
   Wrench,
@@ -64,6 +66,13 @@ const navSections: NavSection[] = [
     items: [
       { to: '/breakdown/approvals', label: 'Papan Approval', icon: ShieldCheck },
       { to: '/breakdown/print-qr', label: 'Cetak QR Code', icon: QrCode },
+    ],
+  },
+  {
+    label: 'Pengaturan',
+    items: [
+      { to: '/settings/company', label: 'Profil Perusahaan', icon: Settings },
+      { to: '/settings/units', label: 'Satuan Part', icon: Ruler },
     ],
   },
 ]

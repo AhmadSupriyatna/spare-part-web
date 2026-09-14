@@ -14,9 +14,11 @@ import { PartDetailPage } from '@/features/parts/PartDetailPage'
 import { PartsPage } from '@/features/parts/PartsPage'
 import { PartStockDetailPage } from '@/features/part-stocks/PartStockDetailPage'
 import { PartStocksPage } from '@/features/part-stocks/PartStocksPage'
+import { CompanySettingsPage } from '@/features/settings/CompanySettingsPage'
 import { SupplierDetailPage } from '@/features/suppliers/SupplierDetailPage'
 import { SuppliersPage } from '@/features/suppliers/SuppliersPage'
 import { MyTasksPage } from '@/features/tasks/MyTasksPage'
+import { UnitsPage } from '@/features/units/UnitsPage'
 import { AppLayout } from '@/layouts/AppLayout'
 import { ProtectedRoute } from '@/routes/ProtectedRoute'
 
@@ -47,6 +49,8 @@ function App() {
             <Route path="my-tasks" element={<MyTasksPage />} />
             <Route path="breakdown/approvals" element={<BreakdownApprovalBoardPage />} />
             <Route path="breakdown/print-qr" element={<PrintQrCodesPage />} />
+            <Route path="settings/company" element={<CompanySettingsPage />} />
+            <Route path="settings/units" element={<UnitsPage />} />
           </Route>
         </Route>
         <Route path="*" element={<Navigate to="/" replace />} />

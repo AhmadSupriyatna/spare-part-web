@@ -3,6 +3,7 @@ import { PrinterIcon } from 'lucide-react'
 import { QRCodeSVG } from 'qrcode.react'
 import { useMemo, useState } from 'react'
 import { fetchParts } from '@/features/parts/api'
+import { fetchCompanySetting } from '@/features/settings/api'
 import { useAuthStore } from '@/stores/auth-store'
 import { useBranchStore } from '@/stores/branch-store'
 import type { Part } from '@/types/inventory'
@@ -40,6 +41,11 @@ export function PrintQrCodesPage() {
   const { data: parts, isLoading } = useQuery({
     queryKey: ['parts'],
     queryFn: fetchParts,
+  })
+
+  const { data: companySetting } = useQuery({
+    queryKey: ['settings', 'company'],
+    queryFn: fetchCompanySetting,
   })
 
   const filteredParts = useMemo(
@@ -244,10 +250,16 @@ export function PrintQrCodesPage() {
               className="flex flex-col items-center gap-1 rounded-md border p-2 text-center break-inside-avoid"
             >
               <div className="flex w-full items-center justify-center gap-1 border-b pb-1">
-                <div className="flex size-5 items-center justify-center rounded border border-dashed text-[6px] text-muted-foreground">
-                  Logo
-                </div>
-                <p className="text-[9px] font-semibold leading-none">Nama Perusahaan</p>
+                {companySetting?.logo_url ? (
+                  <img src={companySetting.logo_url} alt="" className="h-5 w-auto max-w-6 object-contain" />
+                ) : (
+                  <div className="flex size-5 items-center justify-center rounded border border-dashed text-[6px] text-muted-foreground">
+                    Logo
+                  </div>
+                )}
+                <p className="text-[9px] font-semibold leading-none">
+                  {companySetting?.name ?? 'Nama Perusahaan'}
+                </p>
               </div>
               <p className="text-[8px] leading-none text-muted-foreground">
                 {activeBranch ? `${activeBranch.code} — ${activeBranch.name}` : ''}

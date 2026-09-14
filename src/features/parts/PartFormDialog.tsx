@@ -1,10 +1,11 @@
 import { zodResolver } from '@hookform/resolvers/zod'
-import { useMutation, useQueryClient } from '@tanstack/react-query'
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useEffect, useState } from 'react'
-import { useForm } from 'react-hook-form'
+import { Controller, useForm } from 'react-hook-form'
 import { toast } from 'sonner'
 import { createPart, updatePart } from '@/features/parts/api'
 import { partSchema, type PartFormValues } from '@/features/parts/schema'
+import { fetchUnits } from '@/features/units/api'
 import type { Part } from '@/types/inventory'
 import { Button } from '@/components/ui/button'
 import {
@@ -17,6 +18,7 @@ import {
 } from '@/components/ui/dialog'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 
 interface PartFormDialogProps {
   part?: Part
@@ -30,8 +32,14 @@ export function PartFormDialog({ part, trigger }: PartFormDialogProps) {
   const queryClient = useQueryClient()
   const isEdit = Boolean(part)
 
+  const { data: units } = useQuery({
+    queryKey: ['units'],
+    queryFn: fetchUnits,
+  })
+
   const {
     register,
+    control,
     handleSubmit,
     reset,
     formState: { errors },
@@ -121,7 +129,24 @@ export function PartFormDialog({ part, trigger }: PartFormDialogProps) {
           <div className="grid grid-cols-2 gap-4">
             <div className="flex flex-col gap-2">
               <Label htmlFor="unit">Satuan</Label>
-              <Input id="unit" placeholder="pcs" {...register('unit')} />
+              <Controller
+                control={control}
+                name="unit"
+                render={({ field }) => (
+                  <Select value={field.value} onValueChange={field.onChange}>
+                    <SelectTrigger id="unit">
+                      <SelectValue placeholder="Pilih satuan" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {units?.map((unit) => (
+                        <SelectItem key={unit.id} value={unit.name}>
+                          {unit.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                )}
+              />
               {errors.unit && <p className="text-sm text-destructive">{errors.unit.message}</p>}
             </div>
             <div className="flex flex-col gap-2">
