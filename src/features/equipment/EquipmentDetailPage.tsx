@@ -1,13 +1,28 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { useParams } from 'react-router'
+import { Link, useParams } from 'react-router'
 import { toast } from 'sonner'
+import { EquipmentPartFormDialog } from '@/features/equipment-parts/EquipmentPartFormDialog'
+import { fetchEquipmentParts, removeEquipmentPart } from '@/features/equipment-parts/api'
 import { fetchEquipment } from '@/features/equipment/api'
+import { PartInstallationFormDialog } from '@/features/part-installations/PartInstallationFormDialog'
+import { fetchPartInstallations, removePartInstallation } from '@/features/part-installations/api'
 import { TaskFormDialog } from '@/features/tasks/TaskFormDialog'
 import { TaskRow } from '@/features/tasks/TaskRow'
 import { fetchTasksForEquipment } from '@/features/tasks/api'
 import { WorkOrderFormDialog } from '@/features/work-orders/WorkOrderFormDialog'
 import { fetchWorkOrders, generateTaskFromWorkOrder } from '@/features/work-orders/api'
 import { useCanManage } from '@/stores/use-has-role'
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from '@/components/ui/alert-dialog'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Skeleton } from '@/components/ui/skeleton'
@@ -45,6 +60,32 @@ export function EquipmentDetailPage() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['tasks', equipmentId] })
       toast.success('Tugas berhasil dibuat dari work order.')
+    },
+  })
+
+  const { data: equipmentParts, isLoading: equipmentPartsLoading } = useQuery({
+    queryKey: ['equipment-parts', equipmentId],
+    queryFn: () => fetchEquipmentParts(equipmentId),
+  })
+
+  const removeEquipmentPartMutation = useMutation({
+    mutationFn: removeEquipmentPart,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['equipment-parts', equipmentId] })
+      toast.success('Part berhasil dihapus dari BOM.')
+    },
+  })
+
+  const { data: installations, isLoading: installationsLoading } = useQuery({
+    queryKey: ['part-installations', equipmentId],
+    queryFn: () => fetchPartInstallations(equipmentId),
+  })
+
+  const removeInstallationMutation = useMutation({
+    mutationFn: removePartInstallation,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['part-installations', equipmentId] })
+      toast.success('Part berhasil dilepas.')
     },
   })
 
@@ -132,6 +173,157 @@ export function EquipmentDetailPage() {
             <TableBody>
               {tasks?.map((task) => (
                 <TaskRow key={task.id} task={task} invalidateKey={['tasks', equipmentId]} />
+              ))}
+            </TableBody>
+          </Table>
+        )}
+      </div>
+
+      <div className="flex flex-col gap-3">
+        <div className="flex items-center justify-between">
+          <h2 className="text-lg font-medium">Bill of Material (BOM)</h2>
+          {canManage && (
+            <EquipmentPartFormDialog
+              equipmentId={equipmentId}
+              trigger={<Button size="sm">Tambah Part</Button>}
+            />
+          )}
+        </div>
+        {equipmentPartsLoading ? (
+          <Skeleton className="h-24 w-full" />
+        ) : equipmentParts?.length === 0 ? (
+          <p className="text-sm text-muted-foreground">Belum ada part terdaftar sebagai komponen equipment ini.</p>
+        ) : (
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Part</TableHead>
+                <TableHead className="text-right">Jumlah Dibutuhkan</TableHead>
+                <TableHead>Catatan</TableHead>
+                {canManage && <TableHead className="text-right">Aksi</TableHead>}
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {equipmentParts?.map((ep) => (
+                <TableRow key={ep.id}>
+                  <TableCell>
+                    <Link to={`/parts/${ep.part_id}`} className="font-medium hover:underline">
+                      {ep.part_name ?? `Part #${ep.part_id}`}
+                    </Link>
+                  </TableCell>
+                  <TableCell className="text-right">{ep.quantity_required ?? '-'}</TableCell>
+                  <TableCell className="text-muted-foreground">{ep.notes ?? '-'}</TableCell>
+                  {canManage && (
+                    <TableCell className="text-right">
+                      <AlertDialog>
+                        <AlertDialogTrigger render={<Button variant="outline" size="sm" />}>
+                          Hapus
+                        </AlertDialogTrigger>
+                        <AlertDialogContent>
+                          <AlertDialogHeader>
+                            <AlertDialogTitle>Hapus part ini dari BOM?</AlertDialogTitle>
+                            <AlertDialogDescription>
+                              "{ep.part_name ?? `Part #${ep.part_id}`}" tidak akan lagi terdaftar sebagai
+                              komponen equipment ini.
+                            </AlertDialogDescription>
+                          </AlertDialogHeader>
+                          <AlertDialogFooter>
+                            <AlertDialogCancel>Batal</AlertDialogCancel>
+                            <AlertDialogAction onClick={() => removeEquipmentPartMutation.mutate(ep.id)}>
+                              Hapus
+                            </AlertDialogAction>
+                          </AlertDialogFooter>
+                        </AlertDialogContent>
+                      </AlertDialog>
+                    </TableCell>
+                  )}
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        )}
+      </div>
+
+      <div className="flex flex-col gap-3">
+        <div className="flex items-center justify-between">
+          <h2 className="text-lg font-medium">Riwayat Pemasangan Part</h2>
+          {canManage && (
+            <PartInstallationFormDialog
+              equipmentId={equipmentId}
+              trigger={<Button size="sm">Pasang Part</Button>}
+            />
+          )}
+        </div>
+        {installationsLoading ? (
+          <Skeleton className="h-24 w-full" />
+        ) : installations?.length === 0 ? (
+          <p className="text-sm text-muted-foreground">Belum ada part yang tercatat terpasang di equipment ini.</p>
+        ) : (
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Part</TableHead>
+                <TableHead>Tanggal Pasang</TableHead>
+                <TableHead className="text-right">Usia</TableHead>
+                <TableHead className="text-right">Pemakaian</TableHead>
+                <TableHead>Status</TableHead>
+                {canManage && <TableHead className="text-right">Aksi</TableHead>}
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {installations?.map((installation) => (
+                <TableRow key={installation.id}>
+                  <TableCell>
+                    <Link to={`/parts/${installation.part_id}`} className="font-medium hover:underline">
+                      {installation.part_name}
+                    </Link>
+                    <p className="font-mono text-xs text-muted-foreground">{installation.item_master_no}</p>
+                  </TableCell>
+                  <TableCell className="text-muted-foreground">
+                    {new Date(installation.installed_at).toLocaleDateString('id-ID')}
+                  </TableCell>
+                  <TableCell className="text-right text-muted-foreground">
+                    {installation.age_in_days} hari
+                  </TableCell>
+                  <TableCell className="text-right">
+                    {installation.percent_used != null ? (
+                      <Badge
+                        variant={
+                          installation.percent_used >= 100
+                            ? 'destructive'
+                            : installation.percent_used >= 80
+                              ? 'secondary'
+                              : 'outline'
+                        }
+                      >
+                        {Math.round(installation.percent_used)}%
+                      </Badge>
+                    ) : (
+                      '-'
+                    )}
+                  </TableCell>
+                  <TableCell>
+                    {installation.is_active ? (
+                      <Badge variant="outline">Terpasang</Badge>
+                    ) : (
+                      <Badge variant="secondary">Dilepas</Badge>
+                    )}
+                  </TableCell>
+                  {canManage && (
+                    <TableCell className="text-right">
+                      {installation.is_active && (
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => removeInstallationMutation.mutate(installation.id)}
+                          disabled={removeInstallationMutation.isPending}
+                        >
+                          Lepas
+                        </Button>
+                      )}
+                    </TableCell>
+                  )}
+                </TableRow>
               ))}
             </TableBody>
           </Table>
