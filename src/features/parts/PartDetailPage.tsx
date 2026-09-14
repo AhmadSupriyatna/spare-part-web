@@ -1,11 +1,12 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { Pencil, Trash2 } from 'lucide-react'
+import { MapPin, Pencil, Trash2 } from 'lucide-react'
 import { Link, useParams } from 'react-router'
 import { toast } from 'sonner'
 import { Breadcrumb } from '@/components/Breadcrumb'
 import { fetchEquipmentForPart } from '@/features/equipment-parts/api'
 import { fetchInstallationsForPart } from '@/features/part-installations/api'
 import { fetchPart } from '@/features/parts/api'
+import { SetPartLocationDialog } from '@/features/part-stocks/SetPartLocationDialog'
 import { PartSupplierFormDialog } from '@/features/part-suppliers/PartSupplierFormDialog'
 import { fetchPartSuppliers, removePartSupplier } from '@/features/part-suppliers/api'
 import { useBranchStore } from '@/stores/branch-store'
@@ -109,6 +110,7 @@ export function PartDetailPage() {
                 <TableHead>Lokasi</TableHead>
                 <TableHead className="text-right">Jumlah</TableHead>
                 <TableHead>Status</TableHead>
+                {canManage && <TableHead className="text-right">Aksi</TableHead>}
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -138,6 +140,27 @@ export function PartDetailPage() {
                       <Badge variant="outline">Normal</Badge>
                     )}
                   </TableCell>
+                  {canManage && (
+                    <TableCell className="text-right">
+                      <SetPartLocationDialog
+                        partId={partId}
+                        partStockId={stock.id}
+                        branchId={stock.branch_id}
+                        branchName={stock.branch_name}
+                        currentLocationId={stock.location_id}
+                        trigger={
+                          <Button
+                            variant="ghost"
+                            size="icon-sm"
+                            aria-label="Atur lokasi"
+                            title="Atur lokasi"
+                          >
+                            <MapPin />
+                          </Button>
+                        }
+                      />
+                    </TableCell>
+                  )}
                 </TableRow>
               ))}
             </TableBody>
@@ -146,10 +169,10 @@ export function PartDetailPage() {
 
         <TabsContent value="suppliers" className="pt-4">
           <div className="mb-3 flex justify-end">
-            {canManage && activeBranchId && (
+            {canManage && (
               <PartSupplierFormDialog
                 partId={partId}
-                branchId={activeBranchId}
+                defaultBranchId={activeBranchId ?? undefined}
                 trigger={<Button size="sm">Tambah Supplier</Button>}
               />
             )}
@@ -190,23 +213,20 @@ export function PartDetailPage() {
                     </TableCell>
                     {canManage && (
                       <TableCell className="flex justify-end gap-1">
-                        {activeBranchId && (
-                          <PartSupplierFormDialog
-                            partId={partId}
-                            branchId={activeBranchId}
-                            partSupplier={ps}
-                            trigger={
-                              <Button
-                                variant="ghost"
-                                size="icon-sm"
-                                aria-label="Ubah supplier"
-                                title="Ubah supplier"
-                              >
-                                <Pencil />
-                              </Button>
-                            }
-                          />
-                        )}
+                        <PartSupplierFormDialog
+                          partId={partId}
+                          partSupplier={ps}
+                          trigger={
+                            <Button
+                              variant="ghost"
+                              size="icon-sm"
+                              aria-label="Ubah supplier"
+                              title="Ubah supplier"
+                            >
+                              <Pencil />
+                            </Button>
+                          }
+                        />
                         <AlertDialog>
                           <AlertDialogTrigger
                             render={

@@ -114,7 +114,6 @@ export function SupplierDetailPage() {
                     <TableCell className="flex justify-end gap-1">
                       <PartSupplierFormDialog
                         partId={ps.part_id}
-                        branchId={supplier.branch_id}
                         partSupplier={ps}
                         trigger={
                           <Button
