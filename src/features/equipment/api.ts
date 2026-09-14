@@ -13,6 +13,11 @@ export async function fetchEquipmentList(machineId: number): Promise<Equipment[]
   return data.data
 }
 
+export async function fetchEquipmentForBranch(branchId: number): Promise<Equipment[]> {
+  const { data } = await apiClient.get<{ data: Equipment[] }>(`/branches/${branchId}/equipment`)
+  return data.data
+}
+
 export async function fetchEquipment(id: number): Promise<Equipment> {
   const { data } = await apiClient.get<{ data: Equipment }>(`/equipment/${id}`)
   return data.data
