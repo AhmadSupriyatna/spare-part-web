@@ -1,14 +1,21 @@
 import { useQuery } from '@tanstack/react-query'
+import { MapPin, PackagePlus, SlidersHorizontal } from 'lucide-react'
 import { Link } from 'react-router'
-import { fetchParts } from '@/features/parts/api'
+import { AdjustStockDialog } from '@/features/part-stocks/AdjustStockDialog'
 import { fetchPartStocksForBranch } from '@/features/part-stocks/api'
+import { ReceiveStockDialog } from '@/features/part-stocks/ReceiveStockDialog'
+import { SetPartLocationDialog } from '@/features/part-stocks/SetPartLocationDialog'
+import { fetchParts } from '@/features/parts/api'
 import { useBranchStore } from '@/stores/branch-store'
+import { useCanManage } from '@/stores/use-has-role'
 import { Badge } from '@/components/ui/badge'
+import { Button } from '@/components/ui/button'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 
 export function PartStocksPage() {
   const activeBranchId = useBranchStore((state) => state.activeBranchId)
+  const canManage = useCanManage()
 
   const { data: stocks, isLoading } = useQuery({
     queryKey: ['part-stocks', activeBranchId],
@@ -46,6 +53,7 @@ export function PartStocksPage() {
               <TableHead className="text-right">Jumlah</TableHead>
               <TableHead className="text-right">Titik Reorder</TableHead>
               <TableHead>Status</TableHead>
+              {canManage && <TableHead className="text-right">Aksi</TableHead>}
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -71,6 +79,56 @@ export function PartStocksPage() {
                       <Badge variant="outline">Normal</Badge>
                     )}
                   </TableCell>
+                  {canManage && (
+                    <TableCell className="flex justify-end gap-1">
+                      <ReceiveStockDialog
+                        partStockId={stock.id}
+                        branchId={stock.branch_id}
+                        currentQuantity={stock.quantity_on_hand}
+                        currentUnitCost={stock.unit_cost}
+                        trigger={
+                          <Button
+                            variant="ghost"
+                            size="icon-sm"
+                            aria-label="Terima barang"
+                            title="Terima barang"
+                          >
+                            <PackagePlus />
+                          </Button>
+                        }
+                      />
+                      <AdjustStockDialog
+                        partStockId={stock.id}
+                        branchId={stock.branch_id}
+                        trigger={
+                          <Button
+                            variant="ghost"
+                            size="icon-sm"
+                            aria-label="Sesuaikan stok"
+                            title="Sesuaikan stok"
+                          >
+                            <SlidersHorizontal />
+                          </Button>
+                        }
+                      />
+                      <SetPartLocationDialog
+                        partId={stock.part_id}
+                        partStockId={stock.id}
+                        branchId={stock.branch_id}
+                        currentLocationId={stock.location_id}
+                        trigger={
+                          <Button
+                            variant="ghost"
+                            size="icon-sm"
+                            aria-label="Atur lokasi"
+                            title="Atur lokasi"
+                          >
+                            <MapPin />
+                          </Button>
+                        }
+                      />
+                    </TableCell>
+                  )}
                 </TableRow>
               )
             })}
