@@ -3,6 +3,8 @@ import {
   AlertTriangle,
   Boxes,
   Building2,
+  ChevronLeft,
+  ChevronRight,
   ClipboardList,
   Factory,
   LayoutDashboard,
@@ -22,6 +24,7 @@ import { ThemeToggle } from '@/components/ThemeToggle'
 import { logout as logoutRequest } from '@/features/auth/api'
 import { cn } from '@/lib/utils'
 import { useAuthStore } from '@/stores/auth-store'
+import { useSidebarStore } from '@/stores/sidebar-store'
 import { Button } from '@/components/ui/button'
 import { Separator } from '@/components/ui/separator'
 
@@ -91,6 +94,8 @@ export function AppLayout() {
   const navigate = useNavigate()
   const user = useAuthStore((state) => state.user)
   const clearSession = useAuthStore((state) => state.clearSession)
+  const collapsed = useSidebarStore((state) => state.collapsed)
+  const toggleCollapsed = useSidebarStore((state) => state.toggleCollapsed)
 
   const mutation = useMutation({
     mutationFn: logoutRequest,
@@ -102,32 +107,56 @@ export function AppLayout() {
 
   return (
     <div className="flex min-h-svh">
-      <aside className="hidden w-60 shrink-0 flex-col border-r bg-sidebar text-sidebar-foreground sm:flex">
-        <div className="flex items-center gap-2.5 px-5 py-5">
+      <aside
+        className={cn(
+          'relative hidden shrink-0 flex-col border-r bg-sidebar text-sidebar-foreground transition-[width] duration-200 sm:flex',
+          collapsed ? 'w-16' : 'w-60',
+        )}
+      >
+        <Button
+          variant="outline"
+          size="icon-xs"
+          onClick={toggleCollapsed}
+          aria-label={collapsed ? 'Perluas sidebar' : 'Ciutkan sidebar'}
+          title={collapsed ? 'Perluas sidebar' : 'Ciutkan sidebar'}
+          className="absolute -right-3 top-6 z-10 rounded-full bg-background shadow-sm"
+        >
+          {collapsed ? <ChevronRight /> : <ChevronLeft />}
+        </Button>
+
+        <div className={cn('flex items-center gap-2.5 px-5 py-5', collapsed && 'justify-center px-0')}>
           <div className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-primary text-primary-foreground">
             <Wrench className="size-4" />
           </div>
-          <div className="leading-tight">
-            <p className="text-sm font-semibold">Spare Part</p>
-            <p className="text-xs text-muted-foreground">Sistem Manajemen</p>
-          </div>
+          {!collapsed && (
+            <div className="leading-tight">
+              <p className="text-sm font-semibold">Spare Part</p>
+              <p className="text-xs text-muted-foreground">Sistem Manajemen</p>
+            </div>
+          )}
         </div>
-        <nav className="flex flex-1 flex-col gap-4 overflow-y-auto px-3 pb-4">
+
+        <nav className="scroll-thin flex flex-1 flex-col gap-4 overflow-y-auto px-3 pb-4">
           {navSections.map((section, index) => (
             <div key={section.label ?? index} className="flex flex-col gap-1">
-              {section.label && (
-                <p className="px-3 pb-1 text-xs font-medium tracking-wide text-muted-foreground uppercase">
-                  {section.label}
-                </p>
-              )}
+              {section.label &&
+                (collapsed ? (
+                  index > 0 && <Separator className="my-1" />
+                ) : (
+                  <p className="px-3 pb-1 text-xs font-medium tracking-wide text-muted-foreground uppercase">
+                    {section.label}
+                  </p>
+                ))}
               {section.items.map((item) => (
                 <NavLink
                   key={item.to}
                   to={item.to}
                   end={item.end}
+                  title={collapsed ? item.label : undefined}
                   className={({ isActive }) =>
                     cn(
                       'flex items-center gap-2.5 rounded-md px-3 py-2 text-sm font-medium transition-colors',
+                      collapsed && 'justify-center px-0',
                       isActive
                         ? 'bg-sidebar-primary/10 text-sidebar-primary'
                         : 'text-sidebar-foreground/70 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground',
@@ -135,7 +164,7 @@ export function AppLayout() {
                   }
                 >
                   <item.icon className="size-4 shrink-0" />
-                  {item.label}
+                  {!collapsed && item.label}
                 </NavLink>
               ))}
             </div>
