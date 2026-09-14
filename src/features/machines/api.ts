@@ -13,16 +13,6 @@ export async function fetchMachines(lineId: number): Promise<Machine[]> {
   return data.data
 }
 
-export async function fetchMachinesForBranch(branchId: number): Promise<Machine[]> {
-  const { data } = await apiClient.get<{ data: Machine[] }>(`/branches/${branchId}/machines`)
-  return data.data
-}
-
-export async function fetchMachine(id: number): Promise<Machine> {
-  const { data } = await apiClient.get<{ data: Machine }>(`/machines/${id}`)
-  return data.data
-}
-
 export async function createMachine(lineId: number, payload: MachinePayload): Promise<Machine> {
   const { data } = await apiClient.post<{ data: Machine }>(`/lines/${lineId}/machines`, payload)
   return data.data

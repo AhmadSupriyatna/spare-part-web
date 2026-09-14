@@ -99,8 +99,11 @@ export function EquipmentDetailPage() {
             { label: 'Line Produksi', to: '/lines' },
             ...(equipment
               ? [
-                  { label: equipment.line_name ?? 'Line', to: `/lines/${equipment.line_id}` },
-                  { label: equipment.machine_name ?? 'Mesin', to: `/machines/${equipment.machine_id}` },
+                  { label: equipment.line_name ?? 'Line', to: `/lines?line=${equipment.line_id}` },
+                  {
+                    label: equipment.machine_name ?? 'Mesin',
+                    to: `/lines?line=${equipment.line_id}&machine=${equipment.machine_id}`,
+                  },
                 ]
               : []),
             { label: equipment?.name ?? 'Equipment' },

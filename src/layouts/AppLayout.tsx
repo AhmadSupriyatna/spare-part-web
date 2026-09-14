@@ -1,11 +1,9 @@
 import { useMutation } from '@tanstack/react-query'
 import {
   AlertTriangle,
-  Blocks,
   Boxes,
   Building2,
   ClipboardList,
-  Cog,
   Factory,
   LayoutDashboard,
   LogOut,
@@ -52,9 +50,7 @@ const navSections: NavSection[] = [
     label: 'Aset & Produksi',
     items: [
       { to: '/branches', label: 'Cabang', icon: Building2 },
-      { to: '/lines', label: 'Line Produksi', icon: Factory },
-      { to: '/machines', label: 'Mesin', icon: Cog },
-      { to: '/equipment', label: 'Equipment', icon: Blocks },
+      { to: '/lines', label: 'Line, Mesin & Equipment', icon: Factory },
     ],
   },
   {

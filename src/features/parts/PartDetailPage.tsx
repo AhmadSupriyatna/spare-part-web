@@ -267,12 +267,18 @@ export function PartDetailPage() {
                     <TableCell>
                       <Breadcrumb
                         segments={[
-                          { label: ep.line_name ?? 'Line', to: ep.line_id ? `/lines/${ep.line_id}` : undefined },
+                          {
+                            label: ep.line_name ?? 'Line',
+                            to: ep.line_id ? `/lines?line=${ep.line_id}` : undefined,
+                          },
                           {
                             label: ep.machine_name ?? 'Mesin',
-                            to: ep.machine_id ? `/machines/${ep.machine_id}` : undefined,
+                            to: ep.machine_id ? `/lines?line=${ep.line_id}&machine=${ep.machine_id}` : undefined,
                           },
-                          { label: ep.equipment_name ?? `Equipment #${ep.equipment_id}`, to: `/equipment/${ep.equipment_id}` },
+                          {
+                            label: ep.equipment_name ?? `Equipment #${ep.equipment_id}`,
+                            to: `/equipment/${ep.equipment_id}`,
+                          },
                         ]}
                       />
                     </TableCell>
@@ -311,11 +317,13 @@ export function PartDetailPage() {
                         segments={[
                           {
                             label: installation.line_name ?? 'Line',
-                            to: installation.line_id ? `/lines/${installation.line_id}` : undefined,
+                            to: installation.line_id ? `/lines?line=${installation.line_id}` : undefined,
                           },
                           {
                             label: installation.machine_name ?? 'Mesin',
-                            to: installation.machine_id ? `/machines/${installation.machine_id}` : undefined,
+                            to: installation.machine_id
+                              ? `/lines?line=${installation.line_id}&machine=${installation.machine_id}`
+                              : undefined,
                           },
                           {
                             label: installation.equipment_name ?? `Equipment #${installation.equipment_id}`,

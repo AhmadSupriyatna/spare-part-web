@@ -4,13 +4,9 @@ import { LoginPage } from '@/features/auth/LoginPage'
 import { BranchesPage } from '@/features/branches/BranchesPage'
 import { DashboardPage } from '@/features/dashboard/DashboardPage'
 import { EquipmentDetailPage } from '@/features/equipment/EquipmentDetailPage'
-import { EquipmentPage } from '@/features/equipment/EquipmentPage'
-import { LineDetailPage } from '@/features/lines/LineDetailPage'
-import { LinesPage } from '@/features/lines/LinesPage'
+import { LineHierarchyPage } from '@/features/lines/LineHierarchyPage'
 import { LocationDetailPage } from '@/features/locations/LocationDetailPage'
 import { LocationsPage } from '@/features/locations/LocationsPage'
-import { MachineDetailPage } from '@/features/machines/MachineDetailPage'
-import { MachinesPage } from '@/features/machines/MachinesPage'
 import { PartDetailPage } from '@/features/parts/PartDetailPage'
 import { PartsPage } from '@/features/parts/PartsPage'
 import { PartStockDetailPage } from '@/features/part-stocks/PartStockDetailPage'
@@ -39,11 +35,7 @@ function App() {
             <Route path="suppliers/:id" element={<SupplierDetailPage />} />
             <Route path="locations" element={<LocationsPage />} />
             <Route path="locations/:id" element={<LocationDetailPage />} />
-            <Route path="lines" element={<LinesPage />} />
-            <Route path="lines/:id" element={<LineDetailPage />} />
-            <Route path="machines" element={<MachinesPage />} />
-            <Route path="machines/:id" element={<MachineDetailPage />} />
-            <Route path="equipment" element={<EquipmentPage />} />
+            <Route path="lines" element={<LineHierarchyPage />} />
             <Route path="equipment/:id" element={<EquipmentDetailPage />} />
             <Route path="my-tasks" element={<MyTasksPage />} />
           </Route>
