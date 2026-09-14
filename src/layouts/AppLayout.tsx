@@ -9,6 +9,8 @@ import {
   LogOut,
   MapPin,
   Package,
+  QrCode,
+  ShieldCheck,
   Truck,
   Wrench,
 } from 'lucide-react'
@@ -56,6 +58,13 @@ const navSections: NavSection[] = [
   {
     label: 'Kerja Saya',
     items: [{ to: '/my-tasks', label: 'Tugas Saya', icon: ClipboardList }],
+  },
+  {
+    label: 'Breakdown',
+    items: [
+      { to: '/breakdown/approvals', label: 'Papan Approval', icon: ShieldCheck },
+      { to: '/breakdown/print-qr', label: 'Cetak QR Code', icon: QrCode },
+    ],
   },
 ]
 

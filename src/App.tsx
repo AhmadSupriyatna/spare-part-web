@@ -2,6 +2,9 @@ import { BrowserRouter, Navigate, Route, Routes } from 'react-router'
 import { AlertsPage } from '@/features/alerts/AlertsPage'
 import { LoginPage } from '@/features/auth/LoginPage'
 import { BranchesPage } from '@/features/branches/BranchesPage'
+import { BreakdownApprovalBoardPage } from '@/features/breakdown/BreakdownApprovalBoardPage'
+import { BreakdownScanPage } from '@/features/breakdown/BreakdownScanPage'
+import { PrintQrCodesPage } from '@/features/breakdown/PrintQrCodesPage'
 import { DashboardPage } from '@/features/dashboard/DashboardPage'
 import { EquipmentDetailPage } from '@/features/equipment/EquipmentDetailPage'
 import { LineHierarchyPage } from '@/features/lines/LineHierarchyPage'
@@ -22,6 +25,10 @@ function App() {
     <BrowserRouter>
       <Routes>
         <Route path="/login" element={<LoginPage />} />
+
+        {/* Public breakdown QR-scan flow — no login, reachable straight from a printed QR code. */}
+        <Route path="/breakdown/scan/:partId" element={<BreakdownScanPage />} />
+
         <Route element={<ProtectedRoute />}>
           <Route element={<AppLayout />}>
             <Route index element={<DashboardPage />} />
@@ -38,6 +45,8 @@ function App() {
             <Route path="lines" element={<LineHierarchyPage />} />
             <Route path="equipment/:id" element={<EquipmentDetailPage />} />
             <Route path="my-tasks" element={<MyTasksPage />} />
+            <Route path="breakdown/approvals" element={<BreakdownApprovalBoardPage />} />
+            <Route path="breakdown/print-qr" element={<PrintQrCodesPage />} />
           </Route>
         </Route>
         <Route path="*" element={<Navigate to="/" replace />} />
