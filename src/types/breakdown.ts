@@ -40,6 +40,8 @@ export interface PublicMachine {
 export interface PublicEquipment {
   id: number
   name: string
+  machine_name: string
+  line_name: string
 }
 
 export interface PublicPart {

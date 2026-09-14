@@ -27,7 +27,7 @@ function App() {
         <Route path="/login" element={<LoginPage />} />
 
         {/* Public breakdown QR-scan flow — no login, reachable straight from a printed QR code. */}
-        <Route path="/breakdown/scan/:partId" element={<BreakdownScanPage />} />
+        <Route path="/breakdown/scan/:partId/:branchId" element={<BreakdownScanPage />} />
 
         <Route element={<ProtectedRoute />}>
           <Route element={<AppLayout />}>

@@ -2,12 +2,38 @@ import { useQuery } from '@tanstack/react-query'
 import { QRCodeSVG } from 'qrcode.react'
 import { useMemo, useState } from 'react'
 import { fetchParts } from '@/features/parts/api'
+import { useAuthStore } from '@/stores/auth-store'
+import { useBranchStore } from '@/stores/branch-store'
+import type { Part } from '@/types/inventory'
 import { Button } from '@/components/ui/button'
+import { Checkbox } from '@/components/ui/checkbox'
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog'
 import { Input } from '@/components/ui/input'
 import { Skeleton } from '@/components/ui/skeleton'
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
+
+interface PrintEntry {
+  part: Part
+  copy: number
+}
 
 export function PrintQrCodesPage() {
   const [search, setSearch] = useState('')
+  const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set())
+  const [quantityDialogOpen, setQuantityDialogOpen] = useState(false)
+  const [quantities, setQuantities] = useState<Record<number, string>>({})
+  const [printEntries, setPrintEntries] = useState<PrintEntry[] | null>(null)
+
+  const activeBranchId = useBranchStore((state) => state.activeBranchId)
+  const branches = useAuthStore((state) => state.user?.branches ?? [])
+  const activeBranch = branches.find((b) => b.id === activeBranchId)
 
   const { data: parts, isLoading } = useQuery({
     queryKey: ['parts'],
@@ -24,6 +50,52 @@ export function PrintQrCodesPage() {
     [parts, search],
   )
 
+  const allSelected = !!filteredParts?.length && filteredParts.every((p) => selectedIds.has(p.id))
+
+  function toggleAll() {
+    if (!filteredParts) return
+    setSelectedIds((prev) => {
+      if (allSelected) return new Set()
+      const next = new Set(prev)
+      filteredParts.forEach((p) => next.add(p.id))
+      return next
+    })
+  }
+
+  function toggleOne(id: number) {
+    setSelectedIds((prev) => {
+      const next = new Set(prev)
+      if (next.has(id)) next.delete(id)
+      else next.add(id)
+      return next
+    })
+  }
+
+  function openQuantityDialog() {
+    const selectedParts = parts?.filter((p) => selectedIds.has(p.id)) ?? []
+    const initial: Record<number, string> = {}
+    selectedParts.forEach((p) => {
+      initial[p.id] = quantities[p.id] ?? '1'
+    })
+    setQuantities(initial)
+    setQuantityDialogOpen(true)
+  }
+
+  function confirmPrint() {
+    const selectedParts = parts?.filter((p) => selectedIds.has(p.id)) ?? []
+    const entries: PrintEntry[] = []
+    selectedParts.forEach((part) => {
+      const qty = Math.max(1, Number(quantities[part.id]) || 1)
+      for (let i = 0; i < qty; i++) {
+        entries.push({ part, copy: i + 1 })
+      }
+    })
+    setPrintEntries(entries)
+    setQuantityDialogOpen(false)
+    requestAnimationFrame(() => window.print())
+  }
+
+  const selectedParts = parts?.filter((p) => selectedIds.has(p.id)) ?? []
   const scanBaseUrl = `${window.location.origin}/breakdown/scan`
 
   return (
@@ -32,7 +104,7 @@ export function PrintQrCodesPage() {
         @media print {
           body * { visibility: hidden; }
           #qr-print-area, #qr-print-area * { visibility: visible; }
-          #qr-print-area { position: absolute; inset: 0; padding: 12px; }
+          #qr-print-area { position: absolute; inset: 0; padding: 8px; }
         }
       `}</style>
 
@@ -40,11 +112,20 @@ export function PrintQrCodesPage() {
         <div>
           <h1 className="text-2xl font-semibold">Cetak QR Code Part</h1>
           <p className="text-sm text-muted-foreground">
-            Tempelkan QR ini di lokasi/rak part. Scan membuka halaman permintaan penggantian breakdown.
+            Centang part yang mau dicetak QR-nya, lalu tentukan berapa lembar per part.
           </p>
         </div>
-        <Button onClick={() => window.print()}>Cetak</Button>
+        <Button onClick={openQuantityDialog} disabled={selectedIds.size === 0}>
+          Cetak Terpilih ({selectedIds.size})
+        </Button>
       </div>
+
+      {!activeBranchId && (
+        <p className="text-sm text-destructive print:hidden">
+          Pilih cabang di header terlebih dahulu — QR akan menyimpan cabang ini agar tidak perlu
+          dipilih lagi saat scan.
+        </p>
+      )}
 
       <Input
         placeholder="Cari nama atau Item Master..."
@@ -54,21 +135,107 @@ export function PrintQrCodesPage() {
       />
 
       {isLoading ? (
-        <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4">
-          {Array.from({ length: 8 }).map((_, i) => (
-            <Skeleton key={i} className="h-48 w-full" />
+        <div className="flex flex-col gap-2 print:hidden">
+          {Array.from({ length: 6 }).map((_, i) => (
+            <Skeleton key={i} className="h-10 w-full" />
           ))}
         </div>
       ) : (
-        <div id="qr-print-area" className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4">
-          {filteredParts?.map((part) => (
+        <div className="rounded-md border print:hidden">
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead className="w-10">
+                  <Checkbox checked={allSelected} onCheckedChange={toggleAll} aria-label="Pilih semua" />
+                </TableHead>
+                <TableHead>Nama Part</TableHead>
+                <TableHead>Item Master</TableHead>
+                <TableHead>Kategori</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {filteredParts?.map((part) => (
+                <TableRow key={part.id}>
+                  <TableCell>
+                    <Checkbox
+                      checked={selectedIds.has(part.id)}
+                      onCheckedChange={() => toggleOne(part.id)}
+                      aria-label={`Pilih ${part.name}`}
+                    />
+                  </TableCell>
+                  <TableCell className="font-medium">{part.name}</TableCell>
+                  <TableCell className="font-mono text-xs text-muted-foreground">
+                    {part.item_master_no}
+                  </TableCell>
+                  <TableCell className="text-muted-foreground">{part.category ?? '-'}</TableCell>
+                </TableRow>
+              ))}
+              {filteredParts?.length === 0 && (
+                <TableRow>
+                  <TableCell colSpan={4} className="text-center text-muted-foreground">
+                    Tidak ada part yang cocok.
+                  </TableCell>
+                </TableRow>
+              )}
+            </TableBody>
+          </Table>
+        </div>
+      )}
+
+      <Dialog open={quantityDialogOpen} onOpenChange={setQuantityDialogOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Jumlah Cetak per Part</DialogTitle>
+            <DialogDescription>
+              Tentukan berapa lembar QR yang mau dicetak untuk tiap part terpilih.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="flex max-h-80 flex-col gap-3 overflow-y-auto">
+            {selectedParts.map((part) => (
+              <div key={part.id} className="flex items-center justify-between gap-3">
+                <div className="min-w-0">
+                  <p className="truncate text-sm font-medium">{part.name}</p>
+                  <p className="font-mono text-xs text-muted-foreground">{part.item_master_no}</p>
+                </div>
+                <Input
+                  type="number"
+                  min={1}
+                  className="w-20"
+                  value={quantities[part.id] ?? '1'}
+                  onChange={(e) =>
+                    setQuantities((prev) => ({ ...prev, [part.id]: e.target.value }))
+                  }
+                />
+              </div>
+            ))}
+          </div>
+          <DialogFooter>
+            <Button onClick={confirmPrint} disabled={!activeBranchId}>
+              Cetak Sekarang
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {printEntries && activeBranchId && (
+        <div id="qr-print-area" className="hidden grid-cols-3 gap-3 print:grid">
+          {printEntries.map((entry, index) => (
             <div
-              key={part.id}
-              className="flex flex-col items-center gap-2 rounded-md border p-4 text-center break-inside-avoid"
+              key={`${entry.part.id}-${entry.copy}-${index}`}
+              className="flex flex-col items-center gap-1 rounded-md border p-2 text-center break-inside-avoid"
             >
-              <QRCodeSVG value={`${scanBaseUrl}/${part.id}`} size={128} />
-              <p className="text-sm font-medium leading-tight">{part.name}</p>
-              <p className="font-mono text-xs text-muted-foreground">{part.item_master_no}</p>
+              <div className="flex w-full items-center justify-center gap-1 border-b pb-1">
+                <div className="flex size-5 items-center justify-center rounded border border-dashed text-[6px] text-muted-foreground">
+                  Logo
+                </div>
+                <p className="text-[9px] font-semibold leading-none">Nama Perusahaan</p>
+              </div>
+              <p className="text-[8px] leading-none text-muted-foreground">
+                {activeBranch ? `${activeBranch.code} — ${activeBranch.name}` : ''}
+              </p>
+              <QRCodeSVG value={`${scanBaseUrl}/${entry.part.id}/${activeBranchId}`} size={64} />
+              <p className="text-[10px] font-medium leading-tight">{entry.part.name}</p>
+              <p className="font-mono text-[9px] text-muted-foreground">{entry.part.item_master_no}</p>
             </div>
           ))}
         </div>

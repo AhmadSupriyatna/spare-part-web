@@ -5,10 +5,7 @@ import { Controller, useForm } from 'react-hook-form'
 import { useParams } from 'react-router'
 import { z } from 'zod'
 import {
-  fetchPublicBranches,
-  fetchPublicEquipment,
-  fetchPublicLines,
-  fetchPublicMachines,
+  fetchEquipmentForPartInBranch,
   fetchPublicPart,
   submitReplacementRequest,
 } from '@/features/breakdown/api'
@@ -21,9 +18,6 @@ import { Skeleton } from '@/components/ui/skeleton'
 import { Textarea } from '@/components/ui/textarea'
 
 const formSchema = z.object({
-  branch_id: z.string().min(1, 'Pilih cabang'),
-  line_id: z.string().min(1, 'Pilih line'),
-  machine_id: z.string().min(1, 'Pilih mesin'),
   equipment_id: z.string().min(1, 'Pilih equipment'),
   requested_by_name: z.string().min(1, 'Nama wajib diisi').max(255),
   quantity_used: z
@@ -36,8 +30,9 @@ const formSchema = z.object({
 type FormValues = z.infer<typeof formSchema>
 
 export function BreakdownScanPage() {
-  const { partId } = useParams<{ partId: string }>()
+  const { partId, branchId } = useParams<{ partId: string; branchId: string }>()
   const id = Number(partId)
+  const branch = Number(branchId)
   const [submitted, setSubmitted] = useState(false)
 
   const { data: part, isLoading: partLoading } = useQuery({
@@ -45,39 +40,20 @@ export function BreakdownScanPage() {
     queryFn: () => fetchPublicPart(id),
   })
 
+  const { data: equipmentList, isLoading: equipmentLoading } = useQuery({
+    queryKey: ['public-equipment-for-part', id, branch],
+    queryFn: () => fetchEquipmentForPartInBranch(id, branch),
+    enabled: Number.isFinite(id) && Number.isFinite(branch),
+  })
+
   const {
     register,
     control,
     handleSubmit,
-    watch,
     formState: { errors },
   } = useForm<FormValues>({
     resolver: zodResolver(formSchema),
     defaultValues: { quantity_used: '1' },
-  })
-
-  const branchId = watch('branch_id')
-  const lineId = watch('line_id')
-  const machineId = watch('machine_id')
-
-  const { data: branches } = useQuery({
-    queryKey: ['public-branches'],
-    queryFn: fetchPublicBranches,
-  })
-  const { data: lines } = useQuery({
-    queryKey: ['public-lines', branchId],
-    queryFn: () => fetchPublicLines(Number(branchId)),
-    enabled: !!branchId,
-  })
-  const { data: machines } = useQuery({
-    queryKey: ['public-machines', lineId],
-    queryFn: () => fetchPublicMachines(Number(lineId)),
-    enabled: !!lineId,
-  })
-  const { data: equipmentList } = useQuery({
-    queryKey: ['public-equipment', machineId],
-    queryFn: () => fetchPublicEquipment(Number(machineId)),
-    enabled: !!machineId,
   })
 
   const mutation = useMutation({
@@ -143,94 +119,32 @@ export function BreakdownScanPage() {
             onSubmit={handleSubmit((values) => mutation.mutate(values))}
           >
             <div className="flex flex-col gap-2">
-              <Label>Cabang</Label>
-              <Controller
-                control={control}
-                name="branch_id"
-                render={({ field }) => (
-                  <Select value={field.value} onValueChange={field.onChange}>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Pilih cabang" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {branches?.map((b) => (
-                        <SelectItem key={b.id} value={String(b.id)}>
-                          {b.code} — {b.name}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                )}
-              />
-              {errors.branch_id && <p className="text-sm text-destructive">{errors.branch_id.message}</p>}
-            </div>
-
-            <div className="flex flex-col gap-2">
-              <Label>Line</Label>
-              <Controller
-                control={control}
-                name="line_id"
-                render={({ field }) => (
-                  <Select value={field.value} onValueChange={field.onChange} disabled={!branchId}>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Pilih line" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {lines?.map((l) => (
-                        <SelectItem key={l.id} value={String(l.id)}>
-                          {l.name}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                )}
-              />
-              {errors.line_id && <p className="text-sm text-destructive">{errors.line_id.message}</p>}
-            </div>
-
-            <div className="flex flex-col gap-2">
-              <Label>Mesin</Label>
-              <Controller
-                control={control}
-                name="machine_id"
-                render={({ field }) => (
-                  <Select value={field.value} onValueChange={field.onChange} disabled={!lineId}>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Pilih mesin" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {machines?.map((m) => (
-                        <SelectItem key={m.id} value={String(m.id)}>
-                          {m.name}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                )}
-              />
-              {errors.machine_id && <p className="text-sm text-destructive">{errors.machine_id.message}</p>}
-            </div>
-
-            <div className="flex flex-col gap-2">
-              <Label>Equipment</Label>
+              <Label>Line / Mesin / Equipment</Label>
               <Controller
                 control={control}
                 name="equipment_id"
                 render={({ field }) => (
-                  <Select value={field.value} onValueChange={field.onChange} disabled={!machineId}>
+                  <Select value={field.value} onValueChange={field.onChange} disabled={equipmentLoading}>
                     <SelectTrigger>
-                      <SelectValue placeholder="Pilih equipment" />
+                      <SelectValue
+                        placeholder={equipmentLoading ? 'Memuat...' : 'Pilih equipment'}
+                      />
                     </SelectTrigger>
                     <SelectContent>
                       {equipmentList?.map((e) => (
                         <SelectItem key={e.id} value={String(e.id)}>
-                          {e.name}
+                          {e.name} — {e.machine_name} · {e.line_name}
                         </SelectItem>
                       ))}
                     </SelectContent>
                   </Select>
                 )}
               />
+              {!equipmentLoading && equipmentList?.length === 0 && (
+                <p className="text-sm text-muted-foreground">
+                  Tidak ada equipment yang terdaftar memakai part ini di cabang tersebut.
+                </p>
+              )}
               {errors.equipment_id && (
                 <p className="text-sm text-destructive">{errors.equipment_id.message}</p>
               )}

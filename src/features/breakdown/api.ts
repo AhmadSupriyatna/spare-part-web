@@ -38,6 +38,21 @@ export async function fetchPublicEquipment(machineId: number): Promise<PublicEqu
   return data.data
 }
 
+/**
+ * Only equipment that actually uses this part per its BOM, in this branch —
+ * this is what the QR-scan flow shows so a technician never has to hunt
+ * through the full Line > Machine > Equipment hierarchy.
+ */
+export async function fetchEquipmentForPartInBranch(
+  partId: number,
+  branchId: number,
+): Promise<PublicEquipment[]> {
+  const { data } = await apiClient.get<{ data: PublicEquipment[] }>(
+    `/public/parts/${partId}/branches/${branchId}/equipment`,
+  )
+  return data.data
+}
+
 export interface SubmitReplacementPayload {
   part_id: number
   equipment_id: number
