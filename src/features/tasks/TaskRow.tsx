@@ -44,6 +44,12 @@ export function TaskRow({ task, invalidateKey }: TaskRowProps) {
       <TableCell>
         <div className="font-medium">{task.title}</div>
         {task.cause && <div className="text-xs text-muted-foreground">Penyebab: {task.cause}</div>}
+        {task.part_stock_id && (
+          <div className="text-xs text-muted-foreground">
+            Part: {task.part_name ?? `#${task.part_stock_id}`}
+            {task.quantity_used ? ` × ${task.quantity_used}` : ''}
+          </div>
+        )}
       </TableCell>
       <TableCell>
         <Badge
@@ -73,7 +79,7 @@ export function TaskRow({ task, invalidateKey }: TaskRowProps) {
           </Button>
         )}
         {task.status === 'in_progress' && (
-          <CompleteTaskDialog taskId={task.id} invalidateKey={invalidateKey} />
+          <CompleteTaskDialog task={task} invalidateKey={invalidateKey} />
         )}
         {(task.status === 'pending' || task.status === 'in_progress') && (
           <Button size="sm" variant="outline" onClick={() => cancelMutation.mutate()}>

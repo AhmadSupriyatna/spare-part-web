@@ -131,6 +131,7 @@ export function EquipmentDetailPage() {
                 <TableHead>Judul</TableHead>
                 <TableHead>Jenis Jadwal</TableHead>
                 <TableHead>Interval</TableHead>
+                <TableHead>Part</TableHead>
                 {canManage && <TableHead className="text-right">Aksi</TableHead>}
               </TableRow>
             </TableHeader>
@@ -146,6 +147,7 @@ export function EquipmentDetailPage() {
                     {wo.interval_hours ? `${wo.interval_hours} jam operasi` : null}
                     {!wo.interval_days && !wo.interval_hours ? '-' : null}
                   </TableCell>
+                  <TableCell className="text-muted-foreground">{wo.part_name ?? '-'}</TableCell>
                   {canManage && (
                     <TableCell className="text-right">
                       <Button

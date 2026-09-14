@@ -36,8 +36,14 @@ export async function startTask(id: number): Promise<Task> {
   return data.data
 }
 
-export async function completeTask(id: number, notes?: string): Promise<Task> {
-  const { data } = await apiClient.post<{ data: Task }>(`/tasks/${id}/complete`, { notes })
+export interface CompleteTaskPayload {
+  notes?: string
+  part_stock_id?: number | null
+  quantity_used?: number | null
+}
+
+export async function completeTask(id: number, payload: CompleteTaskPayload): Promise<Task> {
+  const { data } = await apiClient.post<{ data: Task }>(`/tasks/${id}/complete`, payload)
   return data.data
 }
 

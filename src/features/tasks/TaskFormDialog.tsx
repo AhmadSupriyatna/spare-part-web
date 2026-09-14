@@ -147,7 +147,7 @@ export function TaskFormDialog({ equipmentId, trigger }: TaskFormDialogProps) {
                   <SelectContent>
                     {partStocks?.map((stock) => (
                       <SelectItem key={stock.id} value={String(stock.id)}>
-                        Part #{stock.part_id} — stok {stock.quantity_on_hand}
+                        {stock.part_name ?? `Part #${stock.part_id}`} — stok {stock.quantity_on_hand}
                       </SelectItem>
                     ))}
                   </SelectContent>

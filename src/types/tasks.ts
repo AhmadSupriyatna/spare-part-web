@@ -63,6 +63,8 @@ export interface Task {
   completed_at: string | null
   completion_notes: string | null
   part_stock_id: number | null
+  part_name?: string | null
+  item_master_no?: string | null
   quantity_used: number | null
   is_overdue: boolean
   created_at: string
