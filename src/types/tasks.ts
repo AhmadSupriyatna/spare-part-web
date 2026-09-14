@@ -3,6 +3,7 @@ export interface ProductionLine {
   branch_id: number
   code: string
   name: string
+  runtime_hours: number
   is_active: boolean
 }
 
@@ -12,7 +13,6 @@ export interface Machine {
   code: string
   name: string
   category: string | null
-  runtime_hours: number
   is_active: boolean
 }
 

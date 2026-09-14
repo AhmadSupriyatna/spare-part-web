@@ -28,11 +28,7 @@ export function MachineDetailPage() {
     <div className="flex flex-col gap-4">
       <div>
         <h1 className="text-2xl font-semibold">{machine?.name ?? 'Mesin'}</h1>
-        {machine && (
-          <p className="text-muted-foreground">
-            Jam operasi saat ini: <span className="font-medium">{machine.runtime_hours}</span>
-          </p>
-        )}
+        {machine?.category && <p className="text-muted-foreground">{machine.category}</p>}
       </div>
 
       <div className="flex items-center justify-between">

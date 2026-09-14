@@ -4,7 +4,7 @@ import { useState } from 'react'
 import { useForm } from 'react-hook-form'
 import { toast } from 'sonner'
 import { z } from 'zod'
-import { addMachineRuntime } from '@/features/machines/api'
+import { addLineRuntime } from '@/features/lines/api'
 import { Button } from '@/components/ui/button'
 import {
   Dialog,
@@ -27,11 +27,11 @@ const runtimeSchema = z.object({
 type RuntimeFormValues = z.infer<typeof runtimeSchema>
 
 interface AddRuntimeDialogProps {
-  machineId: number
   lineId: number
+  branchId: number
 }
 
-export function AddRuntimeDialog({ machineId, lineId }: AddRuntimeDialogProps) {
+export function AddRuntimeDialog({ lineId, branchId }: AddRuntimeDialogProps) {
   const [open, setOpen] = useState(false)
   const queryClient = useQueryClient()
 
@@ -43,10 +43,10 @@ export function AddRuntimeDialog({ machineId, lineId }: AddRuntimeDialogProps) {
   } = useForm<RuntimeFormValues>({ resolver: zodResolver(runtimeSchema) })
 
   const mutation = useMutation({
-    mutationFn: (values: RuntimeFormValues) => addMachineRuntime(machineId, Number(values.hours)),
+    mutationFn: (values: RuntimeFormValues) => addLineRuntime(lineId, Number(values.hours)),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['machines', lineId] })
-      queryClient.invalidateQueries({ queryKey: ['machine', machineId] })
+      queryClient.invalidateQueries({ queryKey: ['lines', branchId] })
+      queryClient.invalidateQueries({ queryKey: ['line', lineId] })
       toast.success('Jam operasi berhasil ditambahkan.')
       reset()
       setOpen(false)

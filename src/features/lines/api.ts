@@ -30,3 +30,8 @@ export async function updateLine(id: number, payload: Partial<LinePayload>): Pro
 export async function deleteLine(id: number): Promise<void> {
   await apiClient.delete(`/lines/${id}`)
 }
+
+export async function addLineRuntime(id: number, hours: number): Promise<ProductionLine> {
+  const { data } = await apiClient.post<{ data: ProductionLine }>(`/lines/${id}/runtime`, { hours })
+  return data.data
+}

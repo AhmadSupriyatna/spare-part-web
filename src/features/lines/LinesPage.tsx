@@ -1,5 +1,6 @@
 import { useQuery } from '@tanstack/react-query'
 import { Link } from 'react-router'
+import { AddRuntimeDialog } from '@/features/lines/AddRuntimeDialog'
 import { fetchLines } from '@/features/lines/api'
 import { LineFormDialog } from '@/features/lines/LineFormDialog'
 import { useBranchStore } from '@/stores/branch-store'
@@ -33,7 +34,7 @@ export function LinesPage() {
       {isLoading ? (
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {Array.from({ length: 3 }).map((_, i) => (
-            <Skeleton key={i} className="h-24 w-full" />
+            <Skeleton key={i} className="h-32 w-full" />
           ))}
         </div>
       ) : lines?.length === 0 ? (
@@ -41,17 +42,23 @@ export function LinesPage() {
       ) : (
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {lines?.map((line) => (
-            <Link key={line.id} to={`/lines/${line.id}`}>
-              <Card className="transition-colors hover:bg-muted/50">
-                <CardHeader className="flex-row items-center justify-between pb-2">
-                  <CardTitle className="text-base">{line.name}</CardTitle>
-                  {!line.is_active && <Badge variant="outline">Nonaktif</Badge>}
-                </CardHeader>
-                <CardContent className="font-mono text-sm text-muted-foreground">
-                  {line.code}
-                </CardContent>
-              </Card>
-            </Link>
+            <Card key={line.id}>
+              <CardHeader className="flex-row items-center justify-between pb-2">
+                <CardTitle className="text-base">
+                  <Link to={`/lines/${line.id}`} className="hover:underline">
+                    {line.name}
+                  </Link>
+                </CardTitle>
+                {!line.is_active && <Badge variant="outline">Nonaktif</Badge>}
+              </CardHeader>
+              <CardContent className="flex flex-col gap-2">
+                <span className="font-mono text-sm text-muted-foreground">{line.code}</span>
+                <span className="text-sm">
+                  Jam operasi: <span className="font-medium">{line.runtime_hours}</span>
+                </span>
+                {canManage && <AddRuntimeDialog lineId={line.id} branchId={activeBranchId} />}
+              </CardContent>
+            </Card>
           ))}
         </div>
       )}

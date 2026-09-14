@@ -31,8 +31,3 @@ export async function updateMachine(id: number, payload: Partial<MachinePayload>
 export async function deleteMachine(id: number): Promise<void> {
   await apiClient.delete(`/machines/${id}`)
 }
-
-export async function addMachineRuntime(id: number, hours: number): Promise<Machine> {
-  const { data } = await apiClient.post<{ data: Machine }>(`/machines/${id}/runtime`, { hours })
-  return data.data
-}
