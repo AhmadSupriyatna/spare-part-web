@@ -1,6 +1,7 @@
 import { BrowserRouter, Navigate, Route, Routes } from 'react-router'
 import { AlertsPage } from '@/features/alerts/AlertsPage'
 import { LoginPage } from '@/features/auth/LoginPage'
+import { BranchesPage } from '@/features/branches/BranchesPage'
 import { DashboardPage } from '@/features/dashboard/DashboardPage'
 import { EquipmentDetailPage } from '@/features/equipment/EquipmentDetailPage'
 import { LineDetailPage } from '@/features/lines/LineDetailPage'
@@ -29,6 +30,7 @@ function App() {
             <Route path="stock" element={<PartStocksPage />} />
             <Route path="stock/:id" element={<PartStockDetailPage />} />
             <Route path="alerts" element={<AlertsPage />} />
+            <Route path="branches" element={<BranchesPage />} />
             <Route path="suppliers" element={<SuppliersPage />} />
             <Route path="locations" element={<LocationsPage />} />
             <Route path="lines" element={<LinesPage />} />

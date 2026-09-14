@@ -4,6 +4,8 @@ export interface Branch {
   id: number
   code: string
   name: string
+  address?: string | null
+  is_active?: boolean
 }
 
 export interface AuthUser {

@@ -12,6 +12,7 @@ const navItems = [
   { to: '/parts', label: 'Part' },
   { to: '/stock', label: 'Stok' },
   { to: '/alerts', label: 'Peringatan' },
+  { to: '/branches', label: 'Cabang' },
   { to: '/suppliers', label: 'Supplier' },
   { to: '/locations', label: 'Lokasi' },
   { to: '/lines', label: 'Line & Mesin' },

@@ -29,7 +29,7 @@ export function BranchSelector() {
       <SelectContent>
         {branches.map((branch) => (
           <SelectItem key={branch.id} value={String(branch.id)}>
-            {branch.name}
+            {branch.code} — {branch.name}
           </SelectItem>
         ))}
       </SelectContent>
