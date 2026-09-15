@@ -3,7 +3,6 @@ import { MapPin, PackagePlus, Pencil, SlidersHorizontal, Trash2 } from 'lucide-r
 import { Link, useParams } from 'react-router'
 import { toast } from 'sonner'
 import { Breadcrumb } from '@/components/Breadcrumb'
-import { fetchEquipmentForPart } from '@/features/equipment-parts/api'
 import { fetchInstallationsForPart } from '@/features/part-installations/api'
 import { fetchUnitsForPart } from '@/features/part-units/api'
 import { fetchPart } from '@/features/parts/api'
@@ -48,11 +47,6 @@ export function PartDetailPage() {
   const { data: partSuppliers, isLoading: suppliersLoading } = useQuery({
     queryKey: ['part-suppliers', partId],
     queryFn: () => fetchPartSuppliers(partId),
-  })
-
-  const { data: equipmentUsage, isLoading: equipmentUsageLoading } = useQuery({
-    queryKey: ['equipment-for-part', partId],
-    queryFn: () => fetchEquipmentForPart(partId),
   })
 
   const { data: installations, isLoading: installationsLoading } = useQuery({
@@ -112,7 +106,6 @@ export function PartDetailPage() {
         <TabsList>
           <TabsTrigger value="stock">Stok &amp; Lokasi</TabsTrigger>
           <TabsTrigger value="suppliers">Supplier</TabsTrigger>
-          <TabsTrigger value="usage">Digunakan di Equipment</TabsTrigger>
           <TabsTrigger value="lifetime">Riwayat Pemasangan</TabsTrigger>
           <TabsTrigger value="units">Unit Part</TabsTrigger>
         </TabsList>
@@ -314,51 +307,6 @@ export function PartDetailPage() {
           )}
         </TabsContent>
 
-        <TabsContent value="usage" className="pt-4">
-          {equipmentUsageLoading ? (
-            <Skeleton className="h-24 w-full" />
-          ) : equipmentUsage?.length === 0 ? (
-            <p className="text-sm text-muted-foreground">
-              Part ini belum terdaftar sebagai komponen di equipment manapun.
-            </p>
-          ) : (
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Line &rarr; Machine &rarr; Equipment</TableHead>
-                  <TableHead className="text-right">Jumlah Dibutuhkan</TableHead>
-                  <TableHead>Catatan</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {equipmentUsage?.map((ep) => (
-                  <TableRow key={ep.id}>
-                    <TableCell>
-                      <Breadcrumb
-                        segments={[
-                          {
-                            label: ep.line_name ?? 'Line',
-                            to: ep.line_id ? `/lines?line=${ep.line_id}` : undefined,
-                          },
-                          {
-                            label: ep.machine_name ?? 'Mesin',
-                            to: ep.machine_id ? `/lines?line=${ep.line_id}&machine=${ep.machine_id}` : undefined,
-                          },
-                          {
-                            label: ep.equipment_name ?? `Equipment #${ep.equipment_id}`,
-                            to: `/equipment/${ep.equipment_id}`,
-                          },
-                        ]}
-                      />
-                    </TableCell>
-                    <TableCell className="text-right">{ep.quantity_required ?? '-'}</TableCell>
-                    <TableCell className="text-muted-foreground">{ep.notes ?? '-'}</TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          )}
-        </TabsContent>
 
         <TabsContent value="lifetime" className="pt-4">
           {installationsLoading ? (

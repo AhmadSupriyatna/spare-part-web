@@ -1,10 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { Trash2 } from 'lucide-react'
 import { Link, useParams } from 'react-router'
 import { toast } from 'sonner'
 import { Breadcrumb } from '@/components/Breadcrumb'
-import { EquipmentPartFormDialog } from '@/features/equipment-parts/EquipmentPartFormDialog'
-import { fetchEquipmentParts, removeEquipmentPart } from '@/features/equipment-parts/api'
 import { fetchEquipment } from '@/features/equipment/api'
 import { PartInstallationFormDialog } from '@/features/part-installations/PartInstallationFormDialog'
 import { fetchPartInstallations, removePartInstallation } from '@/features/part-installations/api'
@@ -15,18 +12,7 @@ import { TaskRow } from '@/features/tasks/TaskRow'
 import { fetchTasksForEquipment } from '@/features/tasks/api'
 import { WorkOrderFormDialog } from '@/features/work-orders/WorkOrderFormDialog'
 import { fetchWorkOrders, generateTaskFromWorkOrder } from '@/features/work-orders/api'
-import { useCanManage, useCanManageEngineering } from '@/stores/use-has-role'
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-  AlertDialogTrigger,
-} from '@/components/ui/alert-dialog'
+import { useCanManage } from '@/stores/use-has-role'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Skeleton } from '@/components/ui/skeleton'
@@ -42,7 +28,6 @@ export function EquipmentDetailPage() {
   const { id } = useParams<{ id: string }>()
   const equipmentId = Number(id)
   const canManage = useCanManage()
-  const canManageBom = useCanManageEngineering()
   const queryClient = useQueryClient()
 
   const { data: equipment } = useQuery({
@@ -65,19 +50,6 @@ export function EquipmentDetailPage() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['tasks', equipmentId] })
       toast.success('Tugas berhasil dibuat dari work order.')
-    },
-  })
-
-  const { data: equipmentParts, isLoading: equipmentPartsLoading } = useQuery({
-    queryKey: ['equipment-parts', equipmentId],
-    queryFn: () => fetchEquipmentParts(equipmentId),
-  })
-
-  const removeEquipmentPartMutation = useMutation({
-    mutationFn: removeEquipmentPart,
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['equipment-parts', equipmentId] })
-      toast.success('Part berhasil dihapus dari BOM.')
     },
   })
 
@@ -197,80 +169,6 @@ export function EquipmentDetailPage() {
             <TableBody>
               {tasks?.map((task) => (
                 <TaskRow key={task.id} task={task} invalidateKey={['tasks', equipmentId]} />
-              ))}
-            </TableBody>
-          </Table>
-        )}
-      </div>
-
-      <div className="flex flex-col gap-3">
-        <div className="flex items-center justify-between">
-          <h2 className="text-lg font-medium">Bill of Material (BOM)</h2>
-          {canManageBom && (
-            <EquipmentPartFormDialog
-              equipmentId={equipmentId}
-              trigger={<Button size="sm">Tambah Part</Button>}
-            />
-          )}
-        </div>
-        {equipmentPartsLoading ? (
-          <Skeleton className="h-24 w-full" />
-        ) : equipmentParts?.length === 0 ? (
-          <p className="text-sm text-muted-foreground">Belum ada part terdaftar sebagai komponen equipment ini.</p>
-        ) : (
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Part</TableHead>
-                <TableHead className="text-right">Jumlah Dibutuhkan</TableHead>
-                <TableHead>Catatan</TableHead>
-                {canManageBom && <TableHead className="text-right">Aksi</TableHead>}
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {equipmentParts?.map((ep) => (
-                <TableRow key={ep.id}>
-                  <TableCell>
-                    <Link to={`/parts/${ep.part_id}`} className="font-medium hover:underline">
-                      {ep.part_name ?? `Part #${ep.part_id}`}
-                    </Link>
-                  </TableCell>
-                  <TableCell className="text-right">{ep.quantity_required ?? '-'}</TableCell>
-                  <TableCell className="text-muted-foreground">{ep.notes ?? '-'}</TableCell>
-                  {canManageBom && (
-                    <TableCell className="text-right">
-                      <AlertDialog>
-                        <AlertDialogTrigger
-                          render={
-                            <Button
-                              variant="ghost"
-                              size="icon-sm"
-                              aria-label="Hapus part dari BOM"
-                              title="Hapus part dari BOM"
-                            />
-                          }
-                        >
-                          <Trash2 />
-                        </AlertDialogTrigger>
-                        <AlertDialogContent>
-                          <AlertDialogHeader>
-                            <AlertDialogTitle>Hapus part ini dari BOM?</AlertDialogTitle>
-                            <AlertDialogDescription>
-                              "{ep.part_name ?? `Part #${ep.part_id}`}" tidak akan lagi terdaftar sebagai
-                              komponen equipment ini.
-                            </AlertDialogDescription>
-                          </AlertDialogHeader>
-                          <AlertDialogFooter>
-                            <AlertDialogCancel>Batal</AlertDialogCancel>
-                            <AlertDialogAction onClick={() => removeEquipmentPartMutation.mutate(ep.id)}>
-                              Hapus
-                            </AlertDialogAction>
-                          </AlertDialogFooter>
-                        </AlertDialogContent>
-                      </AlertDialog>
-                    </TableCell>
-                  )}
-                </TableRow>
               ))}
             </TableBody>
           </Table>

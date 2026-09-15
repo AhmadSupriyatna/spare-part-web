@@ -13,21 +13,6 @@ export interface PartSupplier {
   notes: string | null
 }
 
-export interface EquipmentPart {
-  id: number
-  equipment_id: number
-  equipment_name?: string
-  machine_id?: number
-  machine_name?: string
-  line_id?: number
-  line_name?: string
-  part_id: number
-  part_name?: string
-  item_master_no?: string
-  quantity_required: number | null
-  notes: string | null
-}
-
 export interface PartInstallation {
   id: number
   equipment_id: number
