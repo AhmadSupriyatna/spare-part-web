@@ -11,6 +11,7 @@ import { deleteEquipment, fetchEquipmentList } from '@/features/equipment/api'
 import { deleteMachine, fetchMachines } from '@/features/machines/api'
 import { MachineFormDialog } from '@/features/machines/MachineFormDialog'
 import { InstalledPartsPanel } from '@/features/part-installations/InstalledPartsPanel'
+import { PartDropTargetOverlay } from '@/features/part-installations/PartDropTargetOverlay'
 import { PartPickerSheet } from '@/features/part-installations/PartPickerSheet'
 import { useBranchStore } from '@/stores/branch-store'
 import { useCanManage } from '@/stores/use-has-role'
@@ -325,27 +326,7 @@ export function LineHierarchyPage() {
               </Button>
             )}
           </div>
-          <div
-            className={cn(
-              'max-h-[36rem] overflow-y-auto rounded-b-lg p-3 transition-colors',
-              dropTargetActive &&
-                selectedEquipment &&
-                'bg-primary/5 outline-2 -outline-offset-2 outline-primary/50 outline-dashed',
-            )}
-            onDragOver={(e) => {
-              if (!selectedEquipment) return
-              e.preventDefault()
-              e.dataTransfer.dropEffect = 'copy'
-              setDropTargetActive(true)
-            }}
-            onDragLeave={() => setDropTargetActive(false)}
-            onDrop={(e) => {
-              e.preventDefault()
-              setDropTargetActive(false)
-              if (!selectedEquipment || !draggingPart) return
-              setDroppedPart(draggingPart)
-            }}
-          >
+          <div className="max-h-[36rem] overflow-y-auto rounded-b-lg p-3">
             {selectedEquipment ? (
               <InstalledPartsPanel equipmentId={selectedEquipment.id} />
             ) : (
@@ -355,36 +336,25 @@ export function LineHierarchyPage() {
         </div>
       </div>
 
-      {/* Kotak Part melayang di kiri selagi laci terbuka, supaya tidak
-          ketutupan laci yang muncul dari kanan — target drop yang selalu
-          kelihatan berapa pun lebar layarnya. */}
+      {/* Target drop besar di tengah layar selagi laci terbuka — latar
+          belakang jadi buram, dan hanya kotak ini yang menerima drop
+          (bukan panel Part di halaman, yang bisa ketutupan laci). */}
       {partSheetOpen && selectedEquipment && (
-        <div
-          className={cn(
-            'fixed top-24 left-6 z-40 flex max-h-[70vh] w-72 flex-col overflow-hidden rounded-lg border bg-popover shadow-xl transition-colors',
-            dropTargetActive && 'border-primary ring-2 ring-primary/40',
-          )}
-          onDragOver={(e) => {
-            e.preventDefault()
-            e.dataTransfer.dropEffect = 'copy'
-            setDropTargetActive(true)
-          }}
+        <PartDropTargetOverlay
+          title={`Part — ${selectedEquipment.name}`}
+          subtitle="Lepaskan part di sini untuk memasang"
+          isDropTargetActive={dropTargetActive}
+          onDragEnter={() => setDropTargetActive(true)}
           onDragLeave={() => setDropTargetActive(false)}
-          onDrop={(e) => {
-            e.preventDefault()
+          onDrop={() => {
             setDropTargetActive(false)
             if (!draggingPart) return
             setDroppedPart(draggingPart)
           }}
+          onClose={() => setPartSheetOpen(false)}
         >
-          <div className="border-b px-3 py-2">
-            <p className="truncate text-sm font-semibold">Part — {selectedEquipment.name}</p>
-            <p className="text-xs text-muted-foreground">Lepaskan part di sini untuk memasang</p>
-          </div>
-          <div className="flex-1 overflow-y-auto p-3">
-            <InstalledPartsPanel equipmentId={selectedEquipment.id} />
-          </div>
-        </div>
+          <InstalledPartsPanel equipmentId={selectedEquipment.id} />
+        </PartDropTargetOverlay>
       )}
 
       {selectedEquipment && (
