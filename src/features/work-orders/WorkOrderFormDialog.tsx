@@ -91,7 +91,8 @@ export function WorkOrderFormDialog({ equipmentId, trigger }: WorkOrderFormDialo
         part_id: values.part_id ? Number(values.part_id) : null,
       }),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['work-orders', equipmentId] })
+      // Prefix match: refreshes both the equipment-scoped and branch-wide lists.
+      queryClient.invalidateQueries({ queryKey: ['work-orders'] })
       toast.success('Work order berhasil ditambahkan.')
       setOpen(false)
     },

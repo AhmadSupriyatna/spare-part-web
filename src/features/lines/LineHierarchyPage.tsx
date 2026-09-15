@@ -99,18 +99,23 @@ export function LineHierarchyPage() {
             <div
               key={line.id}
               className={cn(
-                'group flex h-20 shrink-0 items-center gap-1 rounded-xl border py-3 pr-2 pl-4 hover:bg-muted',
+                'group flex h-20 w-48 shrink-0 items-center gap-1 rounded-xl border py-3 pr-2 pl-4 hover:bg-muted',
                 line.id === selectedLineId && 'border-primary bg-primary/5',
               )}
             >
-              <button onClick={() => selectLine(line.id)} className="flex flex-col gap-0.5 text-left">
-                <span className={cn('text-lg font-semibold', line.id === selectedLineId && 'text-primary')}>
+              <button onClick={() => selectLine(line.id)} className="flex min-w-0 flex-1 flex-col gap-0.5 text-left">
+                <span
+                  className={cn(
+                    'truncate text-lg font-semibold',
+                    line.id === selectedLineId && 'text-primary',
+                  )}
+                >
                   {line.name}
                 </span>
-                <span className="font-mono text-sm text-muted-foreground">{line.code}</span>
+                <span className="truncate font-mono text-sm text-muted-foreground">{line.code}</span>
               </button>
               {!line.is_active && (
-                <Badge variant="secondary" className="ml-1">
+                <Badge variant="secondary" className="ml-1 shrink-0">
                   Nonaktif
                 </Badge>
               )}

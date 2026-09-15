@@ -11,11 +11,6 @@ export interface WorkOrderPayload {
   is_active?: boolean
 }
 
-export async function fetchWorkOrders(equipmentId: number): Promise<WorkOrder[]> {
-  const { data } = await apiClient.get<{ data: WorkOrder[] }>(`/equipment/${equipmentId}/work-orders`)
-  return data.data
-}
-
 export async function fetchWorkOrdersForBranch(branchId: number): Promise<WorkOrder[]> {
   const { data } = await apiClient.get<{ data: WorkOrder[] }>(`/branches/${branchId}/work-orders`)
   return data.data
