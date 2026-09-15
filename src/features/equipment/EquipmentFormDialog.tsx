@@ -6,15 +6,7 @@ import { toast } from 'sonner'
 import { z } from 'zod'
 import { createEquipment, updateEquipment } from '@/features/equipment/api'
 import type { Equipment } from '@/types/tasks'
-import { Button } from '@/components/ui/button'
-import {
-  Dialog,
-  DialogContent,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from '@/components/ui/dialog'
+import { FormSheet } from '@/components/FormSheet'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 
@@ -41,7 +33,7 @@ export function EquipmentFormDialog({ machineId, equipment, trigger }: Equipment
     register,
     handleSubmit,
     reset,
-    formState: { errors },
+    formState: { errors, isDirty },
   } = useForm<EquipmentFormValues>({
     resolver: zodResolver(equipmentSchema),
     defaultValues: {
@@ -73,34 +65,30 @@ export function EquipmentFormDialog({ machineId, equipment, trigger }: Equipment
   })
 
   return (
-    <Dialog open={open} onOpenChange={setOpen}>
-      <DialogTrigger render={trigger as React.ReactElement} />
-      <DialogContent>
-        <DialogHeader>
-          <DialogTitle>{isEdit ? 'Ubah Equipment' : 'Tambah Equipment'}</DialogTitle>
-        </DialogHeader>
-        <form className="flex flex-col gap-4" onSubmit={handleSubmit((values) => mutation.mutate(values))}>
-          <div className="flex flex-col gap-2">
-            <Label htmlFor="code">Kode</Label>
-            <Input id="code" {...register('code')} />
-            {errors.code && <p className="text-sm text-destructive">{errors.code.message}</p>}
-          </div>
-          <div className="flex flex-col gap-2">
-            <Label htmlFor="name">Nama</Label>
-            <Input id="name" placeholder="Motor Penggerak" {...register('name')} />
-            {errors.name && <p className="text-sm text-destructive">{errors.name.message}</p>}
-          </div>
-          <div className="flex flex-col gap-2">
-            <Label htmlFor="category">Kategori</Label>
-            <Input id="category" placeholder="Mekanikal" {...register('category')} />
-          </div>
-          <DialogFooter>
-            <Button type="submit" disabled={mutation.isPending}>
-              {mutation.isPending ? 'Menyimpan...' : 'Simpan'}
-            </Button>
-          </DialogFooter>
-        </form>
-      </DialogContent>
-    </Dialog>
+    <FormSheet
+      trigger={trigger}
+      title={isEdit ? 'Ubah Equipment' : 'Tambah Equipment'}
+      open={open}
+      onOpenChange={setOpen}
+      isDirty={isDirty}
+      onSubmit={handleSubmit((values) => mutation.mutate(values))}
+      submitLabel="Simpan"
+      isSubmitting={mutation.isPending}
+    >
+      <div className="flex flex-col gap-2">
+        <Label htmlFor="code">Kode</Label>
+        <Input id="code" {...register('code')} />
+        {errors.code && <p className="text-sm text-destructive">{errors.code.message}</p>}
+      </div>
+      <div className="flex flex-col gap-2">
+        <Label htmlFor="name">Nama</Label>
+        <Input id="name" placeholder="Motor Penggerak" {...register('name')} />
+        {errors.name && <p className="text-sm text-destructive">{errors.name.message}</p>}
+      </div>
+      <div className="flex flex-col gap-2">
+        <Label htmlFor="category">Kategori</Label>
+        <Input id="category" placeholder="Mekanikal" {...register('category')} />
+      </div>
+    </FormSheet>
   )
 }

@@ -6,15 +6,7 @@ import { toast } from 'sonner'
 import { z } from 'zod'
 import { createLine, updateLine } from '@/features/lines/api'
 import type { ProductionLine } from '@/types/tasks'
-import { Button } from '@/components/ui/button'
-import {
-  Dialog,
-  DialogContent,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from '@/components/ui/dialog'
+import { FormSheet } from '@/components/FormSheet'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 
@@ -40,7 +32,7 @@ export function LineFormDialog({ branchId, line, trigger }: LineFormDialogProps)
     register,
     handleSubmit,
     reset,
-    formState: { errors },
+    formState: { errors, isDirty },
   } = useForm<LineFormValues>({
     resolver: zodResolver(lineSchema),
     defaultValues: { code: line?.code ?? '', name: line?.name ?? '' },
@@ -62,30 +54,26 @@ export function LineFormDialog({ branchId, line, trigger }: LineFormDialogProps)
   })
 
   return (
-    <Dialog open={open} onOpenChange={setOpen}>
-      <DialogTrigger render={trigger as React.ReactElement} />
-      <DialogContent>
-        <DialogHeader>
-          <DialogTitle>{isEdit ? 'Ubah Line' : 'Tambah Line'}</DialogTitle>
-        </DialogHeader>
-        <form className="flex flex-col gap-4" onSubmit={handleSubmit((values) => mutation.mutate(values))}>
-          <div className="flex flex-col gap-2">
-            <Label htmlFor="code">Kode</Label>
-            <Input id="code" {...register('code')} />
-            {errors.code && <p className="text-sm text-destructive">{errors.code.message}</p>}
-          </div>
-          <div className="flex flex-col gap-2">
-            <Label htmlFor="name">Nama</Label>
-            <Input id="name" {...register('name')} />
-            {errors.name && <p className="text-sm text-destructive">{errors.name.message}</p>}
-          </div>
-          <DialogFooter>
-            <Button type="submit" disabled={mutation.isPending}>
-              {mutation.isPending ? 'Menyimpan...' : 'Simpan'}
-            </Button>
-          </DialogFooter>
-        </form>
-      </DialogContent>
-    </Dialog>
+    <FormSheet
+      trigger={trigger}
+      title={isEdit ? 'Ubah Line' : 'Tambah Line'}
+      open={open}
+      onOpenChange={setOpen}
+      isDirty={isDirty}
+      onSubmit={handleSubmit((values) => mutation.mutate(values))}
+      submitLabel="Simpan"
+      isSubmitting={mutation.isPending}
+    >
+      <div className="flex flex-col gap-2">
+        <Label htmlFor="code">Kode</Label>
+        <Input id="code" {...register('code')} />
+        {errors.code && <p className="text-sm text-destructive">{errors.code.message}</p>}
+      </div>
+      <div className="flex flex-col gap-2">
+        <Label htmlFor="name">Nama</Label>
+        <Input id="name" {...register('name')} />
+        {errors.name && <p className="text-sm text-destructive">{errors.name.message}</p>}
+      </div>
+    </FormSheet>
   )
 }
