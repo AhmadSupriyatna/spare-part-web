@@ -23,6 +23,6 @@ export async function updateMachine(id: number, payload: Partial<MachinePayload>
   return data.data
 }
 
-export async function deleteMachine(id: number): Promise<void> {
-  await apiClient.delete(`/machines/${id}`)
+export async function deleteMachine(id: number, password: string): Promise<void> {
+  await apiClient.delete(`/machines/${id}`, { data: { password } })
 }

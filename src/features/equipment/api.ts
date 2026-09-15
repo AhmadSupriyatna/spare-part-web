@@ -28,6 +28,6 @@ export async function updateEquipment(id: number, payload: Partial<EquipmentPayl
   return data.data
 }
 
-export async function deleteEquipment(id: number): Promise<void> {
-  await apiClient.delete(`/equipment/${id}`)
+export async function deleteEquipment(id: number, password: string): Promise<void> {
+  await apiClient.delete(`/equipment/${id}`, { data: { password } })
 }

@@ -1,17 +1,20 @@
-import { useQuery } from '@tanstack/react-query'
-import { Pencil, Plus } from 'lucide-react'
+import { useQuery, useQueryClient } from '@tanstack/react-query'
+import { Pencil, Plus, Trash2 } from 'lucide-react'
 import { useEffect } from 'react'
 import { Link, useSearchParams } from 'react-router'
 import { AddRuntimeDialog } from '@/features/lines/AddRuntimeDialog'
-import { fetchLines } from '@/features/lines/api'
+import { deleteLine, fetchLines } from '@/features/lines/api'
 import { LineFormDialog } from '@/features/lines/LineFormDialog'
+import { LineRuntimeLogTable } from '@/features/lines/LineRuntimeLogTable'
 import { EquipmentFormDialog } from '@/features/equipment/EquipmentFormDialog'
-import { fetchEquipmentList } from '@/features/equipment/api'
+import { deleteEquipment, fetchEquipmentList } from '@/features/equipment/api'
+import { deleteMachine, fetchMachines } from '@/features/machines/api'
 import { MachineFormDialog } from '@/features/machines/MachineFormDialog'
-import { fetchMachines } from '@/features/machines/api'
+import { InstalledPartsPanel } from '@/features/part-installations/InstalledPartsPanel'
 import { useBranchStore } from '@/stores/branch-store'
 import { useCanManage } from '@/stores/use-has-role'
 import { cn } from '@/lib/utils'
+import { DeleteWithPasswordDialog } from '@/components/DeleteWithPasswordDialog'
 import { PageHeader } from '@/components/PageHeader'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -20,10 +23,12 @@ import { Skeleton } from '@/components/ui/skeleton'
 export function LineHierarchyPage() {
   const activeBranchId = useBranchStore((state) => state.activeBranchId)
   const canManage = useCanManage()
+  const queryClient = useQueryClient()
   const [searchParams, setSearchParams] = useSearchParams()
 
   const selectedLineId = searchParams.get('line') ? Number(searchParams.get('line')) : null
   const selectedMachineId = searchParams.get('machine') ? Number(searchParams.get('machine')) : null
+  const selectedEquipmentId = searchParams.get('equipment') ? Number(searchParams.get('equipment')) : null
 
   const { data: lines, isLoading: linesLoading } = useQuery({
     queryKey: ['lines', activeBranchId],
@@ -59,6 +64,7 @@ export function LineHierarchyPage() {
 
   const selectedLine = lines?.find((line) => line.id === selectedLineId)
   const selectedMachine = machines?.find((machine) => machine.id === selectedMachineId)
+  const selectedEquipment = equipmentList?.find((equipment) => equipment.id === selectedEquipmentId)
 
   function selectLine(lineId: number) {
     setSearchParams({ line: String(lineId) })
@@ -68,72 +74,103 @@ export function LineHierarchyPage() {
     setSearchParams({ line: String(selectedLineId), machine: String(machineId) })
   }
 
+  function selectEquipment(equipmentId: number) {
+    setSearchParams({
+      line: String(selectedLineId),
+      machine: String(selectedMachineId),
+      equipment: String(equipmentId),
+    })
+  }
+
   if (!activeBranchId) {
     return <p className="text-muted-foreground">Pilih cabang terlebih dahulu.</p>
   }
 
   return (
-    <div className="flex flex-col gap-4">
-      <PageHeader
-        title="Line Produksi"
-        description="Hierarki Line, Mesin, dan Equipment untuk cabang ini."
-        action={
-          selectedLine && (
-            <div className="flex items-center gap-3">
-              <p className="text-sm text-muted-foreground">
-                Jam operasi {selectedLine.name}:{' '}
-                <span className="font-medium text-foreground tabular-nums">{selectedLine.runtime_hours}</span>
-              </p>
-              {canManage && <AddRuntimeDialog lineId={selectedLine.id} branchId={activeBranchId} />}
-            </div>
-          )
-        }
-      />
+    <div className="flex flex-col gap-6">
+      <PageHeader title="Line Produksi" description="Hierarki Line, Mesin, dan Equipment untuk cabang ini." />
 
-      <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
-        <HierarchyColumn
-          title="Line"
-          isLoading={linesLoading}
-          isEmpty={lines?.length === 0}
-          emptyMessage="Belum ada line di cabang ini."
-          addAction={
-            canManage && (
-              <LineFormDialog
-                branchId={activeBranchId}
-                trigger={
-                  <Button variant="ghost" size="icon-xs" aria-label="Tambah Line" title="Tambah Line">
-                    <Plus />
-                  </Button>
-                }
-              />
-            )
-          }
-        >
-          {lines?.map((line) => (
-            <ColumnRow
-              key={line.id}
-              isSelected={line.id === selectedLineId}
-              onClick={() => selectLine(line.id)}
-              title={line.name}
-              subtitle={line.code}
-              badge={!line.is_active ? <Badge variant="secondary">Nonaktif</Badge> : undefined}
-              editAction={
-                canManage && (
-                  <LineFormDialog
-                    branchId={activeBranchId}
-                    line={line}
-                    trigger={
-                      <Button variant="ghost" size="icon-xs" aria-label="Ubah Line" title="Ubah Line">
-                        <Pencil />
-                      </Button>
-                    }
-                  />
-                )
+      {/* Line: horizontal strip, left to right */}
+      <div className="flex flex-col gap-2">
+        <div className="flex items-center justify-between">
+          <h2 className="text-sm font-semibold text-muted-foreground">Line</h2>
+          {canManage && (
+            <LineFormDialog
+              branchId={activeBranchId}
+              trigger={
+                <Button variant="ghost" size="icon-xs" aria-label="Tambah Line" title="Tambah Line">
+                  <Plus />
+                </Button>
               }
             />
-          ))}
-        </HierarchyColumn>
+          )}
+        </div>
+        {linesLoading ? (
+          <div className="flex gap-2">
+            {Array.from({ length: 3 }).map((_, i) => (
+              <Skeleton key={i} className="h-16 w-40" />
+            ))}
+          </div>
+        ) : lines?.length === 0 ? (
+          <p className="text-sm text-muted-foreground">Belum ada line di cabang ini.</p>
+        ) : (
+          <div className="flex gap-2 overflow-x-auto pb-1">
+            {lines?.map((line) => (
+              <div
+                key={line.id}
+                className={cn(
+                  'group flex shrink-0 items-center gap-1 rounded-lg border py-2 pr-1 pl-3 hover:bg-muted',
+                  line.id === selectedLineId && 'border-primary bg-primary/5',
+                )}
+              >
+                <button onClick={() => selectLine(line.id)} className="flex flex-col gap-0.5 text-left">
+                  <span className={cn('text-sm font-medium', line.id === selectedLineId && 'text-primary')}>
+                    {line.name}
+                  </span>
+                  <span className="font-mono text-xs text-muted-foreground">{line.code}</span>
+                </button>
+                {!line.is_active && (
+                  <Badge variant="secondary" className="ml-1">
+                    Nonaktif
+                  </Badge>
+                )}
+                {canManage && (
+                  <div className="flex shrink-0 items-center">
+                    <LineFormDialog
+                      branchId={activeBranchId}
+                      line={line}
+                      trigger={
+                        <Button variant="ghost" size="icon-xs" aria-label="Ubah Line" title="Ubah Line">
+                          <Pencil />
+                        </Button>
+                      }
+                    />
+                    <DeleteWithPasswordDialog
+                      title={`Hapus Line "${line.name}"?`}
+                      description="Semua mesin, equipment, work order, tugas, dan riwayat di bawah line ini akan ikut terhapus permanen. Tindakan ini tidak bisa dibatalkan."
+                      onConfirm={(password) => deleteLine(line.id, password)}
+                      onSuccess={() => {
+                        queryClient.invalidateQueries({ queryKey: ['lines', activeBranchId] })
+                        if (line.id === selectedLineId) {
+                          setSearchParams({})
+                        }
+                      }}
+                      trigger={
+                        <Button variant="ghost" size="icon-xs" aria-label="Hapus Line" title="Hapus Line">
+                          <Trash2 />
+                        </Button>
+                      }
+                    />
+                  </div>
+                )}
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
 
+      {/* Mesin | Equipment | Part terpasang di equipment terpilih */}
+      <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
         <HierarchyColumn
           title={selectedLine ? `Mesin — ${selectedLine.name}` : 'Mesin'}
           isLoading={!!selectedLineId && machinesLoading}
@@ -175,6 +212,26 @@ export function LineHierarchyPage() {
                   />
                 )
               }
+              deleteAction={
+                canManage && (
+                  <DeleteWithPasswordDialog
+                    title={`Hapus Mesin "${machine.name}"?`}
+                    description="Semua equipment, work order, tugas, dan riwayat di bawah mesin ini akan ikut terhapus permanen. Tindakan ini tidak bisa dibatalkan."
+                    onConfirm={(password) => deleteMachine(machine.id, password)}
+                    onSuccess={() => {
+                      queryClient.invalidateQueries({ queryKey: ['machines', selectedLineId] })
+                      if (machine.id === selectedMachineId) {
+                        setSearchParams({ line: String(selectedLineId) })
+                      }
+                    }}
+                    trigger={
+                      <Button variant="ghost" size="icon-xs" aria-label="Hapus Mesin" title="Hapus Mesin">
+                        <Trash2 />
+                      </Button>
+                    }
+                  />
+                )
+              }
             />
           ))}
         </HierarchyColumn>
@@ -199,34 +256,89 @@ export function LineHierarchyPage() {
           }
         >
           {equipmentList?.map((equipment) => (
-            <div
+            <ColumnRow
               key={equipment.id}
-              className="flex items-center gap-1 border-b pr-1 last:border-b-0 hover:bg-muted"
-            >
-              <Link
-                to={`/equipment/${equipment.id}`}
-                className="flex flex-1 flex-col gap-0.5 px-3 py-2 text-left text-sm"
-              >
-                <span className="font-medium">{equipment.name}</span>
-                <span className="font-mono text-xs text-muted-foreground">
-                  {equipment.category ?? equipment.code}
-                </span>
-              </Link>
-              {canManage && selectedMachineId && (
-                <EquipmentFormDialog
-                  machineId={selectedMachineId}
-                  equipment={equipment}
-                  trigger={
-                    <Button variant="ghost" size="icon-xs" aria-label="Ubah Equipment" title="Ubah Equipment">
-                      <Pencil />
-                    </Button>
-                  }
-                />
-              )}
-            </div>
+              isSelected={equipment.id === selectedEquipmentId}
+              onClick={() => selectEquipment(equipment.id)}
+              title={equipment.name}
+              subtitle={equipment.category ?? equipment.code}
+              badge={!equipment.is_active ? <Badge variant="secondary">Nonaktif</Badge> : undefined}
+              detailHref={`/equipment/${equipment.id}`}
+              editAction={
+                canManage &&
+                selectedMachineId && (
+                  <EquipmentFormDialog
+                    machineId={selectedMachineId}
+                    equipment={equipment}
+                    trigger={
+                      <Button variant="ghost" size="icon-xs" aria-label="Ubah Equipment" title="Ubah Equipment">
+                        <Pencil />
+                      </Button>
+                    }
+                  />
+                )
+              }
+              deleteAction={
+                canManage && (
+                  <DeleteWithPasswordDialog
+                    title={`Hapus Equipment "${equipment.name}"?`}
+                    description="Semua work order, tugas, BOM, dan riwayat pemasangan part di equipment ini akan ikut terhapus permanen. Tindakan ini tidak bisa dibatalkan."
+                    onConfirm={(password) => deleteEquipment(equipment.id, password)}
+                    onSuccess={() => {
+                      queryClient.invalidateQueries({ queryKey: ['equipment', selectedMachineId] })
+                      if (equipment.id === selectedEquipmentId) {
+                        setSearchParams({ line: String(selectedLineId), machine: String(selectedMachineId) })
+                      }
+                    }}
+                    trigger={
+                      <Button variant="ghost" size="icon-xs" aria-label="Hapus Equipment" title="Hapus Equipment">
+                        <Trash2 />
+                      </Button>
+                    }
+                  />
+                )
+              }
+            />
           ))}
         </HierarchyColumn>
+
+        <div className="flex flex-col rounded-lg border">
+          <div className="border-b px-3 py-2">
+            <h2 className="truncate text-sm font-semibold text-muted-foreground">
+              {selectedEquipment ? `Part Terpasang — ${selectedEquipment.name}` : 'Part Terpasang'}
+            </h2>
+          </div>
+          <div className="max-h-[32rem] overflow-y-auto p-3">
+            {selectedEquipment ? (
+              <InstalledPartsPanel equipmentId={selectedEquipment.id} />
+            ) : (
+              <p className="text-sm text-muted-foreground">Pilih equipment untuk lihat part yang terpasang.</p>
+            )}
+          </div>
+        </div>
       </div>
+
+      {/* Riwayat jam operasi line, per tanggal */}
+      {selectedLine && (
+        <div className="flex flex-col gap-3">
+          <div className="flex items-center justify-between">
+            <div>
+              <h2 className="text-lg font-medium">Catatan Jam Operasi — {selectedLine.name}</h2>
+              <p className="text-sm text-muted-foreground">
+                Jam operasi saat ini: <span className="font-medium text-foreground">{selectedLine.runtime_hours}</span> jam
+              </p>
+            </div>
+            {canManage && (
+              <AddRuntimeDialog
+                lineId={selectedLine.id}
+                branchId={activeBranchId}
+                currentHours={selectedLine.runtime_hours}
+              />
+            )}
+          </div>
+          <LineRuntimeLogTable lineId={selectedLine.id} />
+        </div>
+      )}
     </div>
   )
 }
@@ -270,10 +382,21 @@ interface ColumnRowProps {
   isSelected: boolean
   onClick: () => void
   badge?: React.ReactNode
+  detailHref?: string
   editAction?: React.ReactNode
+  deleteAction?: React.ReactNode
 }
 
-function ColumnRow({ title, subtitle, isSelected, onClick, badge, editAction }: ColumnRowProps) {
+function ColumnRow({
+  title,
+  subtitle,
+  isSelected,
+  onClick,
+  badge,
+  detailHref,
+  editAction,
+  deleteAction,
+}: ColumnRowProps) {
   return (
     <div
       className={cn(
@@ -288,7 +411,17 @@ function ColumnRow({ title, subtitle, isSelected, onClick, badge, editAction }: 
         </span>
         {badge}
       </button>
+      {detailHref && (
+        <Link
+          to={detailHref}
+          className="px-1 text-xs text-muted-foreground hover:text-primary hover:underline"
+          title="Lihat detail"
+        >
+          Detail
+        </Link>
+      )}
       {editAction}
+      {deleteAction}
     </div>
   )
 }

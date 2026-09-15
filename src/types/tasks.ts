@@ -9,6 +9,17 @@ export interface ProductionLine {
   is_active: boolean
 }
 
+export interface LineRuntimeLog {
+  id: number
+  line_id: number
+  previous_hours: number
+  new_hours: number
+  hours_added: number
+  recorded_by_name: string | null
+  notes: string | null
+  created_at: string
+}
+
 export interface Machine {
   id: number
   line_id: number

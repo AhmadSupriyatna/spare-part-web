@@ -1,5 +1,5 @@
 import { apiClient } from '@/lib/api-client'
-import type { ProductionLine } from '@/types/tasks'
+import type { LineRuntimeLog, ProductionLine } from '@/types/tasks'
 
 export interface LinePayload {
   code: string
@@ -27,11 +27,21 @@ export async function updateLine(id: number, payload: Partial<LinePayload>): Pro
   return data.data
 }
 
-export async function deleteLine(id: number): Promise<void> {
-  await apiClient.delete(`/lines/${id}`)
+export async function deleteLine(id: number, password: string): Promise<void> {
+  await apiClient.delete(`/lines/${id}`, { data: { password } })
 }
 
-export async function addLineRuntime(id: number, hours: number): Promise<ProductionLine> {
-  const { data } = await apiClient.post<{ data: ProductionLine }>(`/lines/${id}/runtime`, { hours })
+export interface AddLineRuntimePayload {
+  current_reading: number
+  notes?: string
+}
+
+export async function addLineRuntime(id: number, payload: AddLineRuntimePayload): Promise<ProductionLine> {
+  const { data } = await apiClient.post<{ data: ProductionLine }>(`/lines/${id}/runtime`, payload)
+  return data.data
+}
+
+export async function fetchLineRuntimeLogs(id: number): Promise<LineRuntimeLog[]> {
+  const { data } = await apiClient.get<{ data: LineRuntimeLog[] }>(`/lines/${id}/runtime-logs`)
   return data.data
 }
