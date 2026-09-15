@@ -3,6 +3,7 @@ import { Inbox } from 'lucide-react'
 import { toast } from 'sonner'
 import { approveReplacementRequest, fetchReplacementRequests } from '@/features/breakdown/api'
 import { RejectRequestDialog } from '@/features/breakdown/RejectRequestDialog'
+import { PartUnitActionRequestsTable } from '@/features/part-unit-actions/PartUnitActionRequestsTable'
 import { useBranchStore } from '@/stores/branch-store'
 import type { ReplacementRequestStatus } from '@/types/breakdown'
 import { EmptyState } from '@/components/EmptyState'
@@ -115,24 +116,52 @@ export function BreakdownApprovalBoardPage() {
   return (
     <div className="flex flex-col gap-4">
       <PageHeader
-        title="Papan Kerja Approval Penggantian"
-        description="Permintaan penggantian part dari lapangan (scan QR breakdown) menunggu keputusan di sini."
+        title="Papan Kerja Approval"
+        description="Permintaan dari lapangan (scan QR, tanpa login) menunggu keputusan di sini."
       />
 
-      <Tabs defaultValue="pending">
+      <Tabs defaultValue="replacement">
         <TabsList>
-          <TabsTrigger value="pending">Menunggu</TabsTrigger>
-          <TabsTrigger value="approved">Disetujui</TabsTrigger>
-          <TabsTrigger value="rejected">Ditolak</TabsTrigger>
+          <TabsTrigger value="replacement">Penggantian (Breakdown)</TabsTrigger>
+          <TabsTrigger value="unit-actions">Pasang/Lepas Unit</TabsTrigger>
         </TabsList>
-        <TabsContent value="pending" className="mt-4">
-          <RequestsTable branchId={activeBranchId} status="pending" />
+
+        <TabsContent value="replacement" className="mt-4">
+          <Tabs defaultValue="pending">
+            <TabsList>
+              <TabsTrigger value="pending">Menunggu</TabsTrigger>
+              <TabsTrigger value="approved">Disetujui</TabsTrigger>
+              <TabsTrigger value="rejected">Ditolak</TabsTrigger>
+            </TabsList>
+            <TabsContent value="pending" className="mt-4">
+              <RequestsTable branchId={activeBranchId} status="pending" />
+            </TabsContent>
+            <TabsContent value="approved" className="mt-4">
+              <RequestsTable branchId={activeBranchId} status="approved" />
+            </TabsContent>
+            <TabsContent value="rejected" className="mt-4">
+              <RequestsTable branchId={activeBranchId} status="rejected" />
+            </TabsContent>
+          </Tabs>
         </TabsContent>
-        <TabsContent value="approved" className="mt-4">
-          <RequestsTable branchId={activeBranchId} status="approved" />
-        </TabsContent>
-        <TabsContent value="rejected" className="mt-4">
-          <RequestsTable branchId={activeBranchId} status="rejected" />
+
+        <TabsContent value="unit-actions" className="mt-4">
+          <Tabs defaultValue="pending">
+            <TabsList>
+              <TabsTrigger value="pending">Menunggu</TabsTrigger>
+              <TabsTrigger value="approved">Disetujui</TabsTrigger>
+              <TabsTrigger value="rejected">Ditolak</TabsTrigger>
+            </TabsList>
+            <TabsContent value="pending" className="mt-4">
+              <PartUnitActionRequestsTable branchId={activeBranchId} status="pending" />
+            </TabsContent>
+            <TabsContent value="approved" className="mt-4">
+              <PartUnitActionRequestsTable branchId={activeBranchId} status="approved" />
+            </TabsContent>
+            <TabsContent value="rejected" className="mt-4">
+              <PartUnitActionRequestsTable branchId={activeBranchId} status="rejected" />
+            </TabsContent>
+          </Tabs>
         </TabsContent>
       </Tabs>
     </div>

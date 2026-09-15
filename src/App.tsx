@@ -16,6 +16,7 @@ import { PartStockDetailPage } from '@/features/part-stocks/PartStockDetailPage'
 import { PartStocksPage } from '@/features/part-stocks/PartStocksPage'
 import { PartLifetimeAlertsPage } from '@/features/part-lifetime/PartLifetimeAlertsPage'
 import { PartRepairsPage } from '@/features/part-repairs/PartRepairsPage'
+import { PartUnitScanPage } from '@/features/part-unit-actions/PartUnitScanPage'
 import { PartUnitDetailPage } from '@/features/part-units/PartUnitDetailPage'
 import { PmCalendarPage } from '@/features/pm/PmCalendarPage'
 import { PmLedgerPage } from '@/features/pm/PmLedgerPage'
@@ -38,6 +39,9 @@ function App() {
 
         {/* Public breakdown QR-scan flow — no login, reachable straight from a printed QR code. */}
         <Route path="/breakdown/scan/:partId/:branchId" element={<BreakdownScanPage />} />
+
+        {/* Public QR-per-unit flow — no login, reachable from a QR stuck on a specific part unit. */}
+        <Route path="/part-units/:id/scan" element={<PartUnitScanPage />} />
 
         <Route element={<ProtectedRoute />}>
           <Route element={<AppLayout />}>
