@@ -93,12 +93,7 @@ export function LineHierarchyPage() {
   }
 
   return (
-    <div
-      className={cn(
-        'flex flex-col gap-6 transition-[margin-right] duration-300',
-        partSheetOpen && 'mr-96',
-      )}
-    >
+    <div className="flex flex-col gap-6">
       {/* Line: horizontal strip, left to right, kotak "+" nempel di ujung kanan */}
       <div className="flex items-center gap-3 overflow-x-auto pb-1">
         {linesLoading ? (

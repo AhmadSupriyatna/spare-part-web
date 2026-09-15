@@ -10,7 +10,7 @@ import {
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog'
 import { Button } from '@/components/ui/button'
-import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle, SheetTrigger } from '@/components/ui/sheet'
+import { Sheet, SheetContent, SheetDescription, SheetTitle, SheetTrigger } from '@/components/ui/sheet'
 
 interface FormSheetProps {
   trigger: React.ReactNode
@@ -27,18 +27,20 @@ interface FormSheetProps {
 }
 
 /**
- * Right-side drawer for create/edit forms (Line, Mesin, Equipment, ...),
- * matching the Part-install drawer's feel — the standard shape for
- * "add via laci" going forward. Three behaviors baked in per request:
- * - Dismissing the sheet (X, Escape, outside click) while `isDirty` asks
- *   "Buang perubahan?" instead of closing straight away.
+ * Right-side drawer for create/edit forms (Line, Mesin, Equipment, jam
+ * operasional, ...) — the standard template for "add via laci" going
+ * forward. Non-modal and overlay-free like the Part-install drawer: the
+ * page pushes over (see `Sheet`'s registration with `useSheetStackStore`
+ * and AppLayout's margin-right) instead of a dark backdrop covering it.
+ * Three behaviors baked in per request:
+ * - Dismissing the sheet (X, Cancel, Escape, or clicking the now-visible
+ *   page behind it) while `isDirty` asks "Buang perubahan?" instead of
+ *   closing straight away.
  * - The first text field auto-focuses on open (Base UI's `initialFocus`
  *   callback, found by querying the form — no per-field ref wiring needed).
- * - Save sits in a footer pinned to the bottom of the drawer (not the
- *   top) — matches this app's existing DialogFooter convention, keeps
- *   the header free for title/close, and stays reachable without
- *   scrolling back up on a long form since it doesn't scroll with the
- *   fields above it.
+ * - A clear header band (title + optional description, divider below) and
+ *   a sticky footer with both Batal and the primary submit action — not
+ *   just a lone Save button floating at the bottom.
  */
 export function FormSheet({
   trigger,
@@ -65,18 +67,23 @@ export function FormSheet({
 
   return (
     <>
-      <Sheet open={open} onOpenChange={handleOpenChange}>
+      <Sheet open={open} onOpenChange={handleOpenChange} modal={false}>
         <SheetTrigger render={trigger as React.ReactElement} />
         <SheetContent
+          className="gap-0 p-0"
+          showOverlay={false}
           initialFocus={() => formRef.current?.querySelector<HTMLElement>('input, textarea') ?? undefined}
         >
-          <SheetHeader>
+          <div className="flex flex-col gap-1 border-b px-4 py-4 pr-10">
             <SheetTitle>{title}</SheetTitle>
             {description && <SheetDescription>{description}</SheetDescription>}
-          </SheetHeader>
+          </div>
           <form ref={formRef} onSubmit={onSubmit} className="flex flex-1 flex-col overflow-hidden">
-            <div className="flex flex-1 flex-col gap-4 overflow-y-auto">{children}</div>
-            <div className="-mx-4 -mb-4 mt-4 flex shrink-0 justify-end gap-2 border-t bg-popover px-4 py-3">
+            <div className="flex flex-1 flex-col gap-4 overflow-y-auto p-4">{children}</div>
+            <div className="flex shrink-0 justify-end gap-2 border-t bg-popover px-4 py-3">
+              <Button type="button" variant="outline" onClick={() => handleOpenChange(false)}>
+                Batal
+              </Button>
               <Button type="submit" disabled={isSubmitting}>
                 {isSubmitting ? 'Menyimpan...' : submitLabel}
               </Button>

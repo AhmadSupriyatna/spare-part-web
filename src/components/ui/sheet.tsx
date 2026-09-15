@@ -4,9 +4,21 @@ import { cn } from "cn"
 import { XIcon } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
+import { useSheetStackStore } from "@/stores/sheet-stack-store"
 
-function Sheet({ ...props }: DialogPrimitive.Root.Props) {
-  return <DialogPrimitive.Root data-slot="sheet" {...props} />
+/**
+ * Registers with the global sheet-stack store while open, so AppLayout can
+ * push the page content over (instead of the sheet floating on top of it)
+ * for every sheet in the app automatically — no per-page wiring needed.
+ */
+function Sheet({ open, ...props }: DialogPrimitive.Root.Props) {
+  React.useEffect(() => {
+    if (!open) return
+    useSheetStackStore.getState().registerOpen()
+    return () => useSheetStackStore.getState().registerClose()
+  }, [open])
+
+  return <DialogPrimitive.Root data-slot="sheet" open={open} {...props} />
 }
 
 function SheetTrigger({ ...props }: DialogPrimitive.Trigger.Props) {

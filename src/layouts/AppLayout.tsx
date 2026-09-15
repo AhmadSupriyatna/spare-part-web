@@ -33,6 +33,7 @@ import { ThemeToggle } from '@/components/ThemeToggle'
 import { logout as logoutRequest } from '@/features/auth/api'
 import { cn } from '@/lib/utils'
 import { useAuthStore } from '@/stores/auth-store'
+import { useSheetStackStore } from '@/stores/sheet-stack-store'
 import { useSidebarStore } from '@/stores/sidebar-store'
 import { Button } from '@/components/ui/button'
 import { Separator } from '@/components/ui/separator'
@@ -107,6 +108,7 @@ export function AppLayout() {
   const clearSession = useAuthStore((state) => state.clearSession)
   const collapsed = useSidebarStore((state) => state.collapsed)
   const toggleCollapsed = useSidebarStore((state) => state.toggleCollapsed)
+  const sheetOpenCount = useSheetStackStore((state) => state.openCount)
 
   const mutation = useMutation({
     mutationFn: logoutRequest,
@@ -210,7 +212,12 @@ export function AppLayout() {
           </div>
         </header>
         <Separator />
-        <main className="flex-1 overflow-y-auto p-6">
+        <main
+          className={cn(
+            'flex-1 overflow-y-auto p-6 transition-[margin-right] duration-300',
+            sheetOpenCount > 0 && 'mr-96',
+          )}
+        >
           <Outlet />
         </main>
       </div>

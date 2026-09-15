@@ -5,16 +5,8 @@ import { useForm } from 'react-hook-form'
 import { toast } from 'sonner'
 import { z } from 'zod'
 import { addLineRuntime } from '@/features/lines/api'
+import { FormSheet } from '@/components/FormSheet'
 import { Button } from '@/components/ui/button'
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from '@/components/ui/dialog'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
@@ -43,7 +35,7 @@ export function AddRuntimeDialog({ lineId, branchId, currentHours }: AddRuntimeD
     register,
     handleSubmit,
     reset,
-    formState: { errors },
+    formState: { errors, isDirty },
   } = useForm<RuntimeFormValues>({
     resolver: zodResolver(runtimeSchema),
     defaultValues: { current_reading: String(currentHours) },
@@ -76,35 +68,30 @@ export function AddRuntimeDialog({ lineId, branchId, currentHours }: AddRuntimeD
   })
 
   return (
-    <Dialog open={open} onOpenChange={setOpen}>
-      <DialogTrigger render={<Button variant="outline" size="sm" />}>Catat Jam Operasi</DialogTrigger>
-      <DialogContent>
-        <DialogHeader>
-          <DialogTitle>Catat Jam Operasi</DialogTitle>
-          <DialogDescription>
-            Masukkan angka yang tertera di meteran jam operasi saat ini (bukan tambahannya) — jam
-            operasi saat ini tercatat <strong>{currentHours}</strong> jam.
-          </DialogDescription>
-        </DialogHeader>
-        <form className="flex flex-col gap-4" onSubmit={handleSubmit((values) => mutation.mutate(values))}>
-          <div className="flex flex-col gap-2">
-            <Label htmlFor="current_reading">Reading Meteran Saat Ini</Label>
-            <Input id="current_reading" type="number" min={currentHours} {...register('current_reading')} />
-            {errors.current_reading && (
-              <p className="text-sm text-destructive">{errors.current_reading.message}</p>
-            )}
-          </div>
-          <div className="flex flex-col gap-2">
-            <Label htmlFor="runtime-notes">Catatan (opsional)</Label>
-            <Textarea id="runtime-notes" placeholder="Misal: dibaca shift pagi" {...register('notes')} />
-          </div>
-          <DialogFooter>
-            <Button type="submit" disabled={mutation.isPending}>
-              {mutation.isPending ? 'Menyimpan...' : 'Simpan'}
-            </Button>
-          </DialogFooter>
-        </form>
-      </DialogContent>
-    </Dialog>
+    <FormSheet
+      trigger={
+        <Button variant="outline" size="sm">
+          Catat Jam Operasi
+        </Button>
+      }
+      title="Catat Jam Operasi"
+      description={`Masukkan angka yang tertera di meteran jam operasi saat ini (bukan tambahannya) — jam operasi saat ini tercatat ${currentHours} jam.`}
+      open={open}
+      onOpenChange={setOpen}
+      isDirty={isDirty}
+      onSubmit={handleSubmit((values) => mutation.mutate(values))}
+      submitLabel="Simpan"
+      isSubmitting={mutation.isPending}
+    >
+      <div className="flex flex-col gap-2">
+        <Label htmlFor="current_reading">Reading Meteran Saat Ini</Label>
+        <Input id="current_reading" type="number" min={currentHours} {...register('current_reading')} />
+        {errors.current_reading && <p className="text-sm text-destructive">{errors.current_reading.message}</p>}
+      </div>
+      <div className="flex flex-col gap-2">
+        <Label htmlFor="runtime-notes">Catatan (opsional)</Label>
+        <Textarea id="runtime-notes" placeholder="Misal: dibaca shift pagi" {...register('notes')} />
+      </div>
+    </FormSheet>
   )
 }
