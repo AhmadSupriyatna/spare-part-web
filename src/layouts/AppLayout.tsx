@@ -123,10 +123,10 @@ export function AppLayout() {
   })
 
   return (
-    <div className="flex min-h-svh">
+    <div className="flex h-svh overflow-hidden">
       <aside
         className={cn(
-          'relative hidden shrink-0 flex-col border-r bg-sidebar text-sidebar-foreground transition-[width] duration-200 sm:flex',
+          'relative hidden h-full shrink-0 flex-col border-r bg-sidebar text-sidebar-foreground transition-[width] duration-200 sm:flex',
           collapsed ? 'w-16' : 'w-60',
         )}
       >
@@ -188,8 +188,8 @@ export function AppLayout() {
           ))}
         </nav>
       </aside>
-      <div className="flex flex-1 flex-col">
-        <header className="flex items-center justify-between gap-4 border-b bg-background/95 px-6 py-3 backdrop-blur supports-backdrop-filter:bg-background/60">
+      <div className="flex min-w-0 flex-1 flex-col">
+        <header className="flex shrink-0 items-center justify-between gap-4 border-b bg-background/95 px-6 py-3 backdrop-blur supports-backdrop-filter:bg-background/60">
           <BranchSelector />
           <div className="flex items-center gap-3">
             <ThemeToggle />
@@ -206,7 +206,7 @@ export function AppLayout() {
           </div>
         </header>
         <Separator />
-        <main className="flex-1 p-6">
+        <main className="flex-1 overflow-y-auto p-6">
           <Outlet />
         </main>
       </div>
