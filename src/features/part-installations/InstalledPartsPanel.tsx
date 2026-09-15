@@ -1,23 +1,22 @@
-import { useQuery } from '@tanstack/react-query'
-import { HeartPulse } from 'lucide-react'
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { HeartPulse, Pencil, Trash2 } from 'lucide-react'
 import { useMemo } from 'react'
 import { Link } from 'react-router'
-import { fetchPartInstallations } from '@/features/part-installations/api'
+import { toast } from 'sonner'
+import { EditInstallationNotesDialog } from '@/features/part-installations/EditInstallationNotesDialog'
+import { fetchPartInstallations, removePartInstallation } from '@/features/part-installations/api'
+import { useCanManage } from '@/stores/use-has-role'
 import type { PartInstallation } from '@/types/relations'
 import { EmptyState } from '@/components/EmptyState'
 import { Badge } from '@/components/ui/badge'
+import { Button } from '@/components/ui/button'
 import { Skeleton } from '@/components/ui/skeleton'
 
 interface PartGroup {
   partId: number
   partName: string
   itemMasterNo: string
-  units: {
-    installationId: number
-    partUnitId: number | null
-    unitCode: string | null
-    percentUsed: number | null
-  }[]
+  installations: PartInstallation[]
 }
 
 function groupByPart(installations: PartInstallation[]): PartGroup[] {
@@ -28,15 +27,10 @@ function groupByPart(installations: PartInstallation[]): PartGroup[] {
         partId: installation.part_id,
         partName: installation.part_name,
         itemMasterNo: installation.item_master_no,
-        units: [],
+        installations: [],
       })
     }
-    groups.get(installation.part_id)!.units.push({
-      installationId: installation.id,
-      partUnitId: installation.part_unit_id,
-      unitCode: installation.unit_code ?? null,
-      percentUsed: installation.percent_used,
-    })
+    groups.get(installation.part_id)!.installations.push(installation)
   }
   return Array.from(groups.values())
 }
@@ -48,18 +42,30 @@ function percentBadgeVariant(percent: number): 'destructive' | 'warning' | 'succ
 }
 
 /**
- * Read-only summary of the parts currently installed on one equipment, for
- * the Line/Mesin/Equipment browser's side panel — grouped by Part identity
+ * Summary of the parts currently installed on one equipment, for the
+ * Line/Mesin/Equipment browser's side panel (and its floating drop-target
+ * copy while the part picker sheet is open) — grouped by Part identity
  * rather than one row per physical installation, since the same part is
  * often installed as more than one unit (e.g. two bearings on one gearbox):
  * the identity (name/code) is shown once, with each unit's remaining
- * lifetime as a compact badge next to it instead of repeating the whole
- * card per unit.
+ * lifetime as a compact badge next to it, alongside edit/lepas actions.
  */
 export function InstalledPartsPanel({ equipmentId }: { equipmentId: number }) {
+  const canManage = useCanManage()
+  const queryClient = useQueryClient()
+
   const { data: installations, isLoading } = useQuery({
     queryKey: ['part-installations', equipmentId],
     queryFn: () => fetchPartInstallations(equipmentId),
+  })
+
+  const removeMutation = useMutation({
+    mutationFn: removePartInstallation,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['part-installations', equipmentId] })
+      toast.success('Part berhasil dilepas.')
+    },
+    onError: () => toast.error('Gagal melepas part.'),
   })
 
   const active = useMemo(
@@ -98,24 +104,54 @@ export function InstalledPartsPanel({ equipmentId }: { equipmentId: number }) {
             <p className="truncate font-mono text-[11px] text-muted-foreground">{group.itemMasterNo}</p>
           </div>
           <div className="flex flex-1 flex-wrap justify-end gap-1">
-            {group.units.map((unit) => {
-              const label = [unit.unitCode ?? '?', unit.percentUsed != null ? `${Math.round(unit.percentUsed)}%` : null]
+            {group.installations.map((installation) => {
+              const label = [
+                installation.unit_code ?? '?',
+                installation.percent_used != null ? `${Math.round(installation.percent_used)}%` : null,
+              ]
                 .filter(Boolean)
                 .join(' · ')
               const badge = (
                 <Badge
                   className="shrink-0 px-1.5 text-[10px]"
-                  variant={unit.percentUsed != null ? percentBadgeVariant(unit.percentUsed) : 'outline'}
+                  variant={installation.percent_used != null ? percentBadgeVariant(installation.percent_used) : 'outline'}
                 >
                   {label}
                 </Badge>
               )
-              return unit.partUnitId ? (
-                <Link key={unit.installationId} to={`/part-units/${unit.partUnitId}`} title="Lihat detail unit">
-                  {badge}
-                </Link>
-              ) : (
-                <span key={unit.installationId}>{badge}</span>
+              return (
+                <div key={installation.id} className="flex shrink-0 items-center gap-0.5">
+                  {installation.part_unit_id ? (
+                    <Link to={`/part-units/${installation.part_unit_id}`} title="Lihat detail unit">
+                      {badge}
+                    </Link>
+                  ) : (
+                    badge
+                  )}
+                  {canManage && (
+                    <>
+                      <EditInstallationNotesDialog
+                        installation={installation}
+                        equipmentId={equipmentId}
+                        trigger={
+                          <Button variant="ghost" size="icon-xs" aria-label="Ubah catatan" title="Ubah catatan">
+                            <Pencil className="size-3" />
+                          </Button>
+                        }
+                      />
+                      <Button
+                        variant="ghost"
+                        size="icon-xs"
+                        aria-label="Lepas part"
+                        title="Lepas part"
+                        onClick={() => removeMutation.mutate(installation.id)}
+                        disabled={removeMutation.isPending}
+                      >
+                        <Trash2 className="size-3" />
+                      </Button>
+                    </>
+                  )}
+                </div>
               )
             })}
           </div>

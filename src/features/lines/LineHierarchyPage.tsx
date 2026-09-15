@@ -10,7 +10,6 @@ import { EquipmentFormDialog } from '@/features/equipment/EquipmentFormDialog'
 import { deleteEquipment, fetchEquipmentList } from '@/features/equipment/api'
 import { deleteMachine, fetchMachines } from '@/features/machines/api'
 import { MachineFormDialog } from '@/features/machines/MachineFormDialog'
-import { ConfirmInstallDialog } from '@/features/part-installations/ConfirmInstallDialog'
 import { InstalledPartsPanel } from '@/features/part-installations/InstalledPartsPanel'
 import { PartPickerSheet } from '@/features/part-installations/PartPickerSheet'
 import { useBranchStore } from '@/stores/branch-store'
@@ -31,7 +30,7 @@ export function LineHierarchyPage() {
   const [partSheetOpen, setPartSheetOpen] = useState(false)
   const [draggingPart, setDraggingPart] = useState<Part | null>(null)
   const [dropTargetActive, setDropTargetActive] = useState(false)
-  const [confirmPart, setConfirmPart] = useState<Part | null>(null)
+  const [droppedPart, setDroppedPart] = useState<Part | null>(null)
 
   const selectedLineId = searchParams.get('line') ? Number(searchParams.get('line')) : null
   const selectedMachineId = searchParams.get('machine') ? Number(searchParams.get('machine')) : null
@@ -344,8 +343,7 @@ export function LineHierarchyPage() {
               e.preventDefault()
               setDropTargetActive(false)
               if (!selectedEquipment || !draggingPart) return
-              setConfirmPart(draggingPart)
-              setPartSheetOpen(false)
+              setDroppedPart(draggingPart)
             }}
           >
             {selectedEquipment ? (
@@ -357,24 +355,48 @@ export function LineHierarchyPage() {
         </div>
       </div>
 
-      <PartPickerSheet
-        open={partSheetOpen}
-        onOpenChange={setPartSheetOpen}
-        onPickPart={(part) => {
-          setConfirmPart(part)
-          setPartSheetOpen(false)
-        }}
-        onDragStartPart={setDraggingPart}
-        onDragEndPart={() => setDraggingPart(null)}
-      />
-      {selectedEquipment && (
-        <ConfirmInstallDialog
-          equipmentId={selectedEquipment.id}
-          part={confirmPart}
-          open={!!confirmPart}
-          onOpenChange={(open) => {
-            if (!open) setConfirmPart(null)
+      {/* Kotak Part melayang di kiri selagi laci terbuka, supaya tidak
+          ketutupan laci yang muncul dari kanan — target drop yang selalu
+          kelihatan berapa pun lebar layarnya. */}
+      {partSheetOpen && selectedEquipment && (
+        <div
+          className={cn(
+            'fixed top-24 left-6 z-40 flex max-h-[70vh] w-72 flex-col overflow-hidden rounded-lg border bg-popover shadow-xl transition-colors',
+            dropTargetActive && 'border-primary ring-2 ring-primary/40',
+          )}
+          onDragOver={(e) => {
+            e.preventDefault()
+            e.dataTransfer.dropEffect = 'copy'
+            setDropTargetActive(true)
           }}
+          onDragLeave={() => setDropTargetActive(false)}
+          onDrop={(e) => {
+            e.preventDefault()
+            setDropTargetActive(false)
+            if (!draggingPart) return
+            setDroppedPart(draggingPart)
+          }}
+        >
+          <div className="border-b px-3 py-2">
+            <p className="truncate text-sm font-semibold">Part — {selectedEquipment.name}</p>
+            <p className="text-xs text-muted-foreground">Lepaskan part di sini untuk memasang</p>
+          </div>
+          <div className="flex-1 overflow-y-auto p-3">
+            <InstalledPartsPanel equipmentId={selectedEquipment.id} />
+          </div>
+        </div>
+      )}
+
+      {selectedEquipment && (
+        <PartPickerSheet
+          open={partSheetOpen}
+          onOpenChange={setPartSheetOpen}
+          equipmentId={selectedEquipment.id}
+          equipmentName={selectedEquipment.name}
+          droppedPart={droppedPart}
+          onDropHandled={() => setDroppedPart(null)}
+          onDragStartPart={setDraggingPart}
+          onDragEndPart={() => setDraggingPart(null)}
         />
       )}
 

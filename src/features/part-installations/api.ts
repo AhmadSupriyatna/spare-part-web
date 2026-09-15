@@ -35,3 +35,8 @@ export async function removePartInstallation(id: number): Promise<PartInstallati
   const { data } = await apiClient.post<{ data: PartInstallation }>(`/part-installations/${id}/remove`)
   return data.data
 }
+
+export async function updatePartInstallation(id: number, notes: string | null): Promise<PartInstallation> {
+  const { data } = await apiClient.put<{ data: PartInstallation }>(`/part-installations/${id}`, { notes })
+  return data.data
+}
