@@ -11,6 +11,7 @@ import { deleteEquipment, fetchEquipmentList } from '@/features/equipment/api'
 import { deleteMachine, fetchMachines } from '@/features/machines/api'
 import { MachineFormDialog } from '@/features/machines/MachineFormDialog'
 import { InstalledPartsPanel } from '@/features/part-installations/InstalledPartsPanel'
+import { PartInstallationFormDialog } from '@/features/part-installations/PartInstallationFormDialog'
 import { useBranchStore } from '@/stores/branch-store'
 import { useCanManage } from '@/stores/use-has-role'
 import { cn } from '@/lib/utils'
@@ -303,10 +304,20 @@ export function LineHierarchyPage() {
         </HierarchyColumn>
 
         <div className="flex flex-col rounded-lg border">
-          <div className="border-b px-3 py-2">
+          <div className="flex items-center justify-between gap-2 border-b px-3 py-2">
             <h2 className="truncate text-sm font-semibold text-muted-foreground">
-              {selectedEquipment ? `Part Terpasang — ${selectedEquipment.name}` : 'Part Terpasang'}
+              {selectedEquipment ? `Part — ${selectedEquipment.name}` : 'Part'}
             </h2>
+            {canManage && selectedEquipment && (
+              <PartInstallationFormDialog
+                equipmentId={selectedEquipment.id}
+                trigger={
+                  <Button variant="ghost" size="icon-xs" aria-label="Pasang Part" title="Pasang Part">
+                    <Plus />
+                  </Button>
+                }
+              />
+            )}
           </div>
           <div className="max-h-[36rem] overflow-y-auto p-3">
             {selectedEquipment ? (
