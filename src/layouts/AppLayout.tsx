@@ -26,6 +26,7 @@ import {
 } from 'lucide-react'
 import { NavLink, Outlet, useNavigate } from 'react-router'
 import { BranchSelector } from '@/components/BranchSelector'
+import { GlobalSearch } from '@/components/GlobalSearch'
 import { ThemeToggle } from '@/components/ThemeToggle'
 import { logout as logoutRequest } from '@/features/auth/api'
 import { cn } from '@/lib/utils'
@@ -189,9 +190,14 @@ export function AppLayout() {
         </nav>
       </aside>
       <div className="flex min-w-0 flex-1 flex-col">
-        <header className="flex shrink-0 items-center justify-between gap-4 border-b bg-background/95 px-6 py-3 backdrop-blur supports-backdrop-filter:bg-background/60">
-          <BranchSelector />
-          <div className="flex items-center gap-3">
+        <header className="flex shrink-0 items-center gap-4 border-b bg-background/95 px-6 py-3 backdrop-blur supports-backdrop-filter:bg-background/60">
+          <div className="flex flex-1 items-center">
+            <BranchSelector />
+          </div>
+          <div className="flex flex-1 justify-center">
+            <GlobalSearch />
+          </div>
+          <div className="flex flex-1 items-center justify-end gap-3">
             <ThemeToggle />
             <div className="flex items-center gap-2">
               <div className="flex size-7 shrink-0 items-center justify-center rounded-full bg-primary/10 text-xs font-semibold text-primary">
