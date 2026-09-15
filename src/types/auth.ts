@@ -1,4 +1,4 @@
-export type UserRole = 'teknisi' | 'engineer' | 'admin_gudang' | 'supervisor' | 'superadmin'
+export type UserRole = 'teknisi' | 'engineer' | 'admin_spare_part' | 'supervisor' | 'superadmin'
 
 export interface Branch {
   id: number

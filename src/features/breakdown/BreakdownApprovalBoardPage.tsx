@@ -5,6 +5,7 @@ import { approveReplacementRequest, fetchReplacementRequests } from '@/features/
 import { RejectRequestDialog } from '@/features/breakdown/RejectRequestDialog'
 import { PartUnitActionRequestsTable } from '@/features/part-unit-actions/PartUnitActionRequestsTable'
 import { useBranchStore } from '@/stores/branch-store'
+import { useCanApprove } from '@/stores/use-has-role'
 import type { ReplacementRequestStatus } from '@/types/breakdown'
 import { EmptyState } from '@/components/EmptyState'
 import { PageHeader } from '@/components/PageHeader'
@@ -21,6 +22,7 @@ const statusLabels: Record<ReplacementRequestStatus, string> = {
 
 function RequestsTable({ branchId, status }: { branchId: number; status: ReplacementRequestStatus }) {
   const queryClient = useQueryClient()
+  const canApprove = useCanApprove()
 
   const { data: requests, isLoading } = useQuery({
     queryKey: ['replacement-requests', branchId, status],
@@ -64,7 +66,7 @@ function RequestsTable({ branchId, status }: { branchId: number; status: Replace
           <TableHead>Alasan</TableHead>
           <TableHead className="text-right">Jumlah</TableHead>
           {status !== 'pending' && <TableHead>Ditinjau oleh</TableHead>}
-          {status === 'pending' && <TableHead className="text-right">Aksi</TableHead>}
+          {status === 'pending' && canApprove && <TableHead className="text-right">Aksi</TableHead>}
         </TableRow>
       </TableHeader>
       <TableBody>
@@ -91,7 +93,7 @@ function RequestsTable({ branchId, status }: { branchId: number; status: Replace
                 {req.review_notes && <div className="text-xs italic">"{req.review_notes}"</div>}
               </TableCell>
             )}
-            {status === 'pending' && (
+            {status === 'pending' && canApprove && (
               <TableCell className="flex justify-end gap-2">
                 <Button size="sm" onClick={() => approveMutation.mutate(req.id)} disabled={approveMutation.isPending}>
                   Setujui

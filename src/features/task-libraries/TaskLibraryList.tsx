@@ -9,7 +9,7 @@ import {
   fetchTaskLibrariesForEquipment,
   removeTaskLibraryPart,
 } from '@/features/task-libraries/api'
-import { useCanManage } from '@/stores/use-has-role'
+import { useCanManageEngineering } from '@/stores/use-has-role'
 import {
   AlertDialog,
   AlertDialogAction,
@@ -42,7 +42,7 @@ export function TaskLibraryList({
   title = 'Task Library (PM)',
   addLabel = 'Tambah Task Library',
 }: TaskLibraryListProps) {
-  const canManage = useCanManage()
+  const canManage = useCanManageEngineering()
   const queryClient = useQueryClient()
 
   const { data: taskLibraries, isLoading: taskLibrariesLoading } = useQuery({

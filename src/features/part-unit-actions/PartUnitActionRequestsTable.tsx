@@ -5,6 +5,7 @@ import { Link } from 'react-router'
 import { approvePartUnitActionRequest, fetchPartUnitActionRequests } from '@/features/part-unit-actions/api'
 import { RejectPartUnitActionDialog } from '@/features/part-unit-actions/RejectPartUnitActionDialog'
 import type { PartUnitActionRequestStatus } from '@/types/part-unit-actions'
+import { useCanApprove } from '@/stores/use-has-role'
 import { EmptyState } from '@/components/EmptyState'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -30,6 +31,7 @@ export function PartUnitActionRequestsTable({
   status: PartUnitActionRequestStatus
 }) {
   const queryClient = useQueryClient()
+  const canApprove = useCanApprove()
 
   const { data: requests, isLoading } = useQuery({
     queryKey: ['part-unit-action-requests', branchId, status],
@@ -66,7 +68,7 @@ export function PartUnitActionRequestsTable({
           <TableHead>Diajukan oleh</TableHead>
           <TableHead>Catatan</TableHead>
           {status !== 'pending' && <TableHead>Ditinjau oleh</TableHead>}
-          {status === 'pending' && <TableHead className="text-right">Aksi</TableHead>}
+          {status === 'pending' && canApprove && <TableHead className="text-right">Aksi</TableHead>}
         </TableRow>
       </TableHeader>
       <TableBody>
@@ -99,7 +101,7 @@ export function PartUnitActionRequestsTable({
                 {req.review_notes && <div className="text-xs italic">"{req.review_notes}"</div>}
               </TableCell>
             )}
-            {status === 'pending' && (
+            {status === 'pending' && canApprove && (
               <TableCell className="flex justify-end gap-2">
                 <Button size="sm" onClick={() => approveMutation.mutate(req.id)} disabled={approveMutation.isPending}>
                   Setujui

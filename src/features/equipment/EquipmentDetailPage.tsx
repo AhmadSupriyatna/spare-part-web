@@ -15,7 +15,7 @@ import { TaskRow } from '@/features/tasks/TaskRow'
 import { fetchTasksForEquipment } from '@/features/tasks/api'
 import { WorkOrderFormDialog } from '@/features/work-orders/WorkOrderFormDialog'
 import { fetchWorkOrders, generateTaskFromWorkOrder } from '@/features/work-orders/api'
-import { useCanManage } from '@/stores/use-has-role'
+import { useCanManage, useCanManageEngineering } from '@/stores/use-has-role'
 import {
   AlertDialog,
   AlertDialogAction,
@@ -42,6 +42,7 @@ export function EquipmentDetailPage() {
   const { id } = useParams<{ id: string }>()
   const equipmentId = Number(id)
   const canManage = useCanManage()
+  const canManageBom = useCanManageEngineering()
   const queryClient = useQueryClient()
 
   const { data: equipment } = useQuery({
@@ -205,7 +206,7 @@ export function EquipmentDetailPage() {
       <div className="flex flex-col gap-3">
         <div className="flex items-center justify-between">
           <h2 className="text-lg font-medium">Bill of Material (BOM)</h2>
-          {canManage && (
+          {canManageBom && (
             <EquipmentPartFormDialog
               equipmentId={equipmentId}
               trigger={<Button size="sm">Tambah Part</Button>}
@@ -223,7 +224,7 @@ export function EquipmentDetailPage() {
                 <TableHead>Part</TableHead>
                 <TableHead className="text-right">Jumlah Dibutuhkan</TableHead>
                 <TableHead>Catatan</TableHead>
-                {canManage && <TableHead className="text-right">Aksi</TableHead>}
+                {canManageBom && <TableHead className="text-right">Aksi</TableHead>}
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -236,7 +237,7 @@ export function EquipmentDetailPage() {
                   </TableCell>
                   <TableCell className="text-right">{ep.quantity_required ?? '-'}</TableCell>
                   <TableCell className="text-muted-foreground">{ep.notes ?? '-'}</TableCell>
-                  {canManage && (
+                  {canManageBom && (
                     <TableCell className="text-right">
                       <AlertDialog>
                         <AlertDialogTrigger

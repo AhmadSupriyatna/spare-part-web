@@ -7,6 +7,7 @@ import { fetchParts } from '@/features/parts/api'
 import { fetchMyTasks } from '@/features/tasks/api'
 import { useAuthStore } from '@/stores/auth-store'
 import { useBranchStore } from '@/stores/branch-store'
+import { useCanApprove } from '@/stores/use-has-role'
 import { PageHeader } from '@/components/PageHeader'
 import { Card, CardContent } from '@/components/ui/card'
 import { Skeleton } from '@/components/ui/skeleton'
@@ -51,6 +52,7 @@ function SummaryCard({ title, value, icon: Icon, href, tone = 'default', loading
 export function DashboardPage() {
   const user = useAuthStore((state) => state.user)
   const activeBranchId = useBranchStore((state) => state.activeBranchId)
+  const canApprove = useCanApprove()
 
   const { data: parts, isLoading: partsLoading } = useQuery({
     queryKey: ['parts'],
@@ -71,7 +73,7 @@ export function DashboardPage() {
   const { data: pendingReplacements, isLoading: replacementsLoading } = useQuery({
     queryKey: ['replacement-requests', activeBranchId, 'pending'],
     queryFn: () => fetchReplacementRequests(activeBranchId!, 'pending'),
-    enabled: !!activeBranchId,
+    enabled: !!activeBranchId && canApprove,
   })
 
   const activeTaskCount =
@@ -117,14 +119,16 @@ export function DashboardPage() {
             href="/my-tasks"
             loading={tasksLoading}
           />
-          <SummaryCard
-            title="Breakdown Menunggu"
-            value={pendingReplacements?.length ?? 0}
-            icon={ShieldCheck}
-            href="/breakdown/approvals"
-            tone={pendingReplacements && pendingReplacements.length > 0 ? 'warning' : 'default'}
-            loading={replacementsLoading}
-          />
+          {canApprove && (
+            <SummaryCard
+              title="Breakdown Menunggu"
+              value={pendingReplacements?.length ?? 0}
+              icon={ShieldCheck}
+              href="/breakdown/approvals"
+              tone={pendingReplacements && pendingReplacements.length > 0 ? 'warning' : 'default'}
+              loading={replacementsLoading}
+            />
+          )}
         </div>
       )}
     </div>
