@@ -1,6 +1,7 @@
 import { useMutation } from '@tanstack/react-query'
 import {
   AlertTriangle,
+  Bell,
   Boxes,
   Building2,
   CalendarClock,
@@ -12,7 +13,6 @@ import {
   Hammer,
   HeartPulse,
   LayoutDashboard,
-  LogOut,
   MapPin,
   NotebookPen,
   NotebookText,
@@ -25,8 +25,10 @@ import {
   Wrench,
 } from 'lucide-react'
 import { NavLink, Outlet, useNavigate } from 'react-router'
+import { toast } from 'sonner'
 import { BranchSelector } from '@/components/BranchSelector'
 import { GlobalSearch } from '@/components/GlobalSearch'
+import { ProfileMenu } from '@/components/ProfileMenu'
 import { ThemeToggle } from '@/components/ThemeToggle'
 import { logout as logoutRequest } from '@/features/auth/api'
 import { cn } from '@/lib/utils'
@@ -98,15 +100,6 @@ const navSections: NavSection[] = [
     ],
   },
 ]
-
-function initials(name: string | undefined): string {
-  if (!name) return '?'
-  const parts = name.trim().split(/\s+/)
-  return parts
-    .slice(0, 2)
-    .map((part) => part[0]?.toUpperCase())
-    .join('')
-}
 
 export function AppLayout() {
   const navigate = useNavigate()
@@ -197,18 +190,23 @@ export function AppLayout() {
           <div className="flex flex-1 justify-center">
             <GlobalSearch />
           </div>
-          <div className="flex flex-1 items-center justify-end gap-3">
+          <div className="flex flex-1 items-center justify-end gap-2">
             <ThemeToggle />
-            <div className="flex items-center gap-2">
-              <div className="flex size-7 shrink-0 items-center justify-center rounded-full bg-primary/10 text-xs font-semibold text-primary">
-                {initials(user?.name)}
-              </div>
-              <span className="text-sm font-medium">{user?.name}</span>
-            </div>
-            <Button variant="outline" size="sm" onClick={() => mutation.mutate()}>
-              <LogOut className="size-3.5" />
-              Keluar
+            <Button
+              variant="outline"
+              size="icon-sm"
+              aria-label="Notifikasi"
+              title="Notifikasi"
+              onClick={() => toast.info('Fitur notifikasi akan segera hadir.')}
+            >
+              <Bell />
             </Button>
+            <ProfileMenu
+              name={user?.name}
+              email={user?.email}
+              onLogout={() => mutation.mutate()}
+              isLoggingOut={mutation.isPending}
+            />
           </div>
         </header>
         <Separator />

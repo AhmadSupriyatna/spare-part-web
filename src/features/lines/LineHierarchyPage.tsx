@@ -88,77 +88,77 @@ export function LineHierarchyPage() {
 
   return (
     <div className="flex flex-col gap-6">
-      {/* Line: horizontal strip, left to right, "+" sejajar di ujung kanan */}
-      <div className="flex items-center gap-3">
+      {/* Line: horizontal strip, left to right, kotak "+" nempel di ujung kanan */}
+      <div className="flex items-center gap-3 overflow-x-auto pb-1">
         {linesLoading ? (
-          <div className="flex flex-1 gap-3">
-            {Array.from({ length: 3 }).map((_, i) => (
-              <Skeleton key={i} className="h-20 w-48" />
-            ))}
-          </div>
+          Array.from({ length: 3 }).map((_, i) => <Skeleton key={i} className="h-20 w-48 shrink-0" />)
         ) : lines?.length === 0 ? (
-          <p className="flex-1 text-sm text-muted-foreground">Belum ada line di cabang ini.</p>
+          <p className="text-sm text-muted-foreground">Belum ada line di cabang ini.</p>
         ) : (
-          <div className="flex flex-1 gap-3 overflow-x-auto pb-1">
-            {lines?.map((line) => (
-              <div
-                key={line.id}
-                className={cn(
-                  'group flex shrink-0 items-center gap-1 rounded-xl border py-3 pr-2 pl-4 hover:bg-muted',
-                  line.id === selectedLineId && 'border-primary bg-primary/5',
-                )}
-              >
-                <button onClick={() => selectLine(line.id)} className="flex flex-col gap-0.5 text-left">
-                  <span className={cn('text-lg font-semibold', line.id === selectedLineId && 'text-primary')}>
-                    {line.name}
-                  </span>
-                  <span className="font-mono text-sm text-muted-foreground">{line.code}</span>
-                </button>
-                {!line.is_active && (
-                  <Badge variant="secondary" className="ml-1">
-                    Nonaktif
-                  </Badge>
-                )}
-                {canManage && (
-                  <div className="flex shrink-0 items-center">
-                    <LineFormDialog
-                      branchId={activeBranchId}
-                      line={line}
-                      trigger={
-                        <Button variant="ghost" size="icon-sm" aria-label="Ubah Line" title="Ubah Line">
-                          <Pencil />
-                        </Button>
+          lines?.map((line) => (
+            <div
+              key={line.id}
+              className={cn(
+                'group flex h-20 shrink-0 items-center gap-1 rounded-xl border py-3 pr-2 pl-4 hover:bg-muted',
+                line.id === selectedLineId && 'border-primary bg-primary/5',
+              )}
+            >
+              <button onClick={() => selectLine(line.id)} className="flex flex-col gap-0.5 text-left">
+                <span className={cn('text-lg font-semibold', line.id === selectedLineId && 'text-primary')}>
+                  {line.name}
+                </span>
+                <span className="font-mono text-sm text-muted-foreground">{line.code}</span>
+              </button>
+              {!line.is_active && (
+                <Badge variant="secondary" className="ml-1">
+                  Nonaktif
+                </Badge>
+              )}
+              {canManage && (
+                <div className="flex shrink-0 items-center">
+                  <LineFormDialog
+                    branchId={activeBranchId}
+                    line={line}
+                    trigger={
+                      <Button variant="ghost" size="icon-sm" aria-label="Ubah Line" title="Ubah Line">
+                        <Pencil />
+                      </Button>
+                    }
+                  />
+                  <DeleteWithPasswordDialog
+                    title={`Hapus Line "${line.name}"?`}
+                    description="Semua mesin, equipment, work order, tugas, dan riwayat di bawah line ini akan ikut terhapus permanen. Tindakan ini tidak bisa dibatalkan."
+                    onConfirm={(password) => deleteLine(line.id, password)}
+                    onSuccess={() => {
+                      queryClient.invalidateQueries({ queryKey: ['lines', activeBranchId] })
+                      if (line.id === selectedLineId) {
+                        setSearchParams({})
                       }
-                    />
-                    <DeleteWithPasswordDialog
-                      title={`Hapus Line "${line.name}"?`}
-                      description="Semua mesin, equipment, work order, tugas, dan riwayat di bawah line ini akan ikut terhapus permanen. Tindakan ini tidak bisa dibatalkan."
-                      onConfirm={(password) => deleteLine(line.id, password)}
-                      onSuccess={() => {
-                        queryClient.invalidateQueries({ queryKey: ['lines', activeBranchId] })
-                        if (line.id === selectedLineId) {
-                          setSearchParams({})
-                        }
-                      }}
-                      trigger={
-                        <Button variant="ghost" size="icon-sm" aria-label="Hapus Line" title="Hapus Line">
-                          <Trash2 />
-                        </Button>
-                      }
-                    />
-                  </div>
-                )}
-              </div>
-            ))}
-          </div>
+                    }}
+                    trigger={
+                      <Button variant="ghost" size="icon-sm" aria-label="Hapus Line" title="Hapus Line">
+                        <Trash2 />
+                      </Button>
+                    }
+                  />
+                </div>
+              )}
+            </div>
+          ))
         )}
-        {canManage && (
+        {canManage && !linesLoading && (
           <LineFormDialog
             branchId={activeBranchId}
             trigger={
-              <Button variant="ghost" size="icon-sm" className="shrink-0" aria-label="Tambah Line" title="Tambah Line">
-                <Plus />
-              </Button>
+              <button
+                type="button"
+                aria-label="Tambah Line"
+                title="Tambah Line"
+                className="flex h-20 w-48 shrink-0 flex-col items-center justify-center gap-1 rounded-xl border-2 border-dashed border-muted-foreground/40 text-muted-foreground transition-colors hover:border-primary hover:bg-primary/5 hover:text-primary"
+              >
+                <Plus className="size-5" />
+                <span className="text-sm font-medium">Tambah Line</span>
+              </button>
             }
           />
         )}
