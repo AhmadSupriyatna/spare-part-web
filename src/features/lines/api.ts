@@ -1,5 +1,6 @@
 import { apiClient } from '@/lib/api-client'
 import type { LineRuntimeLog, ProductionLine } from '@/types/tasks'
+import type { PaginatedResponse } from '@/types/inventory'
 
 export interface LinePayload {
   code: string
@@ -41,7 +42,12 @@ export async function addLineRuntime(id: number, payload: AddLineRuntimePayload)
   return data.data
 }
 
-export async function fetchLineRuntimeLogs(id: number): Promise<LineRuntimeLog[]> {
-  const { data } = await apiClient.get<{ data: LineRuntimeLog[] }>(`/lines/${id}/runtime-logs`)
-  return data.data
+export async function fetchLineRuntimeLogs(
+  id: number,
+  page = 1,
+): Promise<PaginatedResponse<LineRuntimeLog>> {
+  const { data } = await apiClient.get<PaginatedResponse<LineRuntimeLog>>(`/lines/${id}/runtime-logs`, {
+    params: { page },
+  })
+  return data
 }

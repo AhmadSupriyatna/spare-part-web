@@ -16,7 +16,6 @@ import { useBranchStore } from '@/stores/branch-store'
 import { useCanManage } from '@/stores/use-has-role'
 import { cn } from '@/lib/utils'
 import { DeleteWithPasswordDialog } from '@/components/DeleteWithPasswordDialog'
-import { PageHeader } from '@/components/PageHeader'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Skeleton } from '@/components/ui/skeleton'
@@ -89,8 +88,6 @@ export function LineHierarchyPage() {
 
   return (
     <div className="flex flex-col gap-6">
-      <PageHeader title="Line Produksi" />
-
       {/* Line: horizontal strip, left to right */}
       <div className="flex flex-col gap-3">
         {canManage && (
