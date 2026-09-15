@@ -5,7 +5,44 @@ import { Select as SelectPrimitive } from "@base-ui/react/select"
 import { cn } from "cn"
 import { ChevronDownIcon, CheckIcon, ChevronUpIcon } from "lucide-react"
 
-const Select = SelectPrimitive.Root
+/**
+ * Base UI's `<Select.Value>` only renders a real label when `Select.Root`
+ * is given an `items` map — without it, it falls back to printing the raw
+ * value (e.g. "1" instead of "Cabang Pusat") any time the selection wasn't
+ * just picked live from an open popup (a pre-filled edit form, a value
+ * restored from the URL, etc.). Recover the {value, label} pairs by walking
+ * the `<SelectItem>` elements out of `children` so every consumer gets a
+ * correct trigger label for free, without having to build the same items
+ * list twice.
+ */
+function collectSelectItems(node: React.ReactNode): { value: unknown; label: React.ReactNode }[] {
+  const items: { value: unknown; label: React.ReactNode }[] = []
+  React.Children.forEach(node, (child) => {
+    if (!React.isValidElement<{ value?: unknown; children?: React.ReactNode }>(child)) return
+    if (child.type === SelectItem) {
+      items.push({ value: child.props.value, label: child.props.children })
+      return
+    }
+    if (child.props.children) {
+      items.push(...collectSelectItems(child.props.children))
+    }
+  })
+  return items
+}
+
+function Select({ items, children, ...props }: SelectPrimitive.Root.Props<string>) {
+  const derivedItems = React.useMemo(() => {
+    if (items) return items
+    const collected = collectSelectItems(children)
+    return collected.length > 0 ? collected : undefined
+  }, [items, children])
+
+  return (
+    <SelectPrimitive.Root items={derivedItems} {...props}>
+      {children}
+    </SelectPrimitive.Root>
+  )
+}
 
 function SelectGroup({ className, ...props }: SelectPrimitive.Group.Props) {
   return (
