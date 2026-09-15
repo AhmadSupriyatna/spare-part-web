@@ -88,30 +88,18 @@ export function LineHierarchyPage() {
 
   return (
     <div className="flex flex-col gap-6">
-      {/* Line: horizontal strip, left to right */}
-      <div className="flex flex-col gap-3">
-        {canManage && (
-          <div className="flex items-center justify-end">
-            <LineFormDialog
-              branchId={activeBranchId}
-              trigger={
-                <Button variant="ghost" size="icon-sm" aria-label="Tambah Line" title="Tambah Line">
-                  <Plus />
-                </Button>
-              }
-            />
-          </div>
-        )}
+      {/* Line: horizontal strip, left to right, "+" sejajar di ujung kanan */}
+      <div className="flex items-center gap-3">
         {linesLoading ? (
-          <div className="flex gap-3">
+          <div className="flex flex-1 gap-3">
             {Array.from({ length: 3 }).map((_, i) => (
               <Skeleton key={i} className="h-20 w-48" />
             ))}
           </div>
         ) : lines?.length === 0 ? (
-          <p className="text-sm text-muted-foreground">Belum ada line di cabang ini.</p>
+          <p className="flex-1 text-sm text-muted-foreground">Belum ada line di cabang ini.</p>
         ) : (
-          <div className="flex gap-3 overflow-x-auto pb-1">
+          <div className="flex flex-1 gap-3 overflow-x-auto pb-1">
             {lines?.map((line) => (
               <div
                 key={line.id}
@@ -163,6 +151,16 @@ export function LineHierarchyPage() {
               </div>
             ))}
           </div>
+        )}
+        {canManage && (
+          <LineFormDialog
+            branchId={activeBranchId}
+            trigger={
+              <Button variant="ghost" size="icon-sm" className="shrink-0" aria-label="Tambah Line" title="Tambah Line">
+                <Plus />
+              </Button>
+            }
+          />
         )}
       </div>
 
