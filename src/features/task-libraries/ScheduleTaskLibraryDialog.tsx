@@ -45,6 +45,12 @@ export function ScheduleTaskLibraryDialog({
 }: ScheduleTaskLibraryDialogProps) {
   const [open, setOpen] = useState(false)
   const queryClient = useQueryClient()
+  const lockedLibrary = defaultLibraryId
+    ? libraries.find((library) => library.id === defaultLibraryId)
+    : libraries.length === 1
+      ? libraries[0]
+      : null
+  const resolvedLibraryId = lockedLibrary?.id
 
   const { data: users } = useQuery({
     queryKey: ['users'],
@@ -64,7 +70,7 @@ export function ScheduleTaskLibraryDialog({
   } = useForm<ScheduleFormValues>({
     resolver: zodResolver(scheduleSchema),
     defaultValues: {
-      task_library_id: defaultLibraryId ? String(defaultLibraryId) : '',
+      task_library_id: resolvedLibraryId ? String(resolvedLibraryId) : '',
       due_date: defaultDate ?? '',
     },
   })
@@ -72,12 +78,12 @@ export function ScheduleTaskLibraryDialog({
   useEffect(() => {
     if (open) {
       reset({
-        task_library_id: defaultLibraryId ? String(defaultLibraryId) : '',
+        task_library_id: resolvedLibraryId ? String(resolvedLibraryId) : '',
         due_date: defaultDate ?? '',
         assigned_to: '',
       })
     }
-  }, [open, defaultLibraryId, defaultDate, reset])
+  }, [open, resolvedLibraryId, defaultDate, reset])
 
   const mutation = useMutation({
     mutationFn: (values: ScheduleFormValues) =>
@@ -103,24 +109,30 @@ export function ScheduleTaskLibraryDialog({
         <form className="flex flex-col gap-4" onSubmit={handleSubmit((values) => mutation.mutate(values))}>
           <div className="flex flex-col gap-2">
             <Label>Kegiatan PM (Task Library)</Label>
-            <Controller
-              control={control}
-              name="task_library_id"
-              render={({ field }) => (
-                <Select value={field.value} onValueChange={field.onChange} disabled={libraries.length <= 1}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Pilih kegiatan" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {libraries.map((library) => (
-                      <SelectItem key={library.id} value={String(library.id)}>
-                        {library.title} — {library.equipment_name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              )}
-            />
+            {lockedLibrary ? (
+              <p className="rounded-lg border border-input px-2.5 py-2 text-sm">
+                {lockedLibrary.title} — {lockedLibrary.equipment_name}
+              </p>
+            ) : (
+              <Controller
+                control={control}
+                name="task_library_id"
+                render={({ field }) => (
+                  <Select value={field.value} onValueChange={field.onChange}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Pilih kegiatan" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {libraries.map((library) => (
+                        <SelectItem key={library.id} value={String(library.id)}>
+                          {library.title} — {library.equipment_name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                )}
+              />
+            )}
             {errors.task_library_id && (
               <p className="text-sm text-destructive">{errors.task_library_id.message}</p>
             )}
