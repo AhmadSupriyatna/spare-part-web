@@ -11,7 +11,6 @@ import { deleteEquipment, fetchEquipmentList } from '@/features/equipment/api'
 import { deleteMachine, fetchMachines } from '@/features/machines/api'
 import { MachineFormDialog } from '@/features/machines/MachineFormDialog'
 import { InstalledPartsPanel } from '@/features/part-installations/InstalledPartsPanel'
-import { PartDropTargetOverlay } from '@/features/part-installations/PartDropTargetOverlay'
 import { PartPickerSheet } from '@/features/part-installations/PartPickerSheet'
 import { useBranchStore } from '@/stores/branch-store'
 import { useCanManage } from '@/stores/use-has-role'
@@ -94,7 +93,12 @@ export function LineHierarchyPage() {
   }
 
   return (
-    <div className="flex flex-col gap-6">
+    <div
+      className={cn(
+        'flex flex-col gap-6 transition-[margin-right] duration-300',
+        partSheetOpen && 'mr-96',
+      )}
+    >
       {/* Line: horizontal strip, left to right, kotak "+" nempel di ujung kanan */}
       <div className="flex items-center gap-3 overflow-x-auto pb-1">
         {linesLoading ? (
@@ -326,7 +330,27 @@ export function LineHierarchyPage() {
               </Button>
             )}
           </div>
-          <div className="max-h-[36rem] overflow-y-auto rounded-b-lg p-3">
+          <div
+            className={cn(
+              'max-h-[36rem] overflow-y-auto rounded-b-lg p-3 transition-colors',
+              dropTargetActive &&
+                selectedEquipment &&
+                'bg-primary/5 outline-2 -outline-offset-2 outline-primary/50 outline-dashed',
+            )}
+            onDragOver={(e) => {
+              if (!selectedEquipment) return
+              e.preventDefault()
+              e.dataTransfer.dropEffect = 'copy'
+              setDropTargetActive(true)
+            }}
+            onDragLeave={() => setDropTargetActive(false)}
+            onDrop={(e) => {
+              e.preventDefault()
+              setDropTargetActive(false)
+              if (!selectedEquipment || !draggingPart) return
+              setDroppedPart(draggingPart)
+            }}
+          >
             {selectedEquipment ? (
               <InstalledPartsPanel equipmentId={selectedEquipment.id} />
             ) : (
@@ -335,27 +359,6 @@ export function LineHierarchyPage() {
           </div>
         </div>
       </div>
-
-      {/* Target drop besar di tengah layar selagi laci terbuka — latar
-          belakang jadi buram, dan hanya kotak ini yang menerima drop
-          (bukan panel Part di halaman, yang bisa ketutupan laci). */}
-      {partSheetOpen && selectedEquipment && (
-        <PartDropTargetOverlay
-          title={`Part — ${selectedEquipment.name}`}
-          subtitle="Lepaskan part di sini untuk memasang"
-          isDropTargetActive={dropTargetActive}
-          onDragEnter={() => setDropTargetActive(true)}
-          onDragLeave={() => setDropTargetActive(false)}
-          onDrop={() => {
-            setDropTargetActive(false)
-            if (!draggingPart) return
-            setDroppedPart(draggingPart)
-          }}
-          onClose={() => setPartSheetOpen(false)}
-        >
-          <InstalledPartsPanel equipmentId={selectedEquipment.id} />
-        </PartDropTargetOverlay>
-      )}
 
       {selectedEquipment && (
         <PartPickerSheet
