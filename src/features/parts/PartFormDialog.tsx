@@ -51,6 +51,7 @@ export function PartFormDialog({ part, trigger }: PartFormDialogProps) {
       description: part?.description ?? '',
       unit: part?.unit ?? 'pcs',
       category: part?.category ?? '',
+      estimated_lifetime_hours: part?.estimated_lifetime_hours ? String(part.estimated_lifetime_hours) : '',
     },
   })
 
@@ -62,6 +63,7 @@ export function PartFormDialog({ part, trigger }: PartFormDialogProps) {
         description: part?.description ?? '',
         unit: part?.unit ?? 'pcs',
         category: part?.category ?? '',
+        estimated_lifetime_hours: part?.estimated_lifetime_hours ? String(part.estimated_lifetime_hours) : '',
       })
       setImageFile(null)
       setImagePreview(part?.image_url ?? null)
@@ -76,7 +78,13 @@ export function PartFormDialog({ part, trigger }: PartFormDialogProps) {
 
   const mutation = useMutation({
     mutationFn: (values: PartFormValues) => {
-      const payload = { ...values, image: imageFile }
+      const payload = {
+        ...values,
+        estimated_lifetime_hours: values.estimated_lifetime_hours
+          ? Number(values.estimated_lifetime_hours)
+          : null,
+        image: imageFile,
+      }
       return isEdit ? updatePart(part!.id, payload) : createPart(payload)
     },
     onSuccess: () => {
@@ -157,6 +165,23 @@ export function PartFormDialog({ part, trigger }: PartFormDialogProps) {
           <div className="flex flex-col gap-2">
             <Label htmlFor="description">Deskripsi</Label>
             <Input id="description" {...register('description')} />
+          </div>
+          <div className="flex flex-col gap-2">
+            <Label htmlFor="estimated_lifetime_hours">Perkiraan Umur Pakai (jam operasional)</Label>
+            <Input
+              id="estimated_lifetime_hours"
+              type="number"
+              min={1}
+              placeholder="Misal: 2000"
+              {...register('estimated_lifetime_hours')}
+            />
+            <p className="text-xs text-muted-foreground">
+              Dipakai untuk menghitung sisa umur pakai part saat terpasang di equipment. Kosongkan
+              kalau belum tahu perkiraannya.
+            </p>
+            {errors.estimated_lifetime_hours && (
+              <p className="text-sm text-destructive">{errors.estimated_lifetime_hours.message}</p>
+            )}
           </div>
           <DialogFooter>
             <Button type="submit" disabled={mutation.isPending}>

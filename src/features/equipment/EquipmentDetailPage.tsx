@@ -8,6 +8,7 @@ import { fetchEquipmentParts, removeEquipmentPart } from '@/features/equipment-p
 import { fetchEquipment } from '@/features/equipment/api'
 import { PartInstallationFormDialog } from '@/features/part-installations/PartInstallationFormDialog'
 import { fetchPartInstallations, removePartInstallation } from '@/features/part-installations/api'
+import { SendToRepairDialog } from '@/features/part-repairs/SendToRepairDialog'
 import { ScheduleTaskLibraryDialog } from '@/features/task-libraries/ScheduleTaskLibraryDialog'
 import { TaskLibraryFormDialog } from '@/features/task-libraries/TaskLibraryFormDialog'
 import { TaskLibraryPartFormDialog } from '@/features/task-libraries/TaskLibraryPartFormDialog'
@@ -457,6 +458,7 @@ export function EquipmentDetailPage() {
             <TableHeader>
               <TableRow>
                 <TableHead>Part</TableHead>
+                <TableHead>Unit</TableHead>
                 <TableHead>Tanggal Pasang</TableHead>
                 <TableHead className="text-right">Usia</TableHead>
                 <TableHead className="text-right">Pemakaian</TableHead>
@@ -474,6 +476,15 @@ export function EquipmentDetailPage() {
                     <p className="font-mono text-xs text-muted-foreground">{installation.item_master_no}</p>
                   </TableCell>
                   <TableCell className="text-muted-foreground">
+                    {installation.part_unit_id ? (
+                      <Link to={`/part-units/${installation.part_unit_id}`} className="hover:underline">
+                        Unit {installation.unit_code}
+                      </Link>
+                    ) : (
+                      '-'
+                    )}
+                  </TableCell>
+                  <TableCell className="text-muted-foreground">
                     {new Date(installation.installed_at).toLocaleDateString('id-ID')}
                   </TableCell>
                   <TableCell className="text-right text-muted-foreground">
@@ -487,7 +498,7 @@ export function EquipmentDetailPage() {
                             ? 'destructive'
                             : installation.percent_used >= 80
                               ? 'warning'
-                              : 'outline'
+                              : 'success'
                         }
                       >
                         {Math.round(installation.percent_used)}%
@@ -504,7 +515,7 @@ export function EquipmentDetailPage() {
                     )}
                   </TableCell>
                   {canManage && (
-                    <TableCell className="text-right">
+                    <TableCell className="flex justify-end gap-2">
                       {installation.is_active && (
                         <Button
                           variant="outline"
@@ -514,6 +525,18 @@ export function EquipmentDetailPage() {
                         >
                           Lepas
                         </Button>
+                      )}
+                      {!installation.is_active && installation.part_unit_id && (
+                        <SendToRepairDialog
+                          partUnitId={installation.part_unit_id}
+                          partInstallationId={installation.id}
+                          invalidateKeys={[['part-installations', equipmentId]]}
+                          trigger={
+                            <Button variant="outline" size="sm">
+                              Kirim ke Perbaikan
+                            </Button>
+                          }
+                        />
                       )}
                     </TableCell>
                   )}

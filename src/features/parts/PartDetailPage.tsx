@@ -5,6 +5,7 @@ import { toast } from 'sonner'
 import { Breadcrumb } from '@/components/Breadcrumb'
 import { fetchEquipmentForPart } from '@/features/equipment-parts/api'
 import { fetchInstallationsForPart } from '@/features/part-installations/api'
+import { fetchUnitsForPart } from '@/features/part-units/api'
 import { fetchPart } from '@/features/parts/api'
 import { AdjustStockDialog } from '@/features/part-stocks/AdjustStockDialog'
 import { ReceiveStockDialog } from '@/features/part-stocks/ReceiveStockDialog'
@@ -59,6 +60,11 @@ export function PartDetailPage() {
     queryFn: () => fetchInstallationsForPart(partId),
   })
 
+  const { data: units, isLoading: unitsLoading } = useQuery({
+    queryKey: ['part-units', partId],
+    queryFn: () => fetchUnitsForPart(partId),
+  })
+
   const removeSupplierMutation = useMutation({
     mutationFn: removePartSupplier,
     onSuccess: () => {
@@ -91,6 +97,13 @@ export function PartDetailPage() {
             {!part.is_active && <Badge variant="secondary">Nonaktif</Badge>}
           </div>
           <p className="font-mono text-sm text-muted-foreground">{part.item_master_no}</p>
+          {part.estimated_lifetime_hours && (
+            <p className="mt-1 text-sm text-muted-foreground">
+              Perkiraan umur pakai:{' '}
+              <span className="font-medium text-foreground">{part.estimated_lifetime_hours} jam</span>{' '}
+              operasional
+            </p>
+          )}
           {part.description && <p className="mt-2 text-muted-foreground">{part.description}</p>}
         </div>
       </div>
@@ -101,6 +114,7 @@ export function PartDetailPage() {
           <TabsTrigger value="suppliers">Supplier</TabsTrigger>
           <TabsTrigger value="usage">Digunakan di Equipment</TabsTrigger>
           <TabsTrigger value="lifetime">Riwayat Pemasangan</TabsTrigger>
+          <TabsTrigger value="units">Unit Part</TabsTrigger>
         </TabsList>
 
         <TabsContent value="stock" className="pt-4">
@@ -401,7 +415,7 @@ export function PartDetailPage() {
                               ? 'destructive'
                               : installation.percent_used >= 80
                                 ? 'warning'
-                                : 'outline'
+                                : 'success'
                           }
                         >
                           {Math.round(installation.percent_used)}%
@@ -417,6 +431,65 @@ export function PartDetailPage() {
                         <Badge variant="secondary">Dilepas</Badge>
                       )}
                     </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          )}
+        </TabsContent>
+
+        <TabsContent value="units" className="pt-4">
+          {unitsLoading ? (
+            <Skeleton className="h-24 w-full" />
+          ) : units?.length === 0 ? (
+            <p className="text-sm text-muted-foreground">
+              Belum ada unit fisik part ini yang tercatat (dibuat otomatis saat pertama kali dipasang).
+            </p>
+          ) : (
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Unit</TableHead>
+                  <TableHead>Status</TableHead>
+                  <TableHead className="text-right">Sisa Umur</TableHead>
+                  <TableHead className="text-right">Jumlah Pasang</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {units?.map((unit) => (
+                  <TableRow key={unit.id}>
+                    <TableCell>
+                      <Link to={`/part-units/${unit.id}`} className="font-medium hover:underline">
+                        Unit {unit.unit_code}
+                      </Link>
+                    </TableCell>
+                    <TableCell>
+                      <Badge
+                        variant={
+                          unit.status === 'in_service'
+                            ? 'success'
+                            : unit.status === 'scrapped'
+                              ? 'destructive'
+                              : unit.status === 'available'
+                                ? 'secondary'
+                                : 'warning'
+                        }
+                      >
+                        {
+                          {
+                            in_service: 'Terpasang',
+                            pending_repair: 'Menunggu Keputusan',
+                            in_repair: 'Sedang Diperbaiki',
+                            available: 'Siap Dipasang',
+                            scrapped: 'Dibuang',
+                          }[unit.status]
+                        }
+                      </Badge>
+                    </TableCell>
+                    <TableCell className="text-right">
+                      {unit.percent_used != null ? `${100 - unit.percent_used}%` : '-'}
+                    </TableCell>
+                    <TableCell className="text-right tabular-nums">{unit.install_count}</TableCell>
                   </TableRow>
                 ))}
               </TableBody>

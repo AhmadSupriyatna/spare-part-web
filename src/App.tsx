@@ -15,6 +15,8 @@ import { PartsPage } from '@/features/parts/PartsPage'
 import { PartStockDetailPage } from '@/features/part-stocks/PartStockDetailPage'
 import { PartStocksPage } from '@/features/part-stocks/PartStocksPage'
 import { PartLifetimeAlertsPage } from '@/features/part-lifetime/PartLifetimeAlertsPage'
+import { PartRepairsPage } from '@/features/part-repairs/PartRepairsPage'
+import { PartUnitDetailPage } from '@/features/part-units/PartUnitDetailPage'
 import { PmCalendarPage } from '@/features/pm/PmCalendarPage'
 import { PmLedgerPage } from '@/features/pm/PmLedgerPage'
 import { PrintWoChecklistPage } from '@/features/pm/PrintWoChecklistPage'
@@ -60,6 +62,8 @@ function App() {
             <Route path="work-orders" element={<WorkOrdersPage />} />
             <Route path="task-libraries" element={<TaskLibrariesPage />} />
             <Route path="part-lifetime" element={<PartLifetimeAlertsPage />} />
+            <Route path="part-repairs" element={<PartRepairsPage />} />
+            <Route path="part-units/:id" element={<PartUnitDetailPage />} />
             <Route path="pm/calendar" element={<PmCalendarPage />} />
             <Route path="pm/ledger" element={<PmLedgerPage />} />
             <Route path="pm/tasks/:id/print" element={<PrintWoChecklistPage />} />

@@ -7,6 +7,7 @@ export interface PartPayload {
   description?: string | null
   unit: string
   category?: string | null
+  estimated_lifetime_hours?: number | null
   image?: File | null
   is_active?: boolean
 }

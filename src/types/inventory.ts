@@ -11,6 +11,7 @@ export interface Part {
   unit: string
   category: string | null
   price: string
+  estimated_lifetime_hours: number | null
   image_url: string | null
   is_active: boolean
   stocks?: PartStock[]

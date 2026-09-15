@@ -3,6 +3,7 @@ import type { PartInstallation } from '@/types/relations'
 
 export interface PartInstallationPayload {
   part_id: number
+  part_unit_id?: number | null
   installed_at?: string | null
   notes?: string | null
 }
