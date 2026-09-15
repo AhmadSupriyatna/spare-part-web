@@ -88,17 +88,17 @@ export function LineHierarchyPage() {
 
   return (
     <div className="flex flex-col gap-6">
-      <PageHeader title="Line Produksi" description="Hierarki Line, Mesin, dan Equipment untuk cabang ini." />
+      <PageHeader title="Line Produksi" />
 
       {/* Line: horizontal strip, left to right */}
-      <div className="flex flex-col gap-2">
+      <div className="flex flex-col gap-3">
         <div className="flex items-center justify-between">
-          <h2 className="text-sm font-semibold text-muted-foreground">Line</h2>
+          <h2 className="text-base font-semibold">Line</h2>
           {canManage && (
             <LineFormDialog
               branchId={activeBranchId}
               trigger={
-                <Button variant="ghost" size="icon-xs" aria-label="Tambah Line" title="Tambah Line">
+                <Button variant="ghost" size="icon-sm" aria-label="Tambah Line" title="Tambah Line">
                   <Plus />
                 </Button>
               }
@@ -106,28 +106,28 @@ export function LineHierarchyPage() {
           )}
         </div>
         {linesLoading ? (
-          <div className="flex gap-2">
+          <div className="flex gap-3">
             {Array.from({ length: 3 }).map((_, i) => (
-              <Skeleton key={i} className="h-16 w-40" />
+              <Skeleton key={i} className="h-20 w-48" />
             ))}
           </div>
         ) : lines?.length === 0 ? (
           <p className="text-sm text-muted-foreground">Belum ada line di cabang ini.</p>
         ) : (
-          <div className="flex gap-2 overflow-x-auto pb-1">
+          <div className="flex gap-3 overflow-x-auto pb-1">
             {lines?.map((line) => (
               <div
                 key={line.id}
                 className={cn(
-                  'group flex shrink-0 items-center gap-1 rounded-lg border py-2 pr-1 pl-3 hover:bg-muted',
+                  'group flex shrink-0 items-center gap-1 rounded-xl border py-3 pr-2 pl-4 hover:bg-muted',
                   line.id === selectedLineId && 'border-primary bg-primary/5',
                 )}
               >
                 <button onClick={() => selectLine(line.id)} className="flex flex-col gap-0.5 text-left">
-                  <span className={cn('text-sm font-medium', line.id === selectedLineId && 'text-primary')}>
+                  <span className={cn('text-lg font-semibold', line.id === selectedLineId && 'text-primary')}>
                     {line.name}
                   </span>
-                  <span className="font-mono text-xs text-muted-foreground">{line.code}</span>
+                  <span className="font-mono text-sm text-muted-foreground">{line.code}</span>
                 </button>
                 {!line.is_active && (
                   <Badge variant="secondary" className="ml-1">
@@ -140,7 +140,7 @@ export function LineHierarchyPage() {
                       branchId={activeBranchId}
                       line={line}
                       trigger={
-                        <Button variant="ghost" size="icon-xs" aria-label="Ubah Line" title="Ubah Line">
+                        <Button variant="ghost" size="icon-sm" aria-label="Ubah Line" title="Ubah Line">
                           <Pencil />
                         </Button>
                       }
@@ -156,7 +156,7 @@ export function LineHierarchyPage() {
                         }
                       }}
                       trigger={
-                        <Button variant="ghost" size="icon-xs" aria-label="Hapus Line" title="Hapus Line">
+                        <Button variant="ghost" size="icon-sm" aria-label="Hapus Line" title="Hapus Line">
                           <Trash2 />
                         </Button>
                       }
@@ -169,8 +169,8 @@ export function LineHierarchyPage() {
         )}
       </div>
 
-      {/* Mesin | Equipment | Part terpasang di equipment terpilih */}
-      <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
+      {/* Mesin (30%) | Equipment (30%) | Part terpasang (40%) */}
+      <div className="grid grid-cols-1 gap-4 lg:grid-cols-[3fr_3fr_4fr]">
         <HierarchyColumn
           title={selectedLine ? `Mesin — ${selectedLine.name}` : 'Mesin'}
           isLoading={!!selectedLineId && machinesLoading}
@@ -308,7 +308,7 @@ export function LineHierarchyPage() {
               {selectedEquipment ? `Part Terpasang — ${selectedEquipment.name}` : 'Part Terpasang'}
             </h2>
           </div>
-          <div className="max-h-[32rem] overflow-y-auto p-3">
+          <div className="max-h-[36rem] overflow-y-auto p-3">
             {selectedEquipment ? (
               <InstalledPartsPanel equipmentId={selectedEquipment.id} />
             ) : (
@@ -359,7 +359,7 @@ function HierarchyColumn({ title, isLoading, isEmpty, emptyMessage, addAction, c
         <h2 className="truncate text-sm font-semibold text-muted-foreground">{title}</h2>
         {addAction}
       </div>
-      <div className="flex max-h-[32rem] flex-col overflow-y-auto">
+      <div className="flex max-h-[36rem] flex-col overflow-y-auto">
         {isLoading ? (
           <div className="flex flex-col gap-2 p-3">
             {Array.from({ length: 3 }).map((_, i) => (

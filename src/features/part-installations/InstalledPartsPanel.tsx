@@ -40,21 +40,25 @@ export function InstalledPartsPanel({ equipmentId }: { equipmentId: number }) {
   }
 
   return (
-    <div className="flex flex-col gap-2">
+    <div className="flex flex-col gap-1.5">
       {active.map((installation) => (
-        <div key={installation.id} className="rounded-md border p-3">
+        <div key={installation.id} className="rounded-md border p-2">
           <div className="flex items-start justify-between gap-2">
-            <div>
-              <Link to={`/parts/${installation.part_id}`} className="font-medium hover:underline">
+            <div className="min-w-0">
+              <Link
+                to={`/parts/${installation.part_id}`}
+                className="block truncate text-sm font-medium hover:underline"
+              >
                 {installation.part_name}
               </Link>
-              <p className="font-mono text-xs text-muted-foreground">
+              <p className="truncate font-mono text-[11px] text-muted-foreground">
                 {installation.item_master_no}
                 {installation.unit_code ? ` · Unit ${installation.unit_code}` : ''}
               </p>
             </div>
             {installation.percent_used != null && (
               <Badge
+                className="shrink-0 px-1.5 text-[10px]"
                 variant={
                   installation.percent_used >= 100
                     ? 'destructive'
@@ -63,11 +67,11 @@ export function InstalledPartsPanel({ equipmentId }: { equipmentId: number }) {
                       : 'success'
                 }
               >
-                {Math.round(installation.percent_used)}% terpakai
+                {Math.round(installation.percent_used)}%
               </Badge>
             )}
           </div>
-          <p className="mt-1 text-xs text-muted-foreground">
+          <p className="mt-0.5 truncate text-[11px] text-muted-foreground">
             {installation.line_name} · {installation.machine_name}
           </p>
         </div>
