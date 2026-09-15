@@ -93,9 +93,8 @@ export function LineHierarchyPage() {
 
       {/* Line: horizontal strip, left to right */}
       <div className="flex flex-col gap-3">
-        <div className="flex items-center justify-between">
-          <h2 className="text-base font-semibold">Line</h2>
-          {canManage && (
+        {canManage && (
+          <div className="flex items-center justify-end">
             <LineFormDialog
               branchId={activeBranchId}
               trigger={
@@ -104,8 +103,8 @@ export function LineHierarchyPage() {
                 </Button>
               }
             />
-          )}
-        </div>
+          </div>
+        )}
         {linesLoading ? (
           <div className="flex gap-3">
             {Array.from({ length: 3 }).map((_, i) => (
@@ -333,12 +332,7 @@ export function LineHierarchyPage() {
       {selectedLine && (
         <div className="flex flex-col gap-3">
           <div className="flex items-center justify-between">
-            <div>
-              <h2 className="text-lg font-medium">Catatan Jam Operasi — {selectedLine.name}</h2>
-              <p className="text-sm text-muted-foreground">
-                Jam operasi saat ini: <span className="font-medium text-foreground">{selectedLine.runtime_hours}</span> jam
-              </p>
-            </div>
+            <h2 className="text-lg font-medium">Catatan Jam Operasional Line {selectedLine.name}</h2>
             {canManage && (
               <AddRuntimeDialog
                 lineId={selectedLine.id}
@@ -347,6 +341,9 @@ export function LineHierarchyPage() {
               />
             )}
           </div>
+          <p className="text-sm text-muted-foreground">
+            Jam operasi saat ini: <span className="font-medium text-foreground">{selectedLine.runtime_hours}</span> jam
+          </p>
           <LineRuntimeLogTable lineId={selectedLine.id} />
         </div>
       )}
