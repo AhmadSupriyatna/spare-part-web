@@ -1,6 +1,6 @@
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { Pencil, Plus, Trash2 } from 'lucide-react'
-import { useEffect } from 'react'
+import { useEffect, useState } from 'react'
 import { Link, useSearchParams } from 'react-router'
 import { AddRuntimeDialog } from '@/features/lines/AddRuntimeDialog'
 import { deleteLine, fetchLines } from '@/features/lines/api'
@@ -10,10 +10,12 @@ import { EquipmentFormDialog } from '@/features/equipment/EquipmentFormDialog'
 import { deleteEquipment, fetchEquipmentList } from '@/features/equipment/api'
 import { deleteMachine, fetchMachines } from '@/features/machines/api'
 import { MachineFormDialog } from '@/features/machines/MachineFormDialog'
+import { ConfirmInstallDialog } from '@/features/part-installations/ConfirmInstallDialog'
 import { InstalledPartsPanel } from '@/features/part-installations/InstalledPartsPanel'
-import { PartInstallationFormDialog } from '@/features/part-installations/PartInstallationFormDialog'
+import { PartPickerSheet } from '@/features/part-installations/PartPickerSheet'
 import { useBranchStore } from '@/stores/branch-store'
 import { useCanManage } from '@/stores/use-has-role'
+import type { Part } from '@/types/inventory'
 import { cn } from '@/lib/utils'
 import { DeleteWithPasswordDialog } from '@/components/DeleteWithPasswordDialog'
 import { Badge } from '@/components/ui/badge'
@@ -25,6 +27,11 @@ export function LineHierarchyPage() {
   const canManage = useCanManage()
   const queryClient = useQueryClient()
   const [searchParams, setSearchParams] = useSearchParams()
+
+  const [partSheetOpen, setPartSheetOpen] = useState(false)
+  const [draggingPart, setDraggingPart] = useState<Part | null>(null)
+  const [dropTargetActive, setDropTargetActive] = useState(false)
+  const [confirmPart, setConfirmPart] = useState<Part | null>(null)
 
   const selectedLineId = searchParams.get('line') ? Number(searchParams.get('line')) : null
   const selectedMachineId = searchParams.get('machine') ? Number(searchParams.get('machine')) : null
@@ -308,17 +315,39 @@ export function LineHierarchyPage() {
               {selectedEquipment ? `Part — ${selectedEquipment.name}` : 'Part'}
             </h2>
             {canManage && selectedEquipment && (
-              <PartInstallationFormDialog
-                equipmentId={selectedEquipment.id}
-                trigger={
-                  <Button variant="ghost" size="icon-xs" aria-label="Pasang Part" title="Pasang Part">
-                    <Plus />
-                  </Button>
-                }
-              />
+              <Button
+                variant="ghost"
+                size="icon-xs"
+                aria-label="Pasang Part"
+                title="Pasang Part"
+                onClick={() => setPartSheetOpen(true)}
+              >
+                <Plus />
+              </Button>
             )}
           </div>
-          <div className="max-h-[36rem] overflow-y-auto p-3">
+          <div
+            className={cn(
+              'max-h-[36rem] overflow-y-auto rounded-b-lg p-3 transition-colors',
+              dropTargetActive &&
+                selectedEquipment &&
+                'bg-primary/5 outline-2 -outline-offset-2 outline-primary/50 outline-dashed',
+            )}
+            onDragOver={(e) => {
+              if (!selectedEquipment) return
+              e.preventDefault()
+              e.dataTransfer.dropEffect = 'copy'
+              setDropTargetActive(true)
+            }}
+            onDragLeave={() => setDropTargetActive(false)}
+            onDrop={(e) => {
+              e.preventDefault()
+              setDropTargetActive(false)
+              if (!selectedEquipment || !draggingPart) return
+              setConfirmPart(draggingPart)
+              setPartSheetOpen(false)
+            }}
+          >
             {selectedEquipment ? (
               <InstalledPartsPanel equipmentId={selectedEquipment.id} />
             ) : (
@@ -327,6 +356,27 @@ export function LineHierarchyPage() {
           </div>
         </div>
       </div>
+
+      <PartPickerSheet
+        open={partSheetOpen}
+        onOpenChange={setPartSheetOpen}
+        onPickPart={(part) => {
+          setConfirmPart(part)
+          setPartSheetOpen(false)
+        }}
+        onDragStartPart={setDraggingPart}
+        onDragEndPart={() => setDraggingPart(null)}
+      />
+      {selectedEquipment && (
+        <ConfirmInstallDialog
+          equipmentId={selectedEquipment.id}
+          part={confirmPart}
+          open={!!confirmPart}
+          onOpenChange={(open) => {
+            if (!open) setConfirmPart(null)
+          }}
+        />
+      )}
 
       {/* Riwayat jam operasi line, per tanggal */}
       {selectedLine && (

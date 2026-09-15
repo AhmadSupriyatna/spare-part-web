@@ -67,7 +67,7 @@ const navSections: NavSection[] = [
     label: 'Aset & Produksi',
     items: [
       { to: '/branches', label: 'Cabang', icon: Building2 },
-      { to: '/lines', label: 'Line, Mesin & Equipment', icon: Factory },
+      { to: '/lines', label: 'Line Equipment', icon: Factory },
     ],
   },
   {
