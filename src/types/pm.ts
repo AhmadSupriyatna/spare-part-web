@@ -6,7 +6,6 @@ export interface TaskLibraryPart {
   part_id: number
   part_name?: string | null
   item_master_no?: string | null
-  needs_replacement: boolean
   quantity_required: number
   notes: string | null
 }

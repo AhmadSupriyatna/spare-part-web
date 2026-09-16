@@ -159,13 +159,16 @@ export function TaskLibrariesPage() {
                                 type="button"
                                 onClick={() => selectEquipment(equipment.id)}
                                 className={cn(
-                                  'flex flex-col gap-0.5 rounded-lg border p-3 text-left transition-colors hover:border-primary/50 hover:bg-muted',
+                                  'relative flex flex-col gap-0.5 rounded-lg border p-3 text-left transition-colors hover:border-primary/50 hover:bg-muted',
                                   equipment.id === selectedEquipmentId && 'border-primary bg-primary/5',
                                 )}
                               >
+                                <span className="absolute top-1.5 right-2 text-[10px] text-muted-foreground">
+                                  {taskCount} Task
+                                </span>
                                 <span
                                   className={cn(
-                                    'text-sm font-medium',
+                                    'pr-10 text-sm font-medium',
                                     equipment.id === selectedEquipmentId && 'text-primary',
                                   )}
                                 >
@@ -173,9 +176,6 @@ export function TaskLibrariesPage() {
                                 </span>
                                 <span className="font-mono text-xs text-muted-foreground">
                                   {equipment.category ?? equipment.code}
-                                </span>
-                                <span className="text-xs text-muted-foreground">
-                                  {taskCount} Task
                                 </span>
                               </button>
                             )

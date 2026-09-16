@@ -1,6 +1,6 @@
 import { zodResolver } from '@hookform/resolvers/zod'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { Calendar, Gauge, Trash2 } from 'lucide-react'
+import { Calendar, Gauge } from 'lucide-react'
 import { useEffect, useMemo, useState } from 'react'
 import { Controller, useForm } from 'react-hook-form'
 import { toast } from 'sonner'
@@ -16,7 +16,6 @@ import {
 import type { TaskLibrary } from '@/types/pm'
 import { cn } from '@/lib/utils'
 import { FormSheet } from '@/components/FormSheet'
-import { Checkbox } from '@/components/ui/checkbox'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
@@ -105,10 +104,8 @@ export function TaskLibraryFormDialog({ equipmentId, library, trigger }: TaskLib
   })
   const installedParts = useMemo(() => dedupeInstalledParts(installations), [installations])
 
-  // Create-only: parts staged locally until the whole form is submitted together.
-  const [stagedParts, setStagedParts] = useState<Record<number, { needs_replacement: boolean }>>({})
-  // Edit-only: needs_replacement chosen before tapping an addable part to add it immediately.
-  const [pendingNeedsReplacement, setPendingNeedsReplacement] = useState<Record<number, boolean>>({})
+  // Create-only: parts staged locally (just which ones are picked) until the whole form is submitted together.
+  const [stagedPartIds, setStagedPartIds] = useState<Set<number>>(new Set())
 
   const {
     register,
@@ -139,8 +136,7 @@ export function TaskLibraryFormDialog({ equipmentId, library, trigger }: TaskLib
         interval_hours: library?.interval_hours ? String(library.interval_hours) : '',
         estimated_duration_minutes: library?.estimated_duration_minutes ? String(library.estimated_duration_minutes) : '',
       })
-      setStagedParts({})
-      setPendingNeedsReplacement({})
+      setStagedPartIds(new Set())
     }
   }, [open, library, reset])
 
@@ -159,10 +155,7 @@ export function TaskLibraryFormDialog({ equipmentId, library, trigger }: TaskLib
       }
       if (isEdit) return updateTaskLibrary(library!.id, payload)
 
-      const parts: TaskLibraryPartInput[] = Object.entries(stagedParts).map(([partId, config]) => ({
-        part_id: Number(partId),
-        needs_replacement: config.needs_replacement,
-      }))
+      const parts: TaskLibraryPartInput[] = Array.from(stagedPartIds).map((partId) => ({ part_id: partId }))
       return createTaskLibrary(equipmentId, { ...payload, parts })
     },
     onSuccess: () => {
@@ -174,11 +167,9 @@ export function TaskLibraryFormDialog({ equipmentId, library, trigger }: TaskLib
   })
 
   const addPartMutation = useMutation({
-    mutationFn: ({ partId, needsReplacement }: { partId: number; needsReplacement: boolean }) =>
-      addTaskLibraryPart(library!.id, { part_id: partId, needs_replacement: needsReplacement }),
+    mutationFn: (partId: number) => addTaskLibraryPart(library!.id, { part_id: partId }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['task-libraries', equipmentId] })
-      toast.success('Part berhasil ditambahkan ke checklist.')
     },
     onError: () => toast.error('Gagal menambahkan part ke checklist.'),
   })
@@ -187,21 +178,30 @@ export function TaskLibraryFormDialog({ equipmentId, library, trigger }: TaskLib
     mutationFn: removeTaskLibraryPart,
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['task-libraries', equipmentId] })
-      toast.success('Part berhasil dihapus dari checklist.')
     },
+    onError: () => toast.error('Gagal menghapus part dari checklist.'),
   })
 
-  function toggleStagedPart(partId: number, checked: boolean) {
-    setStagedParts((prev) => {
-      const next = { ...prev }
-      if (checked) next[partId] = { needs_replacement: false }
-      else delete next[partId]
+  function toggleStagedPart(partId: number) {
+    setStagedPartIds((prev) => {
+      const next = new Set(prev)
+      if (next.has(partId)) next.delete(partId)
+      else next.add(partId)
       return next
     })
   }
 
-  const alreadyAddedPartIds = new Set(library?.parts.map((p) => p.part_id) ?? [])
-  const addablePartsForEdit = installedParts.filter((p) => !alreadyAddedPartIds.has(p.partId))
+  const alreadyAddedParts = new Map(library?.parts.map((p) => [p.part_id, p.id]) ?? [])
+
+  function togglePart(partId: number) {
+    if (!isEdit) {
+      toggleStagedPart(partId)
+      return
+    }
+    const existingId = alreadyAddedParts.get(partId)
+    if (existingId) removePartMutation.mutate(existingId)
+    else addPartMutation.mutate(partId)
+  }
 
   return (
     <FormSheet
@@ -210,7 +210,7 @@ export function TaskLibraryFormDialog({ equipmentId, library, trigger }: TaskLib
       description="Resep kegiatan PM — interval di sini hanya metadata untuk otomasi ke depan, penjadwalan tanggal aktual tetap dilakukan lewat PM Schedule."
       open={open}
       onOpenChange={setOpen}
-      isDirty={isDirty || Object.keys(stagedParts).length > 0}
+      isDirty={isDirty || stagedPartIds.size > 0}
       onSubmit={handleSubmit((values) => mutation.mutate(values))}
       submitLabel="Simpan"
       isSubmitting={mutation.isPending}
@@ -317,99 +317,36 @@ export function TaskLibraryFormDialog({ equipmentId, library, trigger }: TaskLib
 
       <div className="flex flex-col gap-2">
         <Label>Part Terkait</Label>
-        {installedParts.length === 0 && !isEdit && (
+        <p className="text-xs text-muted-foreground">
+          Tap part untuk mengaitkan ke task ini — biru artinya terpilih, abu-abu artinya tidak dikaitkan.
+        </p>
+        {installedParts.length === 0 ? (
           <p className="text-sm text-muted-foreground">Belum ada part terpasang di equipment ini.</p>
-        )}
-
-        {!isEdit &&
-          installedParts.map((part) => {
-            const staged = stagedParts[part.partId]
-            const checked = Boolean(staged)
-            return (
-              <div key={part.partId} className="flex items-center gap-2 rounded-md border p-2">
-                <label className="flex min-w-0 flex-1 cursor-pointer items-center gap-2">
-                  <Checkbox checked={checked} onCheckedChange={(v) => toggleStagedPart(part.partId, v === true)} />
-                  <span className="min-w-0 flex-1">
-                    <span className="block truncate text-sm font-medium">{part.partName}</span>
-                    <span className="block truncate font-mono text-xs text-muted-foreground">{part.itemMasterNo}</span>
+        ) : (
+          <div className="flex flex-col gap-1.5">
+            {installedParts.map((part) => {
+              const selected = isEdit ? alreadyAddedParts.has(part.partId) : stagedPartIds.has(part.partId)
+              const pending =
+                isEdit && (addPartMutation.isPending || removePartMutation.isPending) &&
+                (addPartMutation.variables === part.partId || removePartMutation.variables === alreadyAddedParts.get(part.partId))
+              return (
+                <button
+                  key={part.partId}
+                  type="button"
+                  disabled={pending}
+                  onClick={() => togglePart(part.partId)}
+                  className={cn(
+                    'flex flex-col items-start rounded-md border p-2 text-left transition-colors disabled:opacity-60',
+                    selected ? 'border-primary bg-primary text-primary-foreground' : 'text-muted-foreground hover:bg-muted',
+                  )}
+                >
+                  <span className="block truncate text-sm font-medium">{part.partName}</span>
+                  <span className={cn('block truncate font-mono text-xs', selected ? 'text-primary-foreground/80' : 'text-muted-foreground')}>
+                    {part.itemMasterNo}
                   </span>
-                </label>
-                {checked && (
-                  <label className="flex shrink-0 items-center gap-1.5 text-xs">
-                    <Checkbox
-                      checked={staged.needs_replacement}
-                      onCheckedChange={(v) =>
-                        setStagedParts((prev) => ({ ...prev, [part.partId]: { needs_replacement: v === true } }))
-                      }
-                    />
-                    Perlu Penggantian
-                  </label>
-                )}
-              </div>
-            )
-          })}
-
-        {isEdit && (
-          <div className="flex flex-col gap-3">
-            {library!.parts.length === 0 ? (
-              <p className="text-sm text-muted-foreground">Belum ada part di checklist ini.</p>
-            ) : (
-              <ul className="flex flex-col gap-1.5">
-                {library!.parts.map((part) => (
-                  <li key={part.id} className="flex items-center justify-between gap-2 rounded-md bg-muted/50 px-3 py-1.5 text-sm">
-                    <span className="min-w-0 flex-1 truncate">
-                      {part.part_name}{' '}
-                      <span className="font-mono text-xs text-muted-foreground">({part.item_master_no})</span>
-                    </span>
-                    {part.needs_replacement && (
-                      <span className="shrink-0 text-xs text-muted-foreground">Perlu Penggantian</span>
-                    )}
-                    <button
-                      type="button"
-                      aria-label="Hapus dari checklist"
-                      title="Hapus dari checklist"
-                      onClick={() => removePartMutation.mutate(part.id)}
-                      className="shrink-0 text-muted-foreground hover:text-destructive"
-                    >
-                      <Trash2 className="size-3.5" />
-                    </button>
-                  </li>
-                ))}
-              </ul>
-            )}
-
-            {addablePartsForEdit.length > 0 && (
-              <div className="flex flex-col gap-2 border-t pt-3">
-                <p className="text-xs font-medium tracking-wide text-muted-foreground uppercase">
-                  Tap part untuk menambah ke checklist
-                </p>
-                {addablePartsForEdit.map((part) => {
-                  const needsReplacement = pendingNeedsReplacement[part.partId] ?? false
-                  return (
-                    <div key={part.partId} className="flex items-center gap-2 rounded-md border p-2">
-                      <button
-                        type="button"
-                        disabled={addPartMutation.isPending}
-                        onClick={() => addPartMutation.mutate({ partId: part.partId, needsReplacement })}
-                        className="flex min-w-0 flex-1 flex-col items-start text-left disabled:opacity-50"
-                      >
-                        <span className="truncate text-sm font-medium">{part.partName}</span>
-                        <span className="truncate font-mono text-xs text-muted-foreground">{part.itemMasterNo}</span>
-                      </button>
-                      <label className="flex shrink-0 items-center gap-1.5 text-xs">
-                        <Checkbox
-                          checked={needsReplacement}
-                          onCheckedChange={(v) =>
-                            setPendingNeedsReplacement((prev) => ({ ...prev, [part.partId]: v === true }))
-                          }
-                        />
-                        Perlu Penggantian
-                      </label>
-                    </div>
-                  )
-                })}
-              </div>
-            )}
+                </button>
+              )
+            })}
           </div>
         )}
       </div>

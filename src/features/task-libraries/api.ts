@@ -4,7 +4,6 @@ import type { Task } from '@/types/tasks'
 
 export interface TaskLibraryPartInput {
   part_id: number
-  needs_replacement?: boolean
 }
 
 export interface TaskLibraryPayload {
@@ -21,7 +20,6 @@ export interface TaskLibraryPayload {
 
 export interface TaskLibraryPartPayload {
   part_id: number
-  needs_replacement?: boolean
   notes?: string | null
 }
 
