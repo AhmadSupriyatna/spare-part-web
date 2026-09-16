@@ -1,6 +1,6 @@
 import { zodResolver } from '@hookform/resolvers/zod'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { Controller, useForm } from 'react-hook-form'
 import { toast } from 'sonner'
 import { createPart, updatePart } from '@/features/parts/api'
@@ -8,6 +8,7 @@ import { partSchema, type PartFormValues } from '@/features/parts/schema'
 import { fetchUnits } from '@/features/units/api'
 import type { Part } from '@/types/inventory'
 import { FormSheet } from '@/components/FormSheet'
+import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
@@ -21,6 +22,7 @@ export function PartFormDialog({ part, trigger }: PartFormDialogProps) {
   const [open, setOpen] = useState(false)
   const [imageFile, setImageFile] = useState<File | null>(null)
   const [imagePreview, setImagePreview] = useState<string | null>(part?.image_url ?? null)
+  const fileInputRef = useRef<HTMLInputElement>(null)
   const queryClient = useQueryClient()
   const isEdit = Boolean(part)
 
@@ -100,16 +102,6 @@ export function PartFormDialog({ part, trigger }: PartFormDialogProps) {
       submitLabel="Simpan"
       isSubmitting={mutation.isPending}
     >
-      <div className="flex flex-col items-center gap-2">
-        {imagePreview ? (
-          <img src={imagePreview} alt="Pratinjau" className="h-32 w-32 rounded-md border object-cover" />
-        ) : (
-          <div className="flex h-32 w-32 items-center justify-center rounded-md border border-dashed text-xs text-muted-foreground">
-            Belum ada foto
-          </div>
-        )}
-        <Input type="file" accept="image/*" onChange={handleImageChange} className="max-w-xs" />
-      </div>
       <div className="flex flex-col gap-2">
         <Label htmlFor="item_master_no">Item Master</Label>
         <Input id="item_master_no" {...register('item_master_no')} />
@@ -168,6 +160,28 @@ export function PartFormDialog({ part, trigger }: PartFormDialogProps) {
         {errors.estimated_lifetime_hours && (
           <p className="text-sm text-destructive">{errors.estimated_lifetime_hours.message}</p>
         )}
+      </div>
+      <div className="flex flex-col gap-2">
+        <Label>Foto Part</Label>
+        <div className="flex items-center gap-3">
+          {imagePreview ? (
+            <img src={imagePreview} alt="Pratinjau" className="size-16 shrink-0 rounded-md border object-cover" />
+          ) : (
+            <div className="flex size-16 shrink-0 items-center justify-center rounded-md border border-dashed text-center text-[10px] text-muted-foreground">
+              Belum ada foto
+            </div>
+          )}
+          <Button type="button" variant="outline" size="sm" onClick={() => fileInputRef.current?.click()}>
+            {imagePreview ? 'Ganti Foto' : 'Pilih Foto'}
+          </Button>
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept="image/*"
+            onChange={handleImageChange}
+            className="hidden"
+          />
+        </div>
       </div>
     </FormSheet>
   )
