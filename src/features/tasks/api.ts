@@ -63,6 +63,8 @@ export interface CompleteChecklistPayload {
     is_replaced: boolean
     quantity_used?: number | null
     reason?: string | null
+    part_unit_id?: number | null
+    old_installation_id?: number | null
   }>
 }
 

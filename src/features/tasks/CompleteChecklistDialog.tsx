@@ -1,7 +1,9 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query'
+import { ScanLine } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { toast } from 'sonner'
 import { completeTask } from '@/features/tasks/api'
+import { ReplacePartDialog, type ReplacePartResult } from '@/features/tasks/ReplacePartDialog'
 import type { Task } from '@/types/tasks'
 import { Button } from '@/components/ui/button'
 import {
@@ -25,6 +27,8 @@ interface CheckState {
   is_replaced: boolean | null
   quantity_used: string
   reason: string
+  part_unit_id: number | null
+  old_installation_id: number | null
 }
 
 interface CompleteChecklistDialogProps {
@@ -36,6 +40,7 @@ export function CompleteChecklistDialog({ task, invalidateKey }: CompleteCheckli
   const [open, setOpen] = useState(false)
   const [notes, setNotes] = useState('')
   const [checks, setChecks] = useState<CheckState[]>([])
+  const [scanningPartId, setScanningPartId] = useState<number | null>(null)
   const queryClient = useQueryClient()
 
   useEffect(() => {
@@ -49,6 +54,8 @@ export function CompleteChecklistDialog({ task, invalidateKey }: CompleteCheckli
           is_replaced: check.is_replaced,
           quantity_used: String(check.quantity_used ?? check.quantity_planned),
           reason: check.reason ?? '',
+          part_unit_id: null,
+          old_installation_id: null,
         })),
       )
       setNotes('')
@@ -71,6 +78,8 @@ export function CompleteChecklistDialog({ task, invalidateKey }: CompleteCheckli
           is_replaced: Boolean(c.is_replaced),
           quantity_used: c.is_replaced ? Number(c.quantity_used) : null,
           reason: c.is_replaced ? null : c.reason,
+          part_unit_id: c.is_replaced ? c.part_unit_id : null,
+          old_installation_id: c.is_replaced ? c.old_installation_id : null,
         })),
       }),
     onSuccess: () => {
@@ -91,6 +100,7 @@ export function CompleteChecklistDialog({ task, invalidateKey }: CompleteCheckli
   }
 
   return (
+    <>
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger render={<Button size="sm" />}>Selesai</DialogTrigger>
       <DialogContent className="sm:max-w-lg">
@@ -114,8 +124,9 @@ export function CompleteChecklistDialog({ task, invalidateKey }: CompleteCheckli
                   type="button"
                   size="sm"
                   variant={check.is_replaced === true ? 'default' : 'outline'}
-                  onClick={() => updateCheck(check.part_id, { is_replaced: true })}
+                  onClick={() => setScanningPartId(check.part_id)}
                 >
+                  <ScanLine />
                   Diganti
                 </Button>
                 <Button
@@ -129,6 +140,9 @@ export function CompleteChecklistDialog({ task, invalidateKey }: CompleteCheckli
               </div>
               {check.is_replaced === true && (
                 <div className="flex flex-col gap-1">
+                  <p className="text-xs text-success">
+                    Part {check.part_unit_id ? `unit #${check.part_unit_id}` : 'baru'} tervalidasi terpasang.
+                  </p>
                   <Label htmlFor={`qty-${check.part_id}`} className="text-xs">
                     Jumlah Dipakai
                   </Label>
@@ -177,5 +191,26 @@ export function CompleteChecklistDialog({ task, invalidateKey }: CompleteCheckli
         </DialogFooter>
       </DialogContent>
     </Dialog>
+
+    {scanningPartId != null && (
+      <ReplacePartDialog
+        open
+        onOpenChange={(nextOpen) => {
+          if (!nextOpen) setScanningPartId(null)
+        }}
+        equipmentId={task.equipment_id}
+        partId={scanningPartId}
+        partName={checks.find((c) => c.part_id === scanningPartId)?.part_name ?? `Part #${scanningPartId}`}
+        onConfirm={(result: ReplacePartResult) => {
+          updateCheck(scanningPartId, {
+            is_replaced: true,
+            part_unit_id: result.part_unit_id,
+            old_installation_id: result.old_installation_id,
+          })
+          setScanningPartId(null)
+        }}
+      />
+    )}
+    </>
   )
 }

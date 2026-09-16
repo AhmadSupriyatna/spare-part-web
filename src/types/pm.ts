@@ -38,6 +38,7 @@ export interface TaskPartCheck {
   is_replaced: boolean | null
   quantity_used: number | null
   reason: string | null
+  part_installation_id: number | null
 }
 
 export interface TaskReschedule {
