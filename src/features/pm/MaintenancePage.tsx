@@ -15,7 +15,6 @@ import { fetchPmTasksForBranch, rescheduleTask } from '@/features/tasks/api'
 import { useBranchStore } from '@/stores/branch-store'
 import { cn } from '@/lib/utils'
 import type { Task } from '@/types/tasks'
-import { PageHeader } from '@/components/PageHeader'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
@@ -170,30 +169,31 @@ export function MaintenancePage() {
   }
 
   return (
-    <div className="flex flex-col gap-4">
-      <PageHeader description="Task Library, jadwal WO, dan monitoring Part Lifetime dalam satu tempat." title="Maintenance" />
-
-      <div className="flex gap-1 rounded-md border p-1 self-start">
-        <Button
-          variant={view === 'library' ? 'default' : 'ghost'}
-          size="sm"
-          onClick={() => setView('library')}
-        >
-          <NotebookPen className="size-3.5" />
-          Library
-        </Button>
-        <Button
-          variant={view === 'calendar' ? 'default' : 'ghost'}
-          size="sm"
-          onClick={() => setView('calendar')}
-        >
-          <CalendarDays className="size-3.5" />
-          Kalender
-        </Button>
-        <Button variant={view === 'list' ? 'default' : 'ghost'} size="sm" onClick={() => setView('list')}>
-          <List className="size-3.5" />
-          WO
-        </Button>
+    <div className="flex flex-col gap-3">
+      <div className="flex items-center gap-3">
+        <h1 className="text-base font-semibold">Maintenance</h1>
+        <div className="flex gap-1 rounded-md border p-1">
+          <Button
+            variant={view === 'library' ? 'default' : 'ghost'}
+            size="sm"
+            onClick={() => setView('library')}
+          >
+            <NotebookPen className="size-3.5" />
+            Library
+          </Button>
+          <Button
+            variant={view === 'calendar' ? 'default' : 'ghost'}
+            size="sm"
+            onClick={() => setView('calendar')}
+          >
+            <CalendarDays className="size-3.5" />
+            Kalender
+          </Button>
+          <Button variant={view === 'list' ? 'default' : 'ghost'} size="sm" onClick={() => setView('list')}>
+            <List className="size-3.5" />
+            WO
+          </Button>
+        </div>
       </div>
 
       {view === 'library' && <TaskLibraryBrowser />}
