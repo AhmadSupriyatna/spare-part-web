@@ -1,10 +1,9 @@
 import { apiClient } from '@/lib/api-client'
-import type { TaskLibrary, TaskLibraryPart, TaskLibraryPartAction, TaskLibraryScheduleType } from '@/types/pm'
+import type { TaskLibrary, TaskLibraryPart, TaskLibraryScheduleType } from '@/types/pm'
 import type { Task } from '@/types/tasks'
 
 export interface TaskLibraryPartInput {
   part_id: number
-  action: TaskLibraryPartAction
   needs_replacement?: boolean
 }
 
@@ -22,7 +21,6 @@ export interface TaskLibraryPayload {
 
 export interface TaskLibraryPartPayload {
   part_id: number
-  action: TaskLibraryPartAction
   needs_replacement?: boolean
   notes?: string | null
 }

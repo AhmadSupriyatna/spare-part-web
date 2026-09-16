@@ -1,6 +1,6 @@
 import { zodResolver } from '@hookform/resolvers/zod'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { Trash2 } from 'lucide-react'
+import { Calendar, Gauge, Trash2 } from 'lucide-react'
 import { useEffect, useMemo, useState } from 'react'
 import { Controller, useForm } from 'react-hook-form'
 import { toast } from 'sonner'
@@ -13,29 +13,29 @@ import {
   updateTaskLibrary,
   type TaskLibraryPartInput,
 } from '@/features/task-libraries/api'
-import type { TaskLibrary, TaskLibraryPartAction } from '@/types/pm'
+import type { TaskLibrary } from '@/types/pm'
+import { cn } from '@/lib/utils'
 import { FormSheet } from '@/components/FormSheet'
 import { Checkbox } from '@/components/ui/checkbox'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
-import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Textarea } from '@/components/ui/textarea'
 
 const scheduleTypeSchema = z.enum(['none', 'calendar', 'runtime'])
+const calendarIntervalSchema = z.enum(['weekly', 'monthly'])
 
 const taskLibrarySchema = z
   .object({
     title: z.string().min(1, 'Nama kegiatan wajib diisi').max(255),
     description: z.string().optional(),
     schedule_type: scheduleTypeSchema,
-    interval_days: z.string().optional(),
+    calendar_interval: calendarIntervalSchema.optional(),
     interval_hours: z.string().optional(),
     estimated_duration_minutes: z.string().optional(),
   })
   .superRefine((data, ctx) => {
-    if (data.schedule_type === 'calendar' && !(Number.isInteger(Number(data.interval_days)) && Number(data.interval_days) >= 1)) {
-      ctx.addIssue({ code: 'custom', path: ['interval_days'], message: 'Wajib diisi, minimal 1 hari' })
+    if (data.schedule_type === 'calendar' && !data.calendar_interval) {
+      ctx.addIssue({ code: 'custom', path: ['calendar_interval'], message: 'Pilih Mingguan atau Bulanan' })
     }
     if (data.schedule_type === 'runtime' && !(Number.isInteger(Number(data.interval_hours)) && Number(data.interval_hours) >= 1)) {
       ctx.addIssue({ code: 'custom', path: ['interval_hours'], message: 'Wajib diisi, minimal 1 jam' })
@@ -50,13 +50,21 @@ const taskLibrarySchema = z
 
 type TaskLibraryFormValues = z.infer<typeof taskLibrarySchema>
 
+function calendarIntervalFromDays(days: number | null): 'weekly' | 'monthly' | undefined {
+  if (days === 7) return 'weekly'
+  if (days === 30) return 'monthly'
+  return undefined
+}
+
 interface InstalledPartOption {
   partId: number
   partName: string
   itemMasterNo: string
 }
 
-function dedupeInstalledParts(installations: { part_id: number; part_name: string; item_master_no: string; is_active: boolean }[] | undefined): InstalledPartOption[] {
+function dedupeInstalledParts(
+  installations: { part_id: number; part_name: string; item_master_no: string; is_active: boolean }[] | undefined,
+): InstalledPartOption[] {
   const seen = new Map<number, InstalledPartOption>()
   for (const installation of installations ?? []) {
     if (!installation.is_active || seen.has(installation.part_id)) continue
@@ -69,11 +77,6 @@ function dedupeInstalledParts(installations: { part_id: number; part_name: strin
   return Array.from(seen.values())
 }
 
-const ACTION_LABELS: Record<TaskLibraryPartAction, string> = {
-  inspection: 'Inspeksi',
-  lubrication: 'Pelumasan',
-}
-
 interface TaskLibraryFormDialogProps {
   equipmentId: number
   library?: TaskLibrary
@@ -83,12 +86,12 @@ interface TaskLibraryFormDialogProps {
 /**
  * The single "laci input" for a Task Library (PM recipe): identity fields,
  * the calendar-vs-running-hours interval (metadata only — nothing here
- * actually schedules a due date, that stays PmSchedulingService's job), and
+ * actually schedules a due date, that stays PM Schedule's job later), and
  * the checklist of parts to work on, picked only from what's actually
  * installed on this equipment. Creating submits everything — including the
  * chosen parts — in one atomic request; editing keeps the parts checklist
- * incremental (add/remove hits the server immediately), matching how
- * removal already behaved before this form existed.
+ * incremental, and tapping an installed part adds it immediately (no
+ * separate confirm button, for speed on a shop-floor tablet).
  */
 export function TaskLibraryFormDialog({ equipmentId, library, trigger }: TaskLibraryFormDialogProps) {
   const [open, setOpen] = useState(false)
@@ -103,7 +106,9 @@ export function TaskLibraryFormDialog({ equipmentId, library, trigger }: TaskLib
   const installedParts = useMemo(() => dedupeInstalledParts(installations), [installations])
 
   // Create-only: parts staged locally until the whole form is submitted together.
-  const [stagedParts, setStagedParts] = useState<Record<number, { action: TaskLibraryPartAction; needs_replacement: boolean }>>({})
+  const [stagedParts, setStagedParts] = useState<Record<number, { needs_replacement: boolean }>>({})
+  // Edit-only: needs_replacement chosen before tapping an addable part to add it immediately.
+  const [pendingNeedsReplacement, setPendingNeedsReplacement] = useState<Record<number, boolean>>({})
 
   const {
     register,
@@ -118,7 +123,7 @@ export function TaskLibraryFormDialog({ equipmentId, library, trigger }: TaskLib
       title: library?.title ?? '',
       description: library?.description ?? '',
       schedule_type: library?.schedule_type ?? 'none',
-      interval_days: library?.interval_days ? String(library.interval_days) : '',
+      calendar_interval: calendarIntervalFromDays(library?.interval_days ?? null),
       interval_hours: library?.interval_hours ? String(library.interval_hours) : '',
       estimated_duration_minutes: library?.estimated_duration_minutes ? String(library.estimated_duration_minutes) : '',
     },
@@ -130,11 +135,12 @@ export function TaskLibraryFormDialog({ equipmentId, library, trigger }: TaskLib
         title: library?.title ?? '',
         description: library?.description ?? '',
         schedule_type: library?.schedule_type ?? 'none',
-        interval_days: library?.interval_days ? String(library.interval_days) : '',
+        calendar_interval: calendarIntervalFromDays(library?.interval_days ?? null),
         interval_hours: library?.interval_hours ? String(library.interval_hours) : '',
         estimated_duration_minutes: library?.estimated_duration_minutes ? String(library.estimated_duration_minutes) : '',
       })
       setStagedParts({})
+      setPendingNeedsReplacement({})
     }
   }, [open, library, reset])
 
@@ -146,7 +152,8 @@ export function TaskLibraryFormDialog({ equipmentId, library, trigger }: TaskLib
         title: values.title,
         description: values.description || null,
         schedule_type: values.schedule_type === 'none' ? null : values.schedule_type,
-        interval_days: values.schedule_type === 'calendar' ? Number(values.interval_days) : null,
+        interval_days:
+          values.schedule_type === 'calendar' ? (values.calendar_interval === 'weekly' ? 7 : 30) : null,
         interval_hours: values.schedule_type === 'runtime' ? Number(values.interval_hours) : null,
         estimated_duration_minutes: values.estimated_duration_minutes ? Number(values.estimated_duration_minutes) : null,
       }
@@ -154,7 +161,6 @@ export function TaskLibraryFormDialog({ equipmentId, library, trigger }: TaskLib
 
       const parts: TaskLibraryPartInput[] = Object.entries(stagedParts).map(([partId, config]) => ({
         part_id: Number(partId),
-        action: config.action,
         needs_replacement: config.needs_replacement,
       }))
       return createTaskLibrary(equipmentId, { ...payload, parts })
@@ -168,8 +174,8 @@ export function TaskLibraryFormDialog({ equipmentId, library, trigger }: TaskLib
   })
 
   const addPartMutation = useMutation({
-    mutationFn: ({ partId, action, needsReplacement }: { partId: number; action: TaskLibraryPartAction; needsReplacement: boolean }) =>
-      addTaskLibraryPart(library!.id, { part_id: partId, action, needs_replacement: needsReplacement }),
+    mutationFn: ({ partId, needsReplacement }: { partId: number; needsReplacement: boolean }) =>
+      addTaskLibraryPart(library!.id, { part_id: partId, needs_replacement: needsReplacement }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['task-libraries', equipmentId] })
       toast.success('Part berhasil ditambahkan ke checklist.')
@@ -188,25 +194,20 @@ export function TaskLibraryFormDialog({ equipmentId, library, trigger }: TaskLib
   function toggleStagedPart(partId: number, checked: boolean) {
     setStagedParts((prev) => {
       const next = { ...prev }
-      if (checked) next[partId] = { action: 'inspection', needs_replacement: false }
+      if (checked) next[partId] = { needs_replacement: false }
       else delete next[partId]
       return next
     })
   }
 
-  function updateStagedPart(partId: number, patch: Partial<{ action: TaskLibraryPartAction; needs_replacement: boolean }>) {
-    setStagedParts((prev) => ({ ...prev, [partId]: { ...prev[partId], ...patch } }))
-  }
-
   const alreadyAddedPartIds = new Set(library?.parts.map((p) => p.part_id) ?? [])
   const addablePartsForEdit = installedParts.filter((p) => !alreadyAddedPartIds.has(p.partId))
-  const [pendingAdd, setPendingAdd] = useState<Record<number, { action: TaskLibraryPartAction; needs_replacement: boolean }>>({})
 
   return (
     <FormSheet
       trigger={trigger}
       title={isEdit ? 'Ubah Task Library' : 'Tambah Task Library'}
-      description="Resep kegiatan PM — interval di sini hanya metadata untuk otomasi ke depan, penjadwalan tanggal aktual tetap dilakukan lewat PM Task."
+      description="Resep kegiatan PM — interval di sini hanya metadata untuk otomasi ke depan, penjadwalan tanggal aktual tetap dilakukan lewat PM Schedule."
       open={open}
       onOpenChange={setOpen}
       isDirty={isDirty || Object.keys(stagedParts).length > 0}
@@ -231,20 +232,62 @@ export function TaskLibraryFormDialog({ equipmentId, library, trigger }: TaskLib
           control={control}
           name="schedule_type"
           render={({ field }) => (
-            <Tabs value={field.value} onValueChange={field.onChange}>
-              <TabsList className="w-full">
-                <TabsTrigger value="none">Belum Ditentukan</TabsTrigger>
-                <TabsTrigger value="calendar">Per Tanggal</TabsTrigger>
-                <TabsTrigger value="runtime">Running Hours</TabsTrigger>
-              </TabsList>
-            </Tabs>
+            <div className="flex gap-2">
+              <button
+                type="button"
+                onClick={() => field.onChange(field.value === 'calendar' ? 'none' : 'calendar')}
+                className={cn(
+                  'flex flex-1 flex-col items-center gap-1 rounded-md border p-3 text-xs font-medium transition-colors',
+                  field.value === 'calendar' ? 'border-primary bg-primary/5 text-primary' : 'text-muted-foreground hover:bg-muted',
+                )}
+              >
+                <Calendar className="size-5" />
+                Kalender
+              </button>
+              <button
+                type="button"
+                onClick={() => field.onChange(field.value === 'runtime' ? 'none' : 'runtime')}
+                className={cn(
+                  'flex flex-1 flex-col items-center gap-1 rounded-md border p-3 text-xs font-medium transition-colors',
+                  field.value === 'runtime' ? 'border-primary bg-primary/5 text-primary' : 'text-muted-foreground hover:bg-muted',
+                )}
+              >
+                <Gauge className="size-5" />
+                Running Hours Mesin
+              </button>
+            </div>
           )}
         />
+
         {scheduleType === 'calendar' && (
-          <div className="flex items-center gap-2">
-            <Input id="interval_days" type="number" min={1} placeholder="30" {...register('interval_days')} />
-            <span className="shrink-0 text-sm text-muted-foreground">hari sekali</span>
-          </div>
+          <Controller
+            control={control}
+            name="calendar_interval"
+            render={({ field }) => (
+              <div className="flex gap-2">
+                <button
+                  type="button"
+                  onClick={() => field.onChange('weekly')}
+                  className={cn(
+                    'flex-1 rounded-md border px-3 py-1.5 text-sm transition-colors',
+                    field.value === 'weekly' ? 'border-primary bg-primary/5 text-primary' : 'text-muted-foreground hover:bg-muted',
+                  )}
+                >
+                  Mingguan
+                </button>
+                <button
+                  type="button"
+                  onClick={() => field.onChange('monthly')}
+                  className={cn(
+                    'flex-1 rounded-md border px-3 py-1.5 text-sm transition-colors',
+                    field.value === 'monthly' ? 'border-primary bg-primary/5 text-primary' : 'text-muted-foreground hover:bg-muted',
+                  )}
+                >
+                  Bulanan
+                </button>
+              </div>
+            )}
+          />
         )}
         {scheduleType === 'runtime' && (
           <div className="flex items-center gap-2">
@@ -252,7 +295,7 @@ export function TaskLibraryFormDialog({ equipmentId, library, trigger }: TaskLib
             <span className="shrink-0 text-sm text-muted-foreground">jam operasi mesin sekali</span>
           </div>
         )}
-        {errors.interval_days && <p className="text-sm text-destructive">{errors.interval_days.message}</p>}
+        {errors.calendar_interval && <p className="text-sm text-destructive">{errors.calendar_interval.message}</p>}
         {errors.interval_hours && <p className="text-sm text-destructive">{errors.interval_hours.message}</p>}
       </div>
 
@@ -283,8 +326,8 @@ export function TaskLibraryFormDialog({ equipmentId, library, trigger }: TaskLib
             const staged = stagedParts[part.partId]
             const checked = Boolean(staged)
             return (
-              <div key={part.partId} className="flex flex-col gap-2 rounded-md border p-2">
-                <label className="flex items-center gap-2">
+              <div key={part.partId} className="flex items-center gap-2 rounded-md border p-2">
+                <label className="flex min-w-0 flex-1 cursor-pointer items-center gap-2">
                   <Checkbox checked={checked} onCheckedChange={(v) => toggleStagedPart(part.partId, v === true)} />
                   <span className="min-w-0 flex-1">
                     <span className="block truncate text-sm font-medium">{part.partName}</span>
@@ -292,24 +335,15 @@ export function TaskLibraryFormDialog({ equipmentId, library, trigger }: TaskLib
                   </span>
                 </label>
                 {checked && (
-                  <div className="flex flex-wrap items-center gap-3 pl-6">
-                    <Select value={staged.action} onValueChange={(v) => updateStagedPart(part.partId, { action: v as TaskLibraryPartAction })}>
-                      <SelectTrigger size="sm">
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="inspection">Inspeksi</SelectItem>
-                        <SelectItem value="lubrication">Pelumasan</SelectItem>
-                      </SelectContent>
-                    </Select>
-                    <label className="flex items-center gap-1.5 text-sm">
-                      <Checkbox
-                        checked={staged.needs_replacement}
-                        onCheckedChange={(v) => updateStagedPart(part.partId, { needs_replacement: v === true })}
-                      />
-                      Perlu Penggantian
-                    </label>
-                  </div>
+                  <label className="flex shrink-0 items-center gap-1.5 text-xs">
+                    <Checkbox
+                      checked={staged.needs_replacement}
+                      onCheckedChange={(v) =>
+                        setStagedParts((prev) => ({ ...prev, [part.partId]: { needs_replacement: v === true } }))
+                      }
+                    />
+                    Perlu Penggantian
+                  </label>
                 )}
               </div>
             )
@@ -327,10 +361,9 @@ export function TaskLibraryFormDialog({ equipmentId, library, trigger }: TaskLib
                       {part.part_name}{' '}
                       <span className="font-mono text-xs text-muted-foreground">({part.item_master_no})</span>
                     </span>
-                    <span className="shrink-0 text-xs text-muted-foreground">
-                      {ACTION_LABELS[part.action]}
-                      {part.needs_replacement && ' · Perlu Penggantian'}
-                    </span>
+                    {part.needs_replacement && (
+                      <span className="shrink-0 text-xs text-muted-foreground">Perlu Penggantian</span>
+                    )}
                     <button
                       type="button"
                       aria-label="Hapus dari checklist"
@@ -347,48 +380,31 @@ export function TaskLibraryFormDialog({ equipmentId, library, trigger }: TaskLib
 
             {addablePartsForEdit.length > 0 && (
               <div className="flex flex-col gap-2 border-t pt-3">
-                <p className="text-xs font-medium tracking-wide text-muted-foreground uppercase">Tambah Part</p>
+                <p className="text-xs font-medium tracking-wide text-muted-foreground uppercase">
+                  Tap part untuk menambah ke checklist
+                </p>
                 {addablePartsForEdit.map((part) => {
-                  const pending = pendingAdd[part.partId] ?? { action: 'inspection' as TaskLibraryPartAction, needs_replacement: false }
+                  const needsReplacement = pendingNeedsReplacement[part.partId] ?? false
                   return (
-                    <div key={part.partId} className="flex flex-col gap-2 rounded-md border p-2">
-                      <span className="min-w-0">
-                        <span className="block truncate text-sm font-medium">{part.partName}</span>
-                        <span className="block truncate font-mono text-xs text-muted-foreground">{part.itemMasterNo}</span>
-                      </span>
-                      <div className="flex flex-wrap items-center gap-2">
-                        <Select
-                          value={pending.action}
-                          onValueChange={(v) => setPendingAdd((prev) => ({ ...prev, [part.partId]: { ...pending, action: v as TaskLibraryPartAction } }))}
-                        >
-                          <SelectTrigger size="sm">
-                            <SelectValue />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="inspection">Inspeksi</SelectItem>
-                            <SelectItem value="lubrication">Pelumasan</SelectItem>
-                          </SelectContent>
-                        </Select>
-                        <label className="flex items-center gap-1.5 text-xs">
-                          <Checkbox
-                            checked={pending.needs_replacement}
-                            onCheckedChange={(v) =>
-                              setPendingAdd((prev) => ({ ...prev, [part.partId]: { ...pending, needs_replacement: v === true } }))
-                            }
-                          />
-                          Perlu Penggantian
-                        </label>
-                        <button
-                          type="button"
-                          className="ml-auto text-xs font-medium text-primary hover:underline disabled:opacity-50"
-                          disabled={addPartMutation.isPending}
-                          onClick={() =>
-                            addPartMutation.mutate({ partId: part.partId, action: pending.action, needsReplacement: pending.needs_replacement })
+                    <div key={part.partId} className="flex items-center gap-2 rounded-md border p-2">
+                      <button
+                        type="button"
+                        disabled={addPartMutation.isPending}
+                        onClick={() => addPartMutation.mutate({ partId: part.partId, needsReplacement })}
+                        className="flex min-w-0 flex-1 flex-col items-start text-left disabled:opacity-50"
+                      >
+                        <span className="truncate text-sm font-medium">{part.partName}</span>
+                        <span className="truncate font-mono text-xs text-muted-foreground">{part.itemMasterNo}</span>
+                      </button>
+                      <label className="flex shrink-0 items-center gap-1.5 text-xs">
+                        <Checkbox
+                          checked={needsReplacement}
+                          onCheckedChange={(v) =>
+                            setPendingNeedsReplacement((prev) => ({ ...prev, [part.partId]: v === true }))
                           }
-                        >
-                          + Tambah
-                        </button>
-                      </div>
+                        />
+                        Perlu Penggantian
+                      </label>
                     </div>
                   )
                 })}

@@ -1,5 +1,3 @@
-export type TaskLibraryPartAction = 'inspection' | 'lubrication'
-
 export type TaskLibraryScheduleType = 'calendar' | 'runtime'
 
 export interface TaskLibraryPart {
@@ -8,7 +6,6 @@ export interface TaskLibraryPart {
   part_id: number
   part_name?: string | null
   item_master_no?: string | null
-  action: TaskLibraryPartAction
   needs_replacement: boolean
   quantity_required: number
   notes: string | null

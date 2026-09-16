@@ -1,10 +1,8 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { Pencil, Trash2 } from 'lucide-react'
 import { toast } from 'sonner'
-import { ScheduleTaskLibraryDialog } from '@/features/task-libraries/ScheduleTaskLibraryDialog'
 import { TaskLibraryFormDialog } from '@/features/task-libraries/TaskLibraryFormDialog'
 import { deleteTaskLibrary, fetchTaskLibrariesForEquipment } from '@/features/task-libraries/api'
-import type { TaskLibraryPartAction } from '@/types/pm'
 import { useCanManageEngineering } from '@/stores/use-has-role'
 import {
   AlertDialog,
@@ -20,13 +18,12 @@ import {
 import { Button } from '@/components/ui/button'
 import { Skeleton } from '@/components/ui/skeleton'
 
-const ACTION_LABELS: Record<TaskLibraryPartAction, string> = {
-  inspection: 'Inspeksi',
-  lubrication: 'Pelumasan',
-}
-
 function intervalLabel(scheduleType: string | null, intervalDays: number | null, intervalHours: number | null): string | null {
-  if (scheduleType === 'calendar' && intervalDays) return `Setiap ${intervalDays} hari`
+  if (scheduleType === 'calendar' && intervalDays) {
+    if (intervalDays === 7) return 'Mingguan'
+    if (intervalDays === 30) return 'Bulanan'
+    return `Setiap ${intervalDays} hari`
+  }
   if (scheduleType === 'runtime' && intervalHours) return `Setiap ${intervalHours} jam operasi`
   return null
 }
@@ -88,12 +85,6 @@ export function TaskLibraryList({ equipmentId, title = 'Task Library (PM)' }: { 
                   </div>
                   {canManage && (
                     <div className="flex shrink-0 gap-1">
-                      <ScheduleTaskLibraryDialog
-                        libraries={[library]}
-                        defaultLibraryId={library.id}
-                        invalidateKeys={[['tasks', equipmentId]]}
-                        trigger={<Button size="sm">Jadwalkan</Button>}
-                      />
                       <TaskLibraryFormDialog
                         equipmentId={equipmentId}
                         library={library}
@@ -143,10 +134,9 @@ export function TaskLibraryList({ equipmentId, title = 'Task Library (PM)' }: { 
                             {part.part_name}{' '}
                             <span className="font-mono text-xs text-muted-foreground">({part.item_master_no})</span>
                           </span>
-                          <span className="text-xs text-muted-foreground">
-                            {ACTION_LABELS[part.action]}
-                            {part.needs_replacement && ' · Perlu Penggantian'}
-                          </span>
+                          {part.needs_replacement && (
+                            <span className="text-xs text-muted-foreground">Perlu Penggantian</span>
+                          )}
                         </li>
                       ))}
                     </ul>

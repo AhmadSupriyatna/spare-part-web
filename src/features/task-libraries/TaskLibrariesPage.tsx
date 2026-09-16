@@ -5,6 +5,7 @@ import { useSearchParams } from 'react-router'
 import { fetchEquipmentList } from '@/features/equipment/api'
 import { fetchLines } from '@/features/lines/api'
 import { fetchMachines } from '@/features/machines/api'
+import { fetchTaskLibrariesForBranch } from '@/features/task-libraries/api'
 import { TaskLibraryList } from '@/features/task-libraries/TaskLibraryList'
 import { useBranchStore } from '@/stores/branch-store'
 import { cn } from '@/lib/utils'
@@ -12,14 +13,6 @@ import { EmptyState } from '@/components/EmptyState'
 import { PageHeader } from '@/components/PageHeader'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Skeleton } from '@/components/ui/skeleton'
-
-interface SubSystemOption {
-  id: number
-  name: string
-  code: string
-  category: string | null
-  machineName: string
-}
 
 export function TaskLibrariesPage() {
   const activeBranchId = useBranchStore((state) => state.activeBranchId)
@@ -51,32 +44,24 @@ export function TaskLibrariesPage() {
       queryFn: () => fetchEquipmentList(machine.id),
     })),
   })
-  const equipmentLoading = machinesLoading || equipmentQueries.some((q) => q.isLoading)
 
-  const subSystems = useMemo<SubSystemOption[]>(() => {
-    const list: SubSystemOption[] = []
-    ;(machines ?? []).forEach((machine, index) => {
-      const equipmentList = equipmentQueries[index]?.data ?? []
-      for (const equipment of equipmentList) {
-        list.push({
-          id: equipment.id,
-          name: equipment.name,
-          code: equipment.code,
-          category: equipment.category ?? null,
-          machineName: machine.name,
-        })
-      }
-    })
-    return list
-  }, [machines, equipmentQueries])
+  // One branch-wide fetch to count existing Task Library entries per
+  // equipment for the small "N Task" hint on each card, instead of an N+1
+  // query per equipment.
+  const { data: branchLibraries } = useQuery({
+    queryKey: ['task-libraries', 'branch', activeBranchId],
+    queryFn: () => fetchTaskLibrariesForBranch(activeBranchId!),
+    enabled: !!activeBranchId,
+  })
+  const taskCountByEquipment = useMemo(() => {
+    const counts = new Map<number, number>()
+    for (const library of branchLibraries ?? []) {
+      counts.set(library.equipment_id, (counts.get(library.equipment_id) ?? 0) + 1)
+    }
+    return counts
+  }, [branchLibraries])
 
-  const filteredSubSystems = useMemo(() => {
-    const term = search.trim().toLowerCase()
-    if (!term) return subSystems
-    return subSystems.filter((item) =>
-      `${item.name} ${item.code} ${item.machineName}`.toLowerCase().includes(term),
-    )
-  }, [subSystems, search])
+  const term = search.trim().toLowerCase()
 
   // Default to the first line once loaded, if nothing is selected via the URL yet.
   useEffect(() => {
@@ -94,7 +79,9 @@ export function TaskLibrariesPage() {
     setSearchParams({ line: String(selectedLineId), equipment: String(equipmentId) })
   }
 
-  const selectedEquipment = subSystems.find((item) => item.id === selectedEquipmentId)
+  const selectedEquipment = equipmentQueries
+    .flatMap((query) => query.data ?? [])
+    .find((equipment) => equipment.id === selectedEquipmentId)
 
   if (!activeBranchId) {
     return <p className="text-muted-foreground">Pilih cabang terlebih dahulu.</p>
@@ -136,37 +123,68 @@ export function TaskLibrariesPage() {
             />
           </div>
 
-          <div className="max-h-[32rem] overflow-y-auto p-1.5">
+          <div className="max-h-[32rem] overflow-y-auto p-3">
             {!selectedLineId ? (
-              <p className="p-3 text-sm text-muted-foreground">Pilih line terlebih dahulu.</p>
-            ) : equipmentLoading ? (
-              <div className="flex flex-col gap-2 p-1.5">
-                {Array.from({ length: 3 }).map((_, i) => (
-                  <Skeleton key={i} className="h-14 w-full" />
+              <p className="p-2 text-sm text-muted-foreground">Pilih line terlebih dahulu.</p>
+            ) : machinesLoading ? (
+              <div className="flex flex-col gap-2">
+                {Array.from({ length: 2 }).map((_, i) => (
+                  <Skeleton key={i} className="h-24 w-full" />
                 ))}
               </div>
-            ) : filteredSubSystems.length === 0 ? (
-              <p className="p-3 text-sm text-muted-foreground">
-                {search ? 'Sub system tidak ditemukan.' : 'Belum ada equipment di line ini.'}
-              </p>
+            ) : machines?.length === 0 ? (
+              <p className="p-2 text-sm text-muted-foreground">Belum ada mesin di line ini.</p>
             ) : (
-              <div className="flex flex-col gap-1">
-                {filteredSubSystems.map((item) => (
-                  <button
-                    key={item.id}
-                    type="button"
-                    onClick={() => selectEquipment(item.id)}
-                    className={cn(
-                      'flex flex-col gap-0.5 rounded-md px-3 py-2 text-left transition-colors hover:bg-muted',
-                      item.id === selectedEquipmentId && 'bg-primary/5 text-primary',
-                    )}
-                  >
-                    <span className="truncate text-sm font-medium">{item.name}</span>
-                    <span className="truncate text-xs text-muted-foreground">
-                      {item.machineName} · <span className="font-mono">{item.category ?? item.code}</span>
-                    </span>
-                  </button>
-                ))}
+              <div className="flex flex-col gap-5">
+                {machines?.map((machine, index) => {
+                  const equipmentList = (equipmentQueries[index]?.data ?? []).filter(
+                    (equipment) => !term || `${equipment.name} ${equipment.code} ${machine.name}`.toLowerCase().includes(term),
+                  )
+                  const isLoadingEquipment = equipmentQueries[index]?.isLoading
+
+                  if (!isLoadingEquipment && equipmentList.length === 0) return null
+
+                  return (
+                    <div key={machine.id} className="flex flex-col gap-2">
+                      <p className="text-xs font-medium tracking-wide text-muted-foreground uppercase">{machine.name}</p>
+                      {isLoadingEquipment ? (
+                        <Skeleton className="h-16 w-full" />
+                      ) : (
+                        <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
+                          {equipmentList.map((equipment) => {
+                            const taskCount = taskCountByEquipment.get(equipment.id) ?? 0
+                            return (
+                              <button
+                                key={equipment.id}
+                                type="button"
+                                onClick={() => selectEquipment(equipment.id)}
+                                className={cn(
+                                  'flex flex-col gap-0.5 rounded-lg border p-3 text-left transition-colors hover:border-primary/50 hover:bg-muted',
+                                  equipment.id === selectedEquipmentId && 'border-primary bg-primary/5',
+                                )}
+                              >
+                                <span
+                                  className={cn(
+                                    'text-sm font-medium',
+                                    equipment.id === selectedEquipmentId && 'text-primary',
+                                  )}
+                                >
+                                  {equipment.name}
+                                </span>
+                                <span className="font-mono text-xs text-muted-foreground">
+                                  {equipment.category ?? equipment.code}
+                                </span>
+                                <span className="text-xs text-muted-foreground">
+                                  {taskCount} Task
+                                </span>
+                              </button>
+                            )
+                          })}
+                        </div>
+                      )}
+                    </div>
+                  )
+                })}
               </div>
             )}
           </div>
@@ -183,7 +201,7 @@ export function TaskLibrariesPage() {
             <EmptyState
               icon={NotebookPen}
               title="Pilih sub system"
-              description="Pilih salah satu sub system (equipment) di kiri untuk lihat dan kelola Task Library-nya."
+              description="Pilih salah satu equipment di kiri untuk lihat dan kelola Task Library-nya."
             />
           )}
         </div>
