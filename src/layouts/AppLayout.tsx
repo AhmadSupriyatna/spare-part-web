@@ -6,8 +6,6 @@ import {
   Building2,
   CalendarClock,
   CalendarCog,
-  ChevronLeft,
-  ChevronRight,
   ClipboardList,
   Factory,
   Hammer,
@@ -22,9 +20,11 @@ import {
   Settings,
   ShieldCheck,
   Truck,
+  Warehouse,
   Wrench,
 } from 'lucide-react'
-import { NavLink, Outlet, useNavigate } from 'react-router'
+import { useState } from 'react'
+import { NavLink, Outlet, useLocation, useNavigate } from 'react-router'
 import { toast } from 'sonner'
 import { BranchSelector } from '@/components/BranchSelector'
 import { GlobalSearch } from '@/components/GlobalSearch'
@@ -34,8 +34,8 @@ import { logout as logoutRequest } from '@/features/auth/api'
 import { cn } from '@/lib/utils'
 import { useAuthStore } from '@/stores/auth-store'
 import { useSheetStackStore } from '@/stores/sheet-stack-store'
-import { useSidebarStore } from '@/stores/sidebar-store'
 import { Button } from '@/components/ui/button'
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
 import { Separator } from '@/components/ui/separator'
 
 interface NavItem {
@@ -47,6 +47,8 @@ interface NavItem {
 
 interface NavSection {
   label?: string
+  /** Only needed for a section with more than one item — it becomes the one icon shown for the whole group. */
+  icon?: React.ComponentType<{ className?: string }>
   items: NavItem[]
 }
 
@@ -56,6 +58,7 @@ const navSections: NavSection[] = [
   },
   {
     label: 'Inventaris',
+    icon: Warehouse,
     items: [
       { to: '/parts', label: 'Part', icon: Package },
       { to: '/stock', label: 'Stok', icon: Boxes },
@@ -66,6 +69,7 @@ const navSections: NavSection[] = [
   },
   {
     label: 'Aset & Produksi',
+    icon: Factory,
     items: [
       { to: '/branches', label: 'Cabang', icon: Building2 },
       { to: '/lines', label: 'Line Equipment', icon: Factory },
@@ -77,6 +81,7 @@ const navSections: NavSection[] = [
   },
   {
     label: 'Perawatan (PM & WO)',
+    icon: Wrench,
     items: [
       { to: '/work-orders', label: 'Work Order', icon: CalendarCog },
       { to: '/task-libraries', label: 'Task Library', icon: NotebookPen },
@@ -88,6 +93,7 @@ const navSections: NavSection[] = [
   },
   {
     label: 'Breakdown',
+    icon: AlertTriangle,
     items: [
       { to: '/breakdown/approvals', label: 'Papan Approval', icon: ShieldCheck },
       { to: '/breakdown/print-qr', label: 'Cetak QR Code', icon: QrCode },
@@ -95,6 +101,7 @@ const navSections: NavSection[] = [
   },
   {
     label: 'Pengaturan',
+    icon: Settings,
     items: [
       { to: '/settings/company', label: 'Profil Perusahaan', icon: Settings },
       { to: '/settings/units', label: 'Satuan Part', icon: Ruler },
@@ -102,13 +109,17 @@ const navSections: NavSection[] = [
   },
 ]
 
+const navIconButtonClass = 'flex size-11 shrink-0 items-center justify-center rounded-md transition-colors'
+const navIconButtonActiveClass = 'bg-sidebar-primary/10 text-sidebar-primary'
+const navIconButtonInactiveClass = 'text-sidebar-foreground/70 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground'
+
 export function AppLayout() {
   const navigate = useNavigate()
+  const location = useLocation()
   const user = useAuthStore((state) => state.user)
   const clearSession = useAuthStore((state) => state.clearSession)
-  const collapsed = useSidebarStore((state) => state.collapsed)
-  const toggleCollapsed = useSidebarStore((state) => state.toggleCollapsed)
   const sheetOpenCount = useSheetStackStore((state) => state.openCount)
+  const [openGroup, setOpenGroup] = useState<string | null>(null)
 
   const mutation = useMutation({
     mutationFn: logoutRequest,
@@ -118,70 +129,95 @@ export function AppLayout() {
     },
   })
 
+  function isItemActive(item: NavItem) {
+    return item.end ? location.pathname === item.to : location.pathname.startsWith(item.to)
+  }
+
   return (
     <div className="flex h-svh overflow-hidden">
-      <aside
-        className={cn(
-          'relative hidden h-full shrink-0 flex-col border-r bg-sidebar text-sidebar-foreground transition-[width] duration-200 sm:flex',
-          collapsed ? 'w-16' : 'w-60',
-        )}
-      >
-        <Button
-          variant="outline"
-          size="icon-xs"
-          onClick={toggleCollapsed}
-          aria-label={collapsed ? 'Perluas sidebar' : 'Ciutkan sidebar'}
-          title={collapsed ? 'Perluas sidebar' : 'Ciutkan sidebar'}
-          className="absolute -right-3 top-6 z-10 rounded-full bg-background shadow-sm"
-        >
-          {collapsed ? <ChevronRight /> : <ChevronLeft />}
-        </Button>
-
-        <div className={cn('flex items-center gap-2.5 px-5 py-5', collapsed && 'justify-center px-0')}>
-          <div className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-primary text-primary-foreground">
+      <aside className="hidden h-full w-16 shrink-0 flex-col items-center border-r bg-sidebar text-sidebar-foreground sm:flex">
+        <div className="flex items-center justify-center py-5">
+          <div
+            className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-primary text-primary-foreground"
+            title="Spare Part — Sistem Manajemen"
+          >
             <Wrench className="size-4" />
           </div>
-          {!collapsed && (
-            <div className="leading-tight">
-              <p className="text-sm font-semibold">Spare Part</p>
-              <p className="text-xs text-muted-foreground">Sistem Manajemen</p>
-            </div>
-          )}
         </div>
 
-        <nav className="scroll-thin flex flex-1 flex-col gap-4 overflow-y-auto px-3 pb-4">
-          {navSections.map((section, index) => (
-            <div key={section.label ?? index} className="flex flex-col gap-1">
-              {section.label &&
-                (collapsed ? (
-                  index > 0 && <Separator className="my-1" />
-                ) : (
-                  <p className="px-3 pb-1 text-xs font-medium tracking-wide text-muted-foreground uppercase">
-                    {section.label}
-                  </p>
-                ))}
-              {section.items.map((item) => (
+        <nav className="scroll-thin flex flex-1 flex-col items-center gap-1 overflow-y-auto px-2 pb-4">
+          {navSections.map((section) => {
+            const isGroup = Boolean(section.label) && section.items.length > 1
+
+            if (!isGroup) {
+              const item = section.items[0]
+              return (
                 <NavLink
                   key={item.to}
                   to={item.to}
                   end={item.end}
-                  title={collapsed ? item.label : undefined}
+                  title={item.label}
                   className={({ isActive }) =>
-                    cn(
-                      'flex items-center gap-2.5 rounded-md px-3 py-2 text-sm font-medium transition-colors',
-                      collapsed && 'justify-center px-0',
-                      isActive
-                        ? 'bg-sidebar-primary/10 text-sidebar-primary'
-                        : 'text-sidebar-foreground/70 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground',
-                    )
+                    cn(navIconButtonClass, isActive ? navIconButtonActiveClass : navIconButtonInactiveClass)
                   }
                 >
-                  <item.icon className="size-4 shrink-0" />
-                  {!collapsed && item.label}
+                  <item.icon className="size-5" />
                 </NavLink>
-              ))}
-            </div>
-          ))}
+              )
+            }
+
+            const SectionIcon = section.icon ?? section.items[0].icon
+            const isGroupActive = section.items.some(isItemActive)
+
+            return (
+              <Popover
+                key={section.label}
+                open={openGroup === section.label}
+                onOpenChange={(next) => setOpenGroup(next ? (section.label as string) : null)}
+              >
+                <PopoverTrigger
+                  render={
+                    <button
+                      type="button"
+                      title={section.label}
+                      className={cn(
+                        navIconButtonClass,
+                        isGroupActive ? navIconButtonActiveClass : navIconButtonInactiveClass,
+                      )}
+                    />
+                  }
+                >
+                  <SectionIcon className="size-5" />
+                </PopoverTrigger>
+                <PopoverContent side="right" align="start" sideOffset={12} className="w-56">
+                  <p className="px-2 py-1.5 text-xs font-medium tracking-wide text-muted-foreground uppercase">
+                    {section.label}
+                  </p>
+                  <div className="flex flex-col gap-0.5">
+                    {section.items.map((item) => (
+                      <NavLink
+                        key={item.to}
+                        to={item.to}
+                        end={item.end}
+                        onClick={() => setOpenGroup(null)}
+                        className={({ isActive }) =>
+                          cn(
+                            'flex items-center gap-2.5 rounded-md px-2 py-2 text-sm font-medium transition-colors',
+                            isActive
+                              ? 'bg-sidebar-primary/10 text-sidebar-primary'
+                              : 'text-foreground/80 hover:bg-accent hover:text-accent-foreground',
+                          )
+                        }
+                      >
+                        <item.icon className="size-4 shrink-0" />
+                        {item.label}
+                      </NavLink>
+                    ))}
+                  </div>
+                </PopoverContent>
+              </Popover>
+            )
+          })}
         </nav>
       </aside>
       <div className="flex min-w-0 flex-1 flex-col">
