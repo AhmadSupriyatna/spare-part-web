@@ -2,6 +2,7 @@ import { KeyRound, LogOut, UserRound } from 'lucide-react'
 import {
   DropdownMenu,
   DropdownMenuContent,
+  DropdownMenuGroup,
   DropdownMenuItem,
   DropdownMenuLabel,
   DropdownMenuSeparator,
@@ -43,10 +44,12 @@ export function ProfileMenu({ name, email, onLogout, isLoggingOut }: ProfileMenu
         <span className="text-sm font-medium">{name}</span>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end" className="w-56">
-        <DropdownMenuLabel className="flex flex-col gap-0.5 px-1.5 py-1.5">
-          <span className="text-sm font-medium text-foreground">{name}</span>
-          <span className="truncate text-xs text-muted-foreground">{email}</span>
-        </DropdownMenuLabel>
+        <DropdownMenuGroup>
+          <DropdownMenuLabel className="flex flex-col gap-0.5 px-1.5 py-1.5">
+            <span className="text-sm font-medium text-foreground">{name}</span>
+            <span className="truncate text-xs text-muted-foreground">{email}</span>
+          </DropdownMenuLabel>
+        </DropdownMenuGroup>
         <DropdownMenuSeparator />
         <DropdownMenuItem disabled title="Segera hadir">
           <UserRound />

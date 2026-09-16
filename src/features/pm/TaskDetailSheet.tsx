@@ -95,7 +95,13 @@ export function TaskDetailSheet({ task, onOpenChange }: TaskDetailSheetProps) {
                 </div>
               )}
 
-              <Button variant="outline" size="sm" className="self-start" render={<Link to={`/pm/tasks/${task.id}/print`} />}>
+              <Button
+                variant="outline"
+                size="sm"
+                className="self-start"
+                nativeButton={false}
+                render={<Link to={`/pm/tasks/${task.id}/print`} />}
+              >
                 <Printer />
                 Cetak Checklist
               </Button>
