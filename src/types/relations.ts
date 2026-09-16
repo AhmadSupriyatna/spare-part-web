@@ -39,6 +39,8 @@ export interface PartInstallation {
   expected_interval_days: number | null
   expected_interval_hours: number | null
   percent_used: number | null
+  total_runtime_hours_used: number | null
+  remaining_hours: number | null
   has_scheduled_lifetime_task: boolean
 }
 

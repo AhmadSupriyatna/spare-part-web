@@ -111,10 +111,15 @@ export function InstalledPartsPanel({ equipmentId }: { equipmentId: number }) {
               ]
                 .filter(Boolean)
                 .join(' · ')
+              const hoursTitle =
+                installation.remaining_hours != null
+                  ? `Sisa ${installation.remaining_hours} jam dari ${installation.estimated_lifetime_hours} jam`
+                  : undefined
               const badge = (
                 <Badge
                   className="shrink-0 px-1.5 text-[10px]"
                   variant={installation.percent_used != null ? percentBadgeVariant(installation.percent_used) : 'outline'}
+                  title={hoursTitle}
                 >
                   {label}
                 </Badge>

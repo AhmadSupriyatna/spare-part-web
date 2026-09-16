@@ -80,6 +80,11 @@ export function PartLifetimeAlertsPage() {
                   <Badge variant={(installation.percent_used ?? 0) >= 100 ? 'destructive' : 'warning'}>
                     {100 - (installation.percent_used ?? 0)}% tersisa
                   </Badge>
+                  {installation.remaining_hours != null && (
+                    <p className="mt-0.5 text-xs text-muted-foreground">
+                      {installation.remaining_hours} jam dari {installation.estimated_lifetime_hours} jam
+                    </p>
+                  )}
                 </TableCell>
                 <TableCell className="text-right">
                   {installation.has_scheduled_lifetime_task ? (
