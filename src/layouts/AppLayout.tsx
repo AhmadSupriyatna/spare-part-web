@@ -60,7 +60,6 @@ const navSections: NavSection[] = [
     label: 'Inventaris',
     icon: Warehouse,
     items: [
-      { to: '/parts', label: 'Part', icon: Package },
       { to: '/stock', label: 'Stok', icon: Boxes },
       { to: '/alerts', label: 'Peringatan', icon: AlertTriangle },
       { to: '/suppliers', label: 'Supplier', icon: Truck },
@@ -73,6 +72,7 @@ const navSections: NavSection[] = [
     items: [
       { to: '/branches', label: 'Cabang', icon: Building2 },
       { to: '/lines', label: 'Line Equipment', icon: Factory },
+      { to: '/parts', label: 'Part', icon: Package },
     ],
   },
   {

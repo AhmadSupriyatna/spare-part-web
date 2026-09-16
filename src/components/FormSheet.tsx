@@ -72,7 +72,9 @@ export function FormSheet({
         <SheetContent
           className="gap-0 p-0"
           showOverlay={false}
-          initialFocus={() => formRef.current?.querySelector<HTMLElement>('input, textarea') ?? undefined}
+          initialFocus={() =>
+            formRef.current?.querySelector<HTMLElement>('input:not([type="file"]), textarea') ?? undefined
+          }
         >
           <div className="flex flex-col gap-1 border-b px-4 py-4 pr-10">
             <SheetTitle>{title}</SheetTitle>

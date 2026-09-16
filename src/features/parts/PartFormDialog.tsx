@@ -7,15 +7,7 @@ import { createPart, updatePart } from '@/features/parts/api'
 import { partSchema, type PartFormValues } from '@/features/parts/schema'
 import { fetchUnits } from '@/features/units/api'
 import type { Part } from '@/types/inventory'
-import { Button } from '@/components/ui/button'
-import {
-  Dialog,
-  DialogContent,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from '@/components/ui/dialog'
+import { FormSheet } from '@/components/FormSheet'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
@@ -42,7 +34,7 @@ export function PartFormDialog({ part, trigger }: PartFormDialogProps) {
     control,
     handleSubmit,
     reset,
-    formState: { errors },
+    formState: { errors, isDirty },
   } = useForm<PartFormValues>({
     resolver: zodResolver(partSchema),
     defaultValues: {
@@ -98,98 +90,85 @@ export function PartFormDialog({ part, trigger }: PartFormDialogProps) {
   })
 
   return (
-    <Dialog open={open} onOpenChange={setOpen}>
-      <DialogTrigger render={trigger as React.ReactElement} />
-      <DialogContent>
-        <DialogHeader>
-          <DialogTitle>{isEdit ? 'Ubah Part' : 'Tambah Part'}</DialogTitle>
-        </DialogHeader>
-        <form
-          className="flex max-h-[70vh] flex-col gap-4 overflow-y-auto"
-          onSubmit={handleSubmit((values) => mutation.mutate(values))}
-        >
-          <div className="flex flex-col items-center gap-2">
-            {imagePreview ? (
-              <img
-                src={imagePreview}
-                alt="Pratinjau"
-                className="h-32 w-32 rounded-md border object-cover"
-              />
-            ) : (
-              <div className="flex h-32 w-32 items-center justify-center rounded-md border border-dashed text-xs text-muted-foreground">
-                Belum ada foto
-              </div>
+    <FormSheet
+      trigger={trigger}
+      title={isEdit ? 'Ubah Part' : 'Tambah Part'}
+      open={open}
+      onOpenChange={setOpen}
+      isDirty={isDirty || imageFile !== null}
+      onSubmit={handleSubmit((values) => mutation.mutate(values))}
+      submitLabel="Simpan"
+      isSubmitting={mutation.isPending}
+    >
+      <div className="flex flex-col items-center gap-2">
+        {imagePreview ? (
+          <img src={imagePreview} alt="Pratinjau" className="h-32 w-32 rounded-md border object-cover" />
+        ) : (
+          <div className="flex h-32 w-32 items-center justify-center rounded-md border border-dashed text-xs text-muted-foreground">
+            Belum ada foto
+          </div>
+        )}
+        <Input type="file" accept="image/*" onChange={handleImageChange} className="max-w-xs" />
+      </div>
+      <div className="flex flex-col gap-2">
+        <Label htmlFor="item_master_no">Item Master</Label>
+        <Input id="item_master_no" {...register('item_master_no')} />
+        {errors.item_master_no && <p className="text-sm text-destructive">{errors.item_master_no.message}</p>}
+      </div>
+      <div className="flex flex-col gap-2">
+        <Label htmlFor="name">Nama</Label>
+        <Input id="name" {...register('name')} />
+        {errors.name && <p className="text-sm text-destructive">{errors.name.message}</p>}
+      </div>
+      <div className="grid grid-cols-2 gap-4">
+        <div className="flex flex-col gap-2">
+          <Label htmlFor="unit">Satuan</Label>
+          <Controller
+            control={control}
+            name="unit"
+            render={({ field }) => (
+              <Select value={field.value} onValueChange={field.onChange}>
+                <SelectTrigger id="unit">
+                  <SelectValue placeholder="Pilih satuan" />
+                </SelectTrigger>
+                <SelectContent>
+                  {units?.map((unit) => (
+                    <SelectItem key={unit.id} value={unit.name}>
+                      {unit.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             )}
-            <Input type="file" accept="image/*" onChange={handleImageChange} className="max-w-xs" />
-          </div>
-          <div className="flex flex-col gap-2">
-            <Label htmlFor="item_master_no">Item Master</Label>
-            <Input id="item_master_no" {...register('item_master_no')} />
-            {errors.item_master_no && (
-              <p className="text-sm text-destructive">{errors.item_master_no.message}</p>
-            )}
-          </div>
-          <div className="flex flex-col gap-2">
-            <Label htmlFor="name">Nama</Label>
-            <Input id="name" {...register('name')} />
-            {errors.name && <p className="text-sm text-destructive">{errors.name.message}</p>}
-          </div>
-          <div className="grid grid-cols-2 gap-4">
-            <div className="flex flex-col gap-2">
-              <Label htmlFor="unit">Satuan</Label>
-              <Controller
-                control={control}
-                name="unit"
-                render={({ field }) => (
-                  <Select value={field.value} onValueChange={field.onChange}>
-                    <SelectTrigger id="unit">
-                      <SelectValue placeholder="Pilih satuan" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {units?.map((unit) => (
-                        <SelectItem key={unit.id} value={unit.name}>
-                          {unit.name}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                )}
-              />
-              {errors.unit && <p className="text-sm text-destructive">{errors.unit.message}</p>}
-            </div>
-            <div className="flex flex-col gap-2">
-              <Label htmlFor="category">Kategori</Label>
-              <Input id="category" placeholder="Mekanikal" {...register('category')} />
-            </div>
-          </div>
-          <div className="flex flex-col gap-2">
-            <Label htmlFor="description">Deskripsi</Label>
-            <Input id="description" {...register('description')} />
-          </div>
-          <div className="flex flex-col gap-2">
-            <Label htmlFor="estimated_lifetime_hours">Perkiraan Umur Pakai (jam operasional)</Label>
-            <Input
-              id="estimated_lifetime_hours"
-              type="number"
-              min={1}
-              placeholder="Misal: 2000"
-              {...register('estimated_lifetime_hours')}
-            />
-            <p className="text-xs text-muted-foreground">
-              Dipakai untuk menghitung sisa umur pakai part saat terpasang di equipment. Kosongkan
-              kalau belum tahu perkiraannya.
-            </p>
-            {errors.estimated_lifetime_hours && (
-              <p className="text-sm text-destructive">{errors.estimated_lifetime_hours.message}</p>
-            )}
-          </div>
-          <DialogFooter>
-            <Button type="submit" disabled={mutation.isPending}>
-              {mutation.isPending ? 'Menyimpan...' : 'Simpan'}
-            </Button>
-          </DialogFooter>
-        </form>
-      </DialogContent>
-    </Dialog>
+          />
+          {errors.unit && <p className="text-sm text-destructive">{errors.unit.message}</p>}
+        </div>
+        <div className="flex flex-col gap-2">
+          <Label htmlFor="category">Kategori</Label>
+          <Input id="category" placeholder="Mekanikal" {...register('category')} />
+        </div>
+      </div>
+      <div className="flex flex-col gap-2">
+        <Label htmlFor="description">Deskripsi</Label>
+        <Input id="description" {...register('description')} />
+      </div>
+      <div className="flex flex-col gap-2">
+        <Label htmlFor="estimated_lifetime_hours">Perkiraan Umur Pakai (jam operasional)</Label>
+        <Input
+          id="estimated_lifetime_hours"
+          type="number"
+          min={1}
+          placeholder="Misal: 2000"
+          {...register('estimated_lifetime_hours')}
+        />
+        <p className="text-xs text-muted-foreground">
+          Dipakai untuk menghitung sisa umur pakai part saat terpasang di equipment. Kosongkan kalau belum
+          tahu perkiraannya.
+        </p>
+        {errors.estimated_lifetime_hours && (
+          <p className="text-sm text-destructive">{errors.estimated_lifetime_hours.message}</p>
+        )}
+      </div>
+    </FormSheet>
   )
 }
