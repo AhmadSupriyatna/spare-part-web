@@ -17,12 +17,11 @@ import { PartStocksPage } from '@/features/part-stocks/PartStocksPage'
 import { PartRepairsPage } from '@/features/part-repairs/PartRepairsPage'
 import { PartUnitScanPage } from '@/features/part-unit-actions/PartUnitScanPage'
 import { PartUnitDetailPage } from '@/features/part-units/PartUnitDetailPage'
-import { PmCalendarPage } from '@/features/pm/PmCalendarPage'
+import { MaintenancePage } from '@/features/pm/MaintenancePage'
 import { PrintWoChecklistPage } from '@/features/pm/PrintWoChecklistPage'
 import { CompanySettingsPage } from '@/features/settings/CompanySettingsPage'
 import { SupplierDetailPage } from '@/features/suppliers/SupplierDetailPage'
 import { SuppliersPage } from '@/features/suppliers/SuppliersPage'
-import { TaskLibrariesPage } from '@/features/task-libraries/TaskLibrariesPage'
 import { MyTasksPage } from '@/features/tasks/MyTasksPage'
 import { UnitsPage } from '@/features/units/UnitsPage'
 import { AppLayout } from '@/layouts/AppLayout'
@@ -60,10 +59,9 @@ function App() {
             <Route path="breakdown/print-qr" element={<PrintQrCodesPage />} />
             <Route path="settings/company" element={<CompanySettingsPage />} />
             <Route path="settings/units" element={<UnitsPage />} />
-            <Route path="task-libraries" element={<TaskLibrariesPage />} />
             <Route path="part-repairs" element={<PartRepairsPage />} />
             <Route path="part-units/:id" element={<PartUnitDetailPage />} />
-            <Route path="pm/calendar" element={<PmCalendarPage />} />
+            <Route path="pm/calendar" element={<MaintenancePage />} />
             <Route path="pm/tasks/:id/print" element={<PrintWoChecklistPage />} />
           </Route>
         </Route>

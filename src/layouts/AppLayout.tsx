@@ -4,13 +4,11 @@ import {
   Bell,
   Boxes,
   Building2,
-  CalendarClock,
   ClipboardList,
   Factory,
   Hammer,
   LayoutDashboard,
   MapPin,
-  NotebookPen,
   Package,
   QrCode,
   Ruler,
@@ -78,12 +76,7 @@ const navSections: NavSection[] = [
     items: [{ to: '/my-tasks', label: 'Tugas Saya', icon: ClipboardList }],
   },
   {
-    label: 'Perawatan (PM & WO)',
-    icon: Wrench,
-    items: [
-      { to: '/task-libraries', label: 'Task Library', icon: NotebookPen },
-      { to: '/pm/calendar', label: 'PM Schedule', icon: CalendarClock },
-    ],
+    items: [{ to: '/pm/calendar', label: 'Maintenance', icon: Wrench }],
   },
   {
     label: 'Breakdown',

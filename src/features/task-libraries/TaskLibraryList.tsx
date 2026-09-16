@@ -32,7 +32,7 @@ function intervalLabel(scheduleType: string | null, intervalDays: number | null,
  * The full Task Library (PM recipe) management block for one equipment —
  * list of recipes plus create/edit (via one unified drawer that also owns
  * the parts checklist) and scheduling. Used by the Line/Sub System browser
- * on TaskLibrariesPage.
+ * in TaskLibraryBrowser.tsx (the "Library" view on MaintenancePage).
  */
 export function TaskLibraryList({ equipmentId, title = 'Task Library (PM)' }: { equipmentId: number; title?: string }) {
   const canManage = useCanManageEngineering()
