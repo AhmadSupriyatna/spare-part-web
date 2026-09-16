@@ -39,6 +39,7 @@ export interface PartInstallation {
   expected_interval_days: number | null
   expected_interval_hours: number | null
   percent_used: number | null
+  has_scheduled_lifetime_task: boolean
 }
 
 export type PartUnitStatus = 'in_service' | 'pending_repair' | 'in_repair' | 'available' | 'scrapped'

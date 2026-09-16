@@ -31,8 +31,8 @@ interface TaskDetailSheetProps {
  */
 export function TaskDetailSheet({ task, onOpenChange }: TaskDetailSheetProps) {
   return (
-    <Sheet open={!!task} onOpenChange={onOpenChange}>
-      <SheetContent className="gap-0 p-0">
+    <Sheet open={!!task} onOpenChange={onOpenChange} modal={false}>
+      <SheetContent className="gap-0 p-0" showOverlay={false}>
         {task && (
           <>
             <div className="flex flex-col gap-1 border-b px-4 py-4 pr-10">

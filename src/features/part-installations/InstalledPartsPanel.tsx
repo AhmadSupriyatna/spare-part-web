@@ -1,5 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { HeartPulse, Pencil, Trash2 } from 'lucide-react'
+import { CalendarCheck, HeartPulse, Pencil, Trash2 } from 'lucide-react'
 import { useMemo } from 'react'
 import { Link } from 'react-router'
 import { toast } from 'sonner'
@@ -127,6 +127,11 @@ export function InstalledPartsPanel({ equipmentId }: { equipmentId: number }) {
                     </Link>
                   ) : (
                     badge
+                  )}
+                  {installation.has_scheduled_lifetime_task && (
+                    <span title="Sudah dijadwalkan ke PM Schedule">
+                      <CalendarCheck className="size-3 shrink-0 text-success" aria-label="Sudah dijadwalkan ke PM Schedule" />
+                    </span>
                   )}
                   {canManage && (
                     <>

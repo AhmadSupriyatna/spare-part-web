@@ -62,6 +62,20 @@ export function PmCalendarPage() {
     enabled: !!activeBranchId,
   })
 
+  const libraryIntervalById = useMemo(() => {
+    const map = new Map<number, number | null>()
+    libraries?.forEach((library) => map.set(library.id, library.interval_days))
+    return map
+  }, [libraries])
+
+  function scheduleTag(task: Task): 'W' | 'M' | null {
+    if (task.task_library_id == null) return null
+    const days = libraryIntervalById.get(task.task_library_id)
+    if (days === 7) return 'W'
+    if (days === 30) return 'M'
+    return null
+  }
+
   const { data: rescheduleHistory } = useQuery({
     queryKey: ['task-reschedules', activeBranchId],
     queryFn: () => fetchTaskRescheduleHistory(activeBranchId!),
@@ -222,7 +236,7 @@ export function PmCalendarPage() {
             <div
               key={day}
               className={cn(
-                'bg-muted px-2 py-1.5 text-center text-xs font-medium text-muted-foreground',
+                'bg-muted px-1.5 py-1 text-center text-[11px] font-medium text-muted-foreground',
                 i === 0 && 'text-destructive',
               )}
             >
@@ -242,7 +256,7 @@ export function PmCalendarPage() {
                 key={key}
                 title={holidayName}
                 className={cn(
-                  'flex min-h-24 flex-col gap-1 bg-background p-1.5 transition-colors',
+                  'flex min-h-16 flex-col gap-0.5 bg-background p-1 transition-colors',
                   !isCurrentMonth && 'bg-muted/30',
                   isSpecialDay && 'bg-destructive/5',
                   dragOverKey === key && 'bg-primary/10 outline-2 -outline-offset-2 outline-primary/50 outline-dashed',
@@ -261,7 +275,7 @@ export function PmCalendarPage() {
                 <div className="flex items-center justify-between">
                   <span
                     className={cn(
-                      'flex size-5 items-center justify-center rounded-full text-xs tabular-nums',
+                      'flex size-4 items-center justify-center rounded-full text-[11px] tabular-nums',
                       key === today && 'bg-primary text-primary-foreground',
                       !isCurrentMonth && 'text-muted-foreground/60',
                       isSpecialDay && isCurrentMonth && key !== today && 'text-destructive',
@@ -278,37 +292,42 @@ export function PmCalendarPage() {
                         <Button
                           variant="ghost"
                           size="icon-xs"
+                          className="size-4"
                           aria-label={`Jadwalkan di tanggal ${date.getDate()}`}
                           title="Jadwalkan"
                         >
-                          <Plus />
+                          <Plus className="size-3" />
                         </Button>
                       }
                     />
                   )}
                 </div>
-                <div className="flex flex-col gap-1">
-                  {dayTasks.slice(0, 3).map((task) => (
-                    <button
-                      key={task.id}
-                      type="button"
-                      draggable
-                      onDragStart={(e) => {
-                        e.dataTransfer.setData('text/plain', String(task.id))
-                        e.dataTransfer.effectAllowed = 'move'
-                        setDraggingTask(task)
-                      }}
-                      onDragEnd={() => setDraggingTask(null)}
-                      onClick={() => setDetailTask(task)}
-                      className="block w-full cursor-grab truncate rounded px-1 py-0.5 text-left text-[11px] leading-tight active:cursor-grabbing"
-                    >
-                      <Badge variant={taskChipVariant(task)} className="max-w-full">
-                        <span className="truncate">{task.title}</span>
-                      </Badge>
-                    </button>
-                  ))}
-                  {dayTasks.length > 3 && (
-                    <span className="text-[11px] text-muted-foreground">+{dayTasks.length - 3} lagi</span>
+                <div className="flex flex-col gap-0.5">
+                  {dayTasks.slice(0, 2).map((task) => {
+                    const tag = scheduleTag(task)
+                    return (
+                      <button
+                        key={task.id}
+                        type="button"
+                        draggable
+                        onDragStart={(e) => {
+                          e.dataTransfer.setData('text/plain', String(task.id))
+                          e.dataTransfer.effectAllowed = 'move'
+                          setDraggingTask(task)
+                        }}
+                        onDragEnd={() => setDraggingTask(null)}
+                        onClick={() => setDetailTask(task)}
+                        className="block w-full cursor-grab truncate rounded text-left text-[10px] leading-tight active:cursor-grabbing"
+                      >
+                        <Badge variant={taskChipVariant(task)} className="max-w-full px-1 py-0">
+                          {tag && <span className="font-bold">{tag}</span>}
+                          <span className="truncate">{task.title}</span>
+                        </Badge>
+                      </button>
+                    )
+                  })}
+                  {dayTasks.length > 2 && (
+                    <span className="text-[10px] text-muted-foreground">+{dayTasks.length - 2} lagi</span>
                   )}
                 </div>
               </div>

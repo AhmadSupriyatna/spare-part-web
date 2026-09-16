@@ -41,7 +41,7 @@ export function PartLifetimeAlertsPage() {
         <EmptyState
           icon={HeartPulse}
           title="Tidak ada part yang hampir habis umurnya"
-          description="Semua part terpasang di cabang ini masih di bawah 90% dari umur pakai yang direncanakan Work Order-nya."
+          description="Semua part terpasang di cabang ini masih di atas 20% sisa umur pakainya."
         />
       ) : (
         <Table>
@@ -82,14 +82,18 @@ export function PartLifetimeAlertsPage() {
                   </Badge>
                 </TableCell>
                 <TableCell className="text-right">
-                  <ScheduleLifetimeReplacementDialog
-                    installation={installation}
-                    invalidateKeys={[
-                      ['pm-tasks', activeBranchId],
-                      ['part-lifetime-alerts', activeBranchId],
-                    ]}
-                    trigger={<Button size="sm">Jadwalkan</Button>}
-                  />
+                  {installation.has_scheduled_lifetime_task ? (
+                    <Badge variant="success">Sudah Terjadwal</Badge>
+                  ) : (
+                    <ScheduleLifetimeReplacementDialog
+                      installation={installation}
+                      invalidateKeys={[
+                        ['pm-tasks', activeBranchId],
+                        ['part-lifetime-alerts', activeBranchId],
+                      ]}
+                      trigger={<Button size="sm">Jadwalkan</Button>}
+                    />
+                  )}
                 </TableCell>
               </TableRow>
             ))}
