@@ -67,10 +67,8 @@ export function TaskRow({ task, invalidateKey }: TaskRowProps) {
             {task.quantity_used ? ` × ${task.quantity_used}` : ''}
           </div>
         )}
-        {task.task_library_id && (
-          <div className="text-xs text-muted-foreground">
-            {task.part_checks?.length ?? 0} part di checklist PM
-          </div>
+        {task.part_checks && task.part_checks.length > 0 && (
+          <div className="text-xs text-muted-foreground">{task.part_checks.length} part di checklist PM</div>
         )}
       </TableCell>
       <TableCell>
@@ -112,12 +110,14 @@ export function TaskRow({ task, invalidateKey }: TaskRowProps) {
             Mulai
           </Button>
         )}
-        {isMine && task.status === 'in_progress' && task.task_library_id && (
+        {isMine && task.status === 'in_progress' && task.part_checks && task.part_checks.length > 0 && (
           <CompleteChecklistDialog task={task} invalidateKey={invalidateKey} />
         )}
-        {isMine && task.status === 'in_progress' && !task.task_library_id && (
-          <CompleteTaskDialog task={task} invalidateKey={invalidateKey} />
-        )}
+        {isMine &&
+          task.status === 'in_progress' &&
+          (!task.part_checks || task.part_checks.length === 0) && (
+            <CompleteTaskDialog task={task} invalidateKey={invalidateKey} />
+          )}
         {isMine && (task.status === 'pending' || task.status === 'in_progress') && (
           <Button size="sm" variant="outline" onClick={() => cancelMutation.mutate()}>
             Batal

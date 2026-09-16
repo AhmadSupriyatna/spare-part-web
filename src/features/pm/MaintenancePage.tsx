@@ -13,6 +13,7 @@ import { TaskLibraryBrowser } from '@/features/task-libraries/TaskLibraryBrowser
 import { fetchTaskLibrariesForBranch } from '@/features/task-libraries/api'
 import { fetchPmTasksForBranch, rescheduleTask } from '@/features/tasks/api'
 import { useBranchStore } from '@/stores/branch-store'
+import { toDateKey } from '@/lib/dates'
 import { cn } from '@/lib/utils'
 import type { Task } from '@/types/tasks'
 import { Badge } from '@/components/ui/badge'
@@ -23,10 +24,6 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 
 const WEEKDAYS = ['Sen', 'Sel', 'Rab', 'Kam', 'Jum', 'Sab', 'Min']
 const VISIBLE_TASKS_PER_DAY = 3
-
-function toDateKey(date: Date): string {
-  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`
-}
 
 function diffInDays(a: string, b: string): number {
   const [ay, am, ad] = a.split('-').map(Number)
