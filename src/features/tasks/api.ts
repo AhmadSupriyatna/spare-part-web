@@ -79,6 +79,14 @@ export async function cancelTask(id: number, notes?: string): Promise<Task> {
   return data.data
 }
 
+export async function rescheduleTask(id: number, dueDate: string, reason?: string): Promise<Task> {
+  const { data } = await apiClient.put<{ data: Task }>(`/tasks/${id}/reschedule`, {
+    due_date: dueDate,
+    reason: reason || undefined,
+  })
+  return data.data
+}
+
 export async function deleteTask(id: number): Promise<void> {
   await apiClient.delete(`/tasks/${id}`)
 }

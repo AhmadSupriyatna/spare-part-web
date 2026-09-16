@@ -39,3 +39,15 @@ export interface TaskPartCheck {
   quantity_used: number | null
   reason: string | null
 }
+
+export interface TaskReschedule {
+  id: number
+  task_id: number
+  task_title?: string | null
+  equipment_name?: string | null
+  previous_due_date: string | null
+  new_due_date: string
+  reason: string | null
+  rescheduled_by_name?: string | null
+  created_at: string
+}

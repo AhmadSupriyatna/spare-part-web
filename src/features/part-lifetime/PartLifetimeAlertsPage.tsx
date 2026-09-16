@@ -28,7 +28,7 @@ export function PartLifetimeAlertsPage() {
     <div className="flex flex-col gap-4">
       <PageHeader
         title="Part Lifetime"
-        description="Part terpasang dengan sisa umur pakai di bawah 10%, dihitung dari jam operasi line dibanding Work Order-nya. Jadwalkan penggantiannya ke Kalender PM dari sini."
+        description="Part terpasang dengan sisa umur pakai 20% atau kurang, dihitung dari akumulasi jam operasi dibanding perkiraan umur pakai part. WO PM biasanya sudah otomatis terjadwal di PM Schedule — jadwalkan manual dari sini hanya kalau belum."
       />
 
       {isLoading ? (

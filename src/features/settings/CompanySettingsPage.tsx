@@ -15,6 +15,10 @@ import { Skeleton } from '@/components/ui/skeleton'
 
 const settingsSchema = z.object({
   name: z.string().min(1, 'Nama perusahaan wajib diisi').max(255),
+  avg_weekly_operating_hours: z
+    .string()
+    .min(1, 'Wajib diisi')
+    .refine((val) => Number.isInteger(Number(val)) && Number(val) >= 1, 'Harus angka bulat, minimal 1'),
 })
 
 type SettingsFormValues = z.infer<typeof settingsSchema>
@@ -37,12 +41,12 @@ export function CompanySettingsPage() {
     formState: { errors },
   } = useForm<SettingsFormValues>({
     resolver: zodResolver(settingsSchema),
-    defaultValues: { name: '' },
+    defaultValues: { name: '', avg_weekly_operating_hours: '85' },
   })
 
   useEffect(() => {
     if (settings) {
-      reset({ name: settings.name })
+      reset({ name: settings.name, avg_weekly_operating_hours: String(settings.avg_weekly_operating_hours) })
       setLogoPreview(settings.logo_url)
     }
   }, [settings, reset])
@@ -54,7 +58,12 @@ export function CompanySettingsPage() {
   }
 
   const mutation = useMutation({
-    mutationFn: (values: SettingsFormValues) => updateCompanySetting({ ...values, logo: logoFile }),
+    mutationFn: (values: SettingsFormValues) =>
+      updateCompanySetting({
+        name: values.name,
+        avg_weekly_operating_hours: Number(values.avg_weekly_operating_hours),
+        logo: logoFile,
+      }),
     onSuccess: (data) => {
       queryClient.setQueryData(['settings', 'company'], data)
       setLogoFile(null)
@@ -109,6 +118,25 @@ export function CompanySettingsPage() {
               <Label htmlFor="name">Nama Perusahaan</Label>
               <Input id="name" disabled={!canManage} {...register('name')} />
               {errors.name && <p className="text-sm text-destructive">{errors.name.message}</p>}
+            </div>
+
+            <div className="flex flex-col gap-2">
+              <Label htmlFor="avg_weekly_operating_hours">Rata-rata Jam Operasional per Minggu</Label>
+              <Input
+                id="avg_weekly_operating_hours"
+                type="number"
+                min={1}
+                max={168}
+                disabled={!canManage}
+                {...register('avg_weekly_operating_hours')}
+              />
+              <p className="text-xs text-muted-foreground">
+                Dipakai untuk menghitung otomatis tanggal WO PM dari Part Lifetime — sisa jam pakai part
+                dibagi angka ini menentukan berapa minggu lagi jadwalnya jatuh.
+              </p>
+              {errors.avg_weekly_operating_hours && (
+                <p className="text-sm text-destructive">{errors.avg_weekly_operating_hours.message}</p>
+              )}
             </div>
 
             {canManage && (

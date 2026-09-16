@@ -87,7 +87,7 @@ const navSections: NavSection[] = [
       { to: '/task-libraries', label: 'Task Library', icon: NotebookPen },
       { to: '/part-lifetime', label: 'Part Lifetime', icon: HeartPulse },
       { to: '/part-repairs', label: 'Perbaikan Part', icon: Hammer },
-      { to: '/pm/calendar', label: 'Kalender PM', icon: CalendarClock },
+      { to: '/pm/calendar', label: 'PM Schedule', icon: CalendarClock },
       { to: '/pm/ledger', label: 'Ledger WO', icon: NotebookText },
     ],
   },
