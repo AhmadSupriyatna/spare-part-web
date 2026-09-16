@@ -14,12 +14,10 @@ import { PartDetailPage } from '@/features/parts/PartDetailPage'
 import { PartsPage } from '@/features/parts/PartsPage'
 import { PartStockDetailPage } from '@/features/part-stocks/PartStockDetailPage'
 import { PartStocksPage } from '@/features/part-stocks/PartStocksPage'
-import { PartLifetimeAlertsPage } from '@/features/part-lifetime/PartLifetimeAlertsPage'
 import { PartRepairsPage } from '@/features/part-repairs/PartRepairsPage'
 import { PartUnitScanPage } from '@/features/part-unit-actions/PartUnitScanPage'
 import { PartUnitDetailPage } from '@/features/part-units/PartUnitDetailPage'
 import { PmCalendarPage } from '@/features/pm/PmCalendarPage'
-import { PmLedgerPage } from '@/features/pm/PmLedgerPage'
 import { PrintWoChecklistPage } from '@/features/pm/PrintWoChecklistPage'
 import { CompanySettingsPage } from '@/features/settings/CompanySettingsPage'
 import { SupplierDetailPage } from '@/features/suppliers/SupplierDetailPage'
@@ -27,7 +25,6 @@ import { SuppliersPage } from '@/features/suppliers/SuppliersPage'
 import { TaskLibrariesPage } from '@/features/task-libraries/TaskLibrariesPage'
 import { MyTasksPage } from '@/features/tasks/MyTasksPage'
 import { UnitsPage } from '@/features/units/UnitsPage'
-import { WorkOrdersPage } from '@/features/work-orders/WorkOrdersPage'
 import { AppLayout } from '@/layouts/AppLayout'
 import { ProtectedRoute } from '@/routes/ProtectedRoute'
 
@@ -63,13 +60,10 @@ function App() {
             <Route path="breakdown/print-qr" element={<PrintQrCodesPage />} />
             <Route path="settings/company" element={<CompanySettingsPage />} />
             <Route path="settings/units" element={<UnitsPage />} />
-            <Route path="work-orders" element={<WorkOrdersPage />} />
             <Route path="task-libraries" element={<TaskLibrariesPage />} />
-            <Route path="part-lifetime" element={<PartLifetimeAlertsPage />} />
             <Route path="part-repairs" element={<PartRepairsPage />} />
             <Route path="part-units/:id" element={<PartUnitDetailPage />} />
             <Route path="pm/calendar" element={<PmCalendarPage />} />
-            <Route path="pm/ledger" element={<PmLedgerPage />} />
             <Route path="pm/tasks/:id/print" element={<PrintWoChecklistPage />} />
           </Route>
         </Route>

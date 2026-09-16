@@ -1,10 +1,13 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { ChevronLeft, ChevronRight, Plus } from 'lucide-react'
+import { CalendarDays, ChevronLeft, ChevronRight, List, Plus } from 'lucide-react'
 import { useMemo, useState } from 'react'
 import { toast } from 'sonner'
 import { fetchNationalHolidays, fetchTaskRescheduleHistory } from '@/features/pm/api'
+import { PartLifetimePanel } from '@/features/pm/PartLifetimePanel'
 import { RescheduleReasonDialog } from '@/features/pm/RescheduleReasonDialog'
+import { taskChipVariant } from '@/features/pm/taskColors'
 import { TaskDetailSheet } from '@/features/pm/TaskDetailSheet'
+import { WoListView } from '@/features/pm/WoListView'
 import { ScheduleTaskLibraryDialog } from '@/features/task-libraries/ScheduleTaskLibraryDialog'
 import { fetchTaskLibrariesForBranch } from '@/features/task-libraries/api'
 import { fetchPmTasksForBranch, rescheduleTask } from '@/features/tasks/api'
@@ -30,15 +33,10 @@ function diffInDays(a: string, b: string): number {
   return Math.round((Date.UTC(by, bm - 1, bd) - Date.UTC(ay, am - 1, ad)) / msPerDay)
 }
 
-function taskChipVariant(task: Task): 'success' | 'default' | 'warning' | 'destructive' {
-  if (task.status === 'completed') return 'success'
-  if (task.status === 'cancelled') return 'destructive'
-  return task.task_library_id != null ? 'default' : 'warning'
-}
-
 export function PmCalendarPage() {
   const activeBranchId = useBranchStore((state) => state.activeBranchId)
   const queryClient = useQueryClient()
+  const [view, setView] = useState<'calendar' | 'list'>('calendar')
   const [monthCursor, setMonthCursor] = useState(() => {
     const now = new Date()
     return new Date(now.getFullYear(), now.getMonth(), 1)
@@ -116,15 +114,6 @@ export function PmCalendarPage() {
     return map
   }, [tasks])
 
-  const upcomingTasks = useMemo(() => {
-    const todayKey = toDateKey(new Date())
-    return (tasks ?? [])
-      .filter((task) => task.due_date && task.status !== 'completed' && task.status !== 'cancelled')
-      .filter((task) => toDateKey(new Date(task.due_date!)) >= todayKey)
-      .sort((a, b) => (a.due_date! < b.due_date! ? -1 : 1))
-      .slice(0, 10)
-  }, [tasks])
-
   const cells = useMemo(() => {
     const firstOfMonth = monthCursor
     const startOffset = firstOfMonth.getDay()
@@ -166,7 +155,7 @@ export function PmCalendarPage() {
     <div className="flex flex-col gap-4">
       <PageHeader
         title="PM Schedule"
-        description="WO PM Schedule otomatis muncul dari Task Library (biru) dan Part Lifetime yang tersisa 20% (kuning). Seret kartu untuk menggeser tanggal — pergeseran lebih dari 7 hari perlu alasan."
+        description="WO otomatis muncul dari Task Library (biru), Part Lifetime yang tersisa 20% (kuning), dan breakdown (merah). Seret kartu untuk menggeser tanggal — pergeseran lebih dari 7 hari perlu alasan."
         action={
           libraries &&
           libraries.length > 0 && (
@@ -184,233 +173,206 @@ export function PmCalendarPage() {
         }
       />
 
-      {libraries?.length === 0 && (
-        <p className="text-sm text-muted-foreground">
-          Belum ada Task Library di cabang ini — tambahkan dulu lewat halaman Task Library sebelum bisa
-          dijadwalkan ke kalender.
-        </p>
-      )}
-
       <div className="flex flex-wrap items-center justify-between gap-2">
-        <p className="text-lg font-medium">
-          {monthCursor.toLocaleDateString('id-ID', { month: 'long', year: 'numeric' })}
-        </p>
-        <div className="flex items-center gap-3">
-          <div className="flex items-center gap-3 text-xs text-muted-foreground">
-            <span className="flex items-center gap-1">
-              <span className="size-2.5 rounded-full bg-primary" /> Task Library
-            </span>
-            <span className="flex items-center gap-1">
-              <span className="size-2.5 rounded-full bg-warning" /> Part Lifetime
-            </span>
-            <span className="flex items-center gap-1">
-              <span className="size-2.5 rounded-full bg-success" /> Selesai
-            </span>
-            <span className="flex items-center gap-1">
-              <span className="size-2.5 rounded-full bg-destructive" /> Minggu/Libur
-            </span>
-          </div>
-          <div className="flex gap-1">
-            <Button variant="outline" size="icon-sm" aria-label="Bulan sebelumnya" onClick={() => shiftMonth(-1)}>
-              <ChevronLeft />
-            </Button>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => setMonthCursor(new Date(new Date().getFullYear(), new Date().getMonth(), 1))}
-            >
-              Hari Ini
-            </Button>
-            <Button variant="outline" size="icon-sm" aria-label="Bulan berikutnya" onClick={() => shiftMonth(1)}>
-              <ChevronRight />
-            </Button>
-          </div>
+        <div className="flex gap-1 rounded-md border p-1">
+          <Button
+            variant={view === 'calendar' ? 'default' : 'ghost'}
+            size="icon-sm"
+            aria-label="Tampilan Kalender"
+            title="Kalender"
+            onClick={() => setView('calendar')}
+          >
+            <CalendarDays />
+          </Button>
+          <Button
+            variant={view === 'list' ? 'default' : 'ghost'}
+            size="icon-sm"
+            aria-label="Tampilan List WO"
+            title="List WO"
+            onClick={() => setView('list')}
+          >
+            <List />
+          </Button>
         </div>
+
+        {view === 'calendar' && (
+          <div className="flex items-center gap-3">
+            <div className="flex flex-wrap items-center gap-3 text-xs text-muted-foreground">
+              <span className="flex items-center gap-1">
+                <span className="size-2.5 rounded-full bg-primary" /> Task Library
+              </span>
+              <span className="flex items-center gap-1">
+                <span className="size-2.5 rounded-full bg-warning" /> Part Lifetime
+              </span>
+              <span className="flex items-center gap-1">
+                <span className="size-2.5 rounded-full bg-destructive" /> Breakdown
+              </span>
+              <span className="flex items-center gap-1">
+                <span className="size-2.5 rounded-full bg-success" /> Selesai
+              </span>
+            </div>
+            <div className="flex gap-1">
+              <Button variant="outline" size="icon-sm" aria-label="Bulan sebelumnya" onClick={() => shiftMonth(-1)}>
+                <ChevronLeft />
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setMonthCursor(new Date(new Date().getFullYear(), new Date().getMonth(), 1))}
+              >
+                Hari Ini
+              </Button>
+              <Button variant="outline" size="icon-sm" aria-label="Bulan berikutnya" onClick={() => shiftMonth(1)}>
+                <ChevronRight />
+              </Button>
+            </div>
+          </div>
+        )}
       </div>
 
-      {tasksLoading ? (
-        <Skeleton className="h-96 w-full" />
+      {view === 'list' ? (
+        <WoListView tasks={tasks} isLoading={tasksLoading} onSelect={setDetailTask} />
       ) : (
-        <div className="grid grid-cols-7 gap-px overflow-hidden rounded-md border bg-border">
-          {WEEKDAYS.map((day, i) => (
-            <div
-              key={day}
-              className={cn(
-                'bg-muted px-1.5 py-1 text-center text-[11px] font-medium text-muted-foreground',
-                i === 0 && 'text-destructive',
-              )}
-            >
-              {day}
-            </div>
-          ))}
-          {cells.map((date) => {
-            const key = toDateKey(date)
-            const isCurrentMonth = date.getMonth() === monthCursor.getMonth()
-            const dayTasks = tasksByDate.get(key) ?? []
-            const isSunday = date.getDay() === 0
-            const holidayName = holidays?.[key]
-            const isSpecialDay = isSunday || !!holidayName
+        <div className="grid grid-cols-1 gap-4 lg:grid-cols-[65fr_35fr]">
+          <div className="flex flex-col gap-4">
+            <p className="text-lg font-medium">
+              {monthCursor.toLocaleDateString('id-ID', { month: 'long', year: 'numeric' })}
+            </p>
 
-            return (
-              <div
-                key={key}
-                title={holidayName}
-                className={cn(
-                  'flex min-h-16 flex-col gap-0.5 bg-background p-1 transition-colors',
-                  !isCurrentMonth && 'bg-muted/30',
-                  isSpecialDay && 'bg-destructive/5',
-                  dragOverKey === key && 'bg-primary/10 outline-2 -outline-offset-2 outline-primary/50 outline-dashed',
-                )}
-                onDragOver={(e) => {
-                  e.preventDefault()
-                  e.dataTransfer.dropEffect = 'move'
-                  setDragOverKey(key)
-                }}
-                onDragLeave={() => setDragOverKey((prev) => (prev === key ? null : prev))}
-                onDrop={(e) => {
-                  e.preventDefault()
-                  handleDrop(key)
-                }}
-              >
-                <div className="flex items-center justify-between">
-                  <span
+            {tasksLoading ? (
+              <Skeleton className="h-96 w-full" />
+            ) : (
+              <div className="grid grid-cols-7 gap-px overflow-hidden rounded-md border bg-border">
+                {WEEKDAYS.map((day, i) => (
+                  <div
+                    key={day}
                     className={cn(
-                      'flex size-4 items-center justify-center rounded-full text-[11px] tabular-nums',
-                      key === today && 'bg-primary text-primary-foreground',
-                      !isCurrentMonth && 'text-muted-foreground/60',
-                      isSpecialDay && isCurrentMonth && key !== today && 'text-destructive',
+                      'bg-muted px-1.5 py-1 text-center text-[11px] font-medium text-muted-foreground',
+                      i === 0 && 'text-destructive',
                     )}
                   >
-                    {date.getDate()}
-                  </span>
-                  {libraries && libraries.length > 0 && (
-                    <ScheduleTaskLibraryDialog
-                      libraries={libraries}
-                      defaultDate={key}
-                      invalidateKeys={[['pm-tasks', activeBranchId]]}
-                      trigger={
-                        <Button
-                          variant="ghost"
-                          size="icon-xs"
-                          className="size-4"
-                          aria-label={`Jadwalkan di tanggal ${date.getDate()}`}
-                          title="Jadwalkan"
-                        >
-                          <Plus className="size-3" />
-                        </Button>
-                      }
-                    />
-                  )}
-                </div>
-                <div className="flex flex-col gap-0.5">
-                  {dayTasks.slice(0, 2).map((task) => {
-                    const tag = scheduleTag(task)
-                    return (
-                      <button
-                        key={task.id}
-                        type="button"
-                        draggable
-                        onDragStart={(e) => {
-                          e.dataTransfer.setData('text/plain', String(task.id))
-                          e.dataTransfer.effectAllowed = 'move'
-                          setDraggingTask(task)
-                        }}
-                        onDragEnd={() => setDraggingTask(null)}
-                        onClick={() => setDetailTask(task)}
-                        className="block w-full cursor-grab truncate rounded text-left text-[10px] leading-tight active:cursor-grabbing"
+                    {day}
+                  </div>
+                ))}
+                {cells.map((date) => {
+                  const key = toDateKey(date)
+                  const isCurrentMonth = date.getMonth() === monthCursor.getMonth()
+                  const dayTasks = tasksByDate.get(key) ?? []
+                  const isSunday = date.getDay() === 0
+                  const holidayName = holidays?.[key]
+                  const isSpecialDay = isSunday || !!holidayName
+
+                  return (
+                    <div
+                      key={key}
+                      title={holidayName}
+                      className={cn(
+                        'flex min-h-16 flex-col gap-0.5 bg-background p-1 transition-colors',
+                        !isCurrentMonth && 'bg-muted/30',
+                        isSpecialDay && 'bg-destructive/5',
+                        dragOverKey === key &&
+                          'bg-primary/10 outline-2 -outline-offset-2 outline-primary/50 outline-dashed',
+                      )}
+                      onDragOver={(e) => {
+                        e.preventDefault()
+                        e.dataTransfer.dropEffect = 'move'
+                        setDragOverKey(key)
+                      }}
+                      onDragLeave={() => setDragOverKey((prev) => (prev === key ? null : prev))}
+                      onDrop={(e) => {
+                        e.preventDefault()
+                        handleDrop(key)
+                      }}
+                    >
+                      <span
+                        className={cn(
+                          'flex size-4 items-center justify-center rounded-full text-[11px] tabular-nums',
+                          key === today && 'bg-primary text-primary-foreground',
+                          !isCurrentMonth && 'text-muted-foreground/60',
+                          isSpecialDay && isCurrentMonth && key !== today && 'text-destructive',
+                        )}
                       >
-                        <Badge variant={taskChipVariant(task)} className="max-w-full px-1 py-0">
-                          {tag && <span className="font-bold">{tag}</span>}
-                          <span className="truncate">{task.title}</span>
-                        </Badge>
-                      </button>
-                    )
-                  })}
-                  {dayTasks.length > 2 && (
-                    <span className="text-[10px] text-muted-foreground">+{dayTasks.length - 2} lagi</span>
-                  )}
-                </div>
+                        {date.getDate()}
+                      </span>
+                      <div className="flex flex-col gap-0.5">
+                        {dayTasks.slice(0, 2).map((task) => {
+                          const tag = scheduleTag(task)
+                          return (
+                            <button
+                              key={task.id}
+                              type="button"
+                              draggable
+                              onDragStart={(e) => {
+                                e.dataTransfer.setData('text/plain', String(task.id))
+                                e.dataTransfer.effectAllowed = 'move'
+                                setDraggingTask(task)
+                              }}
+                              onDragEnd={() => setDraggingTask(null)}
+                              onClick={() => setDetailTask(task)}
+                              className="block w-full cursor-grab truncate rounded text-left text-[10px] leading-tight active:cursor-grabbing"
+                            >
+                              <Badge variant={taskChipVariant(task)} className="max-w-full px-1 py-0">
+                                {tag && <span className="font-bold">{tag}</span>}
+                                <span className="truncate">{task.title}</span>
+                              </Badge>
+                            </button>
+                          )
+                        })}
+                        {dayTasks.length > 2 && (
+                          <span className="text-[10px] text-muted-foreground">+{dayTasks.length - 2} lagi</span>
+                        )}
+                      </div>
+                    </div>
+                  )
+                })}
               </div>
-            )
-          })}
+            )}
+
+            <div className="flex flex-col gap-2">
+              <h2 className="text-sm font-medium">Riwayat Reschedule</h2>
+              {!rescheduleHistory || rescheduleHistory.length === 0 ? (
+                <p className="text-sm text-muted-foreground">Belum ada jadwal yang pernah digeser.</p>
+              ) : (
+                <div className="max-h-72 overflow-y-auto rounded-md border">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>WO</TableHead>
+                        <TableHead>Dari</TableHead>
+                        <TableHead>Ke</TableHead>
+                        <TableHead>Alasan</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {rescheduleHistory.map((entry) => (
+                        <TableRow key={entry.id}>
+                          <TableCell className="font-medium">{entry.task_title}</TableCell>
+                          <TableCell className="text-muted-foreground">
+                            {entry.previous_due_date
+                              ? new Date(entry.previous_due_date).toLocaleDateString('id-ID', { dateStyle: 'medium' })
+                              : '-'}
+                          </TableCell>
+                          <TableCell className="text-muted-foreground">
+                            {new Date(entry.new_due_date).toLocaleDateString('id-ID', { dateStyle: 'medium' })}
+                          </TableCell>
+                          <TableCell
+                            className="max-w-[180px] truncate text-muted-foreground"
+                            title={entry.reason ?? ''}
+                          >
+                            {entry.reason ?? '-'}
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </div>
+              )}
+            </div>
+          </div>
+
+          <PartLifetimePanel branchId={activeBranchId} />
         </div>
       )}
-
-      <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
-        <div className="flex flex-col gap-2">
-          <h2 className="text-sm font-medium">Riwayat Reschedule</h2>
-          {!rescheduleHistory || rescheduleHistory.length === 0 ? (
-            <p className="text-sm text-muted-foreground">Belum ada jadwal yang pernah digeser.</p>
-          ) : (
-            <div className="max-h-72 overflow-y-auto rounded-md border">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>WO</TableHead>
-                    <TableHead>Dari</TableHead>
-                    <TableHead>Ke</TableHead>
-                    <TableHead>Alasan</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {rescheduleHistory.map((entry) => (
-                    <TableRow key={entry.id}>
-                      <TableCell className="font-medium">{entry.task_title}</TableCell>
-                      <TableCell className="text-muted-foreground">
-                        {entry.previous_due_date
-                          ? new Date(entry.previous_due_date).toLocaleDateString('id-ID', { dateStyle: 'medium' })
-                          : '-'}
-                      </TableCell>
-                      <TableCell className="text-muted-foreground">
-                        {new Date(entry.new_due_date).toLocaleDateString('id-ID', { dateStyle: 'medium' })}
-                      </TableCell>
-                      <TableCell className="max-w-[180px] truncate text-muted-foreground" title={entry.reason ?? ''}>
-                        {entry.reason ?? '-'}
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </div>
-          )}
-        </div>
-
-        <div className="flex flex-col gap-2">
-          <h2 className="text-sm font-medium">Akan Datang</h2>
-          {upcomingTasks.length === 0 ? (
-            <p className="text-sm text-muted-foreground">Tidak ada WO PM yang akan datang.</p>
-          ) : (
-            <div className="max-h-72 overflow-y-auto rounded-md border">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>WO</TableHead>
-                    <TableHead>Equipment</TableHead>
-                    <TableHead>Tanggal</TableHead>
-                    <TableHead>Sumber</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {upcomingTasks.map((task) => (
-                    <TableRow key={task.id} className="cursor-pointer" onClick={() => setDetailTask(task)}>
-                      <TableCell className="font-medium">{task.title}</TableCell>
-                      <TableCell className="text-muted-foreground">{task.equipment_name}</TableCell>
-                      <TableCell className="text-muted-foreground">
-                        {new Date(task.due_date!).toLocaleDateString('id-ID', { dateStyle: 'medium' })}
-                      </TableCell>
-                      <TableCell>
-                        <Badge variant={task.task_library_id != null ? 'default' : 'warning'}>
-                          {task.task_library_id != null ? 'Task Library' : 'Part Lifetime'}
-                        </Badge>
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </div>
-          )}
-        </div>
-      </div>
 
       <TaskDetailSheet task={detailTask} onOpenChange={(open) => !open && setDetailTask(null)} />
 
