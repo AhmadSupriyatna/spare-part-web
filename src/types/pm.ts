@@ -1,15 +1,22 @@
+export type TaskLibraryPartAction = 'inspection' | 'lubrication'
+
+export type TaskLibraryScheduleType = 'calendar' | 'runtime'
+
 export interface TaskLibraryPart {
   id: number
   task_library_id: number
   part_id: number
   part_name?: string | null
   item_master_no?: string | null
+  action: TaskLibraryPartAction
+  needs_replacement: boolean
   quantity_required: number
   notes: string | null
 }
 
 export interface TaskLibrary {
   id: number
+  code: string
   equipment_id: number
   equipment_name?: string
   machine_name?: string
@@ -17,6 +24,10 @@ export interface TaskLibrary {
   line_name?: string
   title: string
   description: string | null
+  schedule_type: TaskLibraryScheduleType | null
+  interval_days: number | null
+  interval_hours: number | null
+  estimated_duration_minutes: number | null
   is_active: boolean
   parts: TaskLibraryPart[]
   created_at: string

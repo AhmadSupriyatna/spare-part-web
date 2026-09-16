@@ -1,16 +1,29 @@
 import { apiClient } from '@/lib/api-client'
-import type { TaskLibrary, TaskLibraryPart } from '@/types/pm'
+import type { TaskLibrary, TaskLibraryPart, TaskLibraryPartAction, TaskLibraryScheduleType } from '@/types/pm'
 import type { Task } from '@/types/tasks'
+
+export interface TaskLibraryPartInput {
+  part_id: number
+  action: TaskLibraryPartAction
+  needs_replacement?: boolean
+}
 
 export interface TaskLibraryPayload {
   title: string
   description?: string | null
+  schedule_type?: TaskLibraryScheduleType | null
+  interval_days?: number | null
+  interval_hours?: number | null
+  estimated_duration_minutes?: number | null
   is_active?: boolean
+  /** Only used on create — editing an existing library manages parts via add/remove below. */
+  parts?: TaskLibraryPartInput[]
 }
 
 export interface TaskLibraryPartPayload {
   part_id: number
-  quantity_required: number
+  action: TaskLibraryPartAction
+  needs_replacement?: boolean
   notes?: string | null
 }
 

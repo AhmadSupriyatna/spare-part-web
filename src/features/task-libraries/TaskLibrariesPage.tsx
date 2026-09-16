@@ -1,6 +1,6 @@
 import { useQueries, useQuery } from '@tanstack/react-query'
-import { NotebookPen } from 'lucide-react'
-import { useEffect } from 'react'
+import { NotebookPen, Search } from 'lucide-react'
+import { useEffect, useMemo, useState } from 'react'
 import { useSearchParams } from 'react-router'
 import { fetchEquipmentList } from '@/features/equipment/api'
 import { fetchLines } from '@/features/lines/api'
@@ -13,9 +13,18 @@ import { PageHeader } from '@/components/PageHeader'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Skeleton } from '@/components/ui/skeleton'
 
+interface SubSystemOption {
+  id: number
+  name: string
+  code: string
+  category: string | null
+  machineName: string
+}
+
 export function TaskLibrariesPage() {
   const activeBranchId = useBranchStore((state) => state.activeBranchId)
   const [searchParams, setSearchParams] = useSearchParams()
+  const [search, setSearch] = useState('')
 
   const selectedLineId = searchParams.get('line') ? Number(searchParams.get('line')) : null
   const selectedEquipmentId = searchParams.get('equipment') ? Number(searchParams.get('equipment')) : null
@@ -42,6 +51,32 @@ export function TaskLibrariesPage() {
       queryFn: () => fetchEquipmentList(machine.id),
     })),
   })
+  const equipmentLoading = machinesLoading || equipmentQueries.some((q) => q.isLoading)
+
+  const subSystems = useMemo<SubSystemOption[]>(() => {
+    const list: SubSystemOption[] = []
+    ;(machines ?? []).forEach((machine, index) => {
+      const equipmentList = equipmentQueries[index]?.data ?? []
+      for (const equipment of equipmentList) {
+        list.push({
+          id: equipment.id,
+          name: equipment.name,
+          code: equipment.code,
+          category: equipment.category ?? null,
+          machineName: machine.name,
+        })
+      }
+    })
+    return list
+  }, [machines, equipmentQueries])
+
+  const filteredSubSystems = useMemo(() => {
+    const term = search.trim().toLowerCase()
+    if (!term) return subSystems
+    return subSystems.filter((item) =>
+      `${item.name} ${item.code} ${item.machineName}`.toLowerCase().includes(term),
+    )
+  }, [subSystems, search])
 
   // Default to the first line once loaded, if nothing is selected via the URL yet.
   useEffect(() => {
@@ -51,6 +86,7 @@ export function TaskLibrariesPage() {
   }, [selectedLineId, lines, setSearchParams])
 
   function selectLine(lineId: number) {
+    setSearch('')
     setSearchParams({ line: String(lineId) })
   }
 
@@ -58,9 +94,7 @@ export function TaskLibrariesPage() {
     setSearchParams({ line: String(selectedLineId), equipment: String(equipmentId) })
   }
 
-  const selectedEquipment = equipmentQueries
-    .flatMap((query) => query.data ?? [])
-    .find((equipment) => equipment.id === selectedEquipmentId)
+  const selectedEquipment = subSystems.find((item) => item.id === selectedEquipmentId)
 
   if (!activeBranchId) {
     return <p className="text-muted-foreground">Pilih cabang terlebih dahulu.</p>
@@ -68,100 +102,88 @@ export function TaskLibrariesPage() {
 
   return (
     <div className="flex flex-col gap-4">
-      <PageHeader
-        title="Task Library"
-        description="Resep kegiatan PM (aktivitas + equipment + checklist part). Pilih line, lalu pilih equipment untuk kelola Task Library-nya."
-      />
-
-      <div className="sm:w-72">
-        <Select
-          value={selectedLineId ? String(selectedLineId) : ''}
-          onValueChange={(value) => selectLine(Number(value))}
-          disabled={linesLoading}
-        >
-          <SelectTrigger className="w-full">
-            <SelectValue placeholder={linesLoading ? 'Memuat...' : 'Pilih Line'} />
-          </SelectTrigger>
-          <SelectContent>
-            {lines?.map((line) => (
-              <SelectItem key={line.id} value={String(line.id)}>
-                {line.name}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-      </div>
+      <PageHeader title="Task Library" />
 
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.3fr)]">
-        <div className="flex flex-col gap-5">
-          {machinesLoading ? (
-            <div className="flex flex-col gap-2">
-              {Array.from({ length: 2 }).map((_, i) => (
-                <Skeleton key={i} className="h-24 w-full" />
-              ))}
-            </div>
-          ) : machines?.length === 0 ? (
-            <p className="text-sm text-muted-foreground">Belum ada mesin di line ini.</p>
-          ) : (
-            machines?.map((machine, index) => {
-              const equipmentList = equipmentQueries[index]?.data ?? []
-              const isLoadingEquipment = equipmentQueries[index]?.isLoading
+        <div className="flex flex-col overflow-hidden rounded-lg border">
+          <div className="border-b p-1">
+            <Select
+              value={selectedLineId ? String(selectedLineId) : ''}
+              onValueChange={(value) => selectLine(Number(value))}
+              disabled={linesLoading}
+            >
+              <SelectTrigger className="w-full border-0 shadow-none focus-visible:ring-0">
+                <SelectValue placeholder={linesLoading ? 'Memuat...' : 'Pilih Line'} />
+              </SelectTrigger>
+              <SelectContent>
+                {lines?.map((line) => (
+                  <SelectItem key={line.id} value={String(line.id)}>
+                    {line.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
 
-              return (
-                <div key={machine.id} className="flex flex-col gap-2">
-                  <p className="text-xs font-medium tracking-wide text-muted-foreground uppercase">
-                    {machine.name}
-                  </p>
-                  {isLoadingEquipment ? (
-                    <Skeleton className="h-16 w-full" />
-                  ) : equipmentList.length === 0 ? (
-                    <p className="text-sm text-muted-foreground">Belum ada equipment di mesin ini.</p>
-                  ) : (
-                    <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
-                      {equipmentList.map((equipment) => (
-                        <button
-                          key={equipment.id}
-                          type="button"
-                          onClick={() => selectEquipment(equipment.id)}
-                          className={cn(
-                            'flex flex-col gap-0.5 rounded-lg border p-3 text-left transition-colors hover:border-primary/50 hover:bg-muted',
-                            equipment.id === selectedEquipmentId && 'border-primary bg-primary/5',
-                          )}
-                        >
-                          <span
-                            className={cn(
-                              'text-sm font-medium',
-                              equipment.id === selectedEquipmentId && 'text-primary',
-                            )}
-                          >
-                            {equipment.name}
-                          </span>
-                          <span className="font-mono text-xs text-muted-foreground">
-                            {equipment.category ?? equipment.code}
-                          </span>
-                        </button>
-                      ))}
-                    </div>
-                  )}
-                </div>
-              )
-            })
-          )}
+          <div className="relative border-b">
+            <Search className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-muted-foreground" />
+            <input
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              placeholder="Cari sub system..."
+              disabled={!selectedLineId}
+              className="h-9 w-full bg-transparent pr-3 pl-9 text-sm outline-none placeholder:text-muted-foreground disabled:opacity-50"
+            />
+          </div>
+
+          <div className="max-h-[32rem] overflow-y-auto p-1.5">
+            {!selectedLineId ? (
+              <p className="p-3 text-sm text-muted-foreground">Pilih line terlebih dahulu.</p>
+            ) : equipmentLoading ? (
+              <div className="flex flex-col gap-2 p-1.5">
+                {Array.from({ length: 3 }).map((_, i) => (
+                  <Skeleton key={i} className="h-14 w-full" />
+                ))}
+              </div>
+            ) : filteredSubSystems.length === 0 ? (
+              <p className="p-3 text-sm text-muted-foreground">
+                {search ? 'Sub system tidak ditemukan.' : 'Belum ada equipment di line ini.'}
+              </p>
+            ) : (
+              <div className="flex flex-col gap-1">
+                {filteredSubSystems.map((item) => (
+                  <button
+                    key={item.id}
+                    type="button"
+                    onClick={() => selectEquipment(item.id)}
+                    className={cn(
+                      'flex flex-col gap-0.5 rounded-md px-3 py-2 text-left transition-colors hover:bg-muted',
+                      item.id === selectedEquipmentId && 'bg-primary/5 text-primary',
+                    )}
+                  >
+                    <span className="truncate text-sm font-medium">{item.name}</span>
+                    <span className="truncate text-xs text-muted-foreground">
+                      {item.machineName} · <span className="font-mono">{item.category ?? item.code}</span>
+                    </span>
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
         </div>
 
-        <div className="rounded-lg border p-4">
+        <div className="max-h-[38rem] overflow-y-auto rounded-lg border p-4">
           {selectedEquipment ? (
             <TaskLibraryList
               key={selectedEquipment.id}
               equipmentId={selectedEquipment.id}
               title={`Task Library — ${selectedEquipment.name}`}
-              addLabel="Tambah Task"
             />
           ) : (
             <EmptyState
               icon={NotebookPen}
-              title="Pilih equipment"
-              description="Pilih salah satu card equipment di kiri untuk lihat dan kelola Task Library-nya."
+              title="Pilih sub system"
+              description="Pilih salah satu sub system (equipment) di kiri untuk lihat dan kelola Task Library-nya."
             />
           )}
         </div>
