@@ -1,4 +1,4 @@
-export type UserRole = 'teknisi' | 'engineer' | 'admin_spare_part' | 'supervisor' | 'superadmin'
+export type UserRole = 'engineer' | 'admin_spare_part' | 'supervisor' | 'superadmin'
 
 export interface Branch {
   id: number
@@ -12,6 +12,7 @@ export interface AuthUser {
   id: number
   name: string
   email: string
+  avatar_url: string | null
   roles: UserRole[]
   branches: Branch[]
 }

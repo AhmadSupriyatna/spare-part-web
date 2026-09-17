@@ -24,6 +24,7 @@ import { SupplierDetailPage } from '@/features/suppliers/SupplierDetailPage'
 import { SuppliersPage } from '@/features/suppliers/SuppliersPage'
 import { MyTasksPage } from '@/features/tasks/MyTasksPage'
 import { UnitsPage } from '@/features/units/UnitsPage'
+import { UsersPage } from '@/features/users/UsersPage'
 import { AppLayout } from '@/layouts/AppLayout'
 import { ProtectedRoute } from '@/routes/ProtectedRoute'
 
@@ -59,6 +60,7 @@ function App() {
             <Route path="breakdown/print-qr" element={<PrintQrCodesPage />} />
             <Route path="settings/company" element={<CompanySettingsPage />} />
             <Route path="settings/units" element={<UnitsPage />} />
+            <Route path="settings/users" element={<UsersPage />} />
             <Route path="part-repairs" element={<PartRepairsPage />} />
             <Route path="part-units/:id" element={<PartUnitDetailPage />} />
             <Route path="pm/calendar" element={<MaintenancePage />} />

@@ -15,10 +15,11 @@ import {
   Settings,
   ShieldCheck,
   Truck,
+  UserRoundCog,
   Warehouse,
   Wrench,
 } from 'lucide-react'
-import { useState } from 'react'
+import { useMemo, useState } from 'react'
 import { NavLink, Outlet, useLocation, useNavigate } from 'react-router'
 import { toast } from 'sonner'
 import { BranchSelector } from '@/components/BranchSelector'
@@ -29,6 +30,7 @@ import { logout as logoutRequest } from '@/features/auth/api'
 import { cn } from '@/lib/utils'
 import { useAuthStore } from '@/stores/auth-store'
 import { useSheetStackStore } from '@/stores/sheet-stack-store'
+import type { UserRole } from '@/types/auth'
 import { Button } from '@/components/ui/button'
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
 import { Separator } from '@/components/ui/separator'
@@ -38,6 +40,8 @@ interface NavItem {
   label: string
   icon: React.ComponentType<{ className?: string }>
   end?: boolean
+  /** Omit to show for everyone — only Kelola Pengguna is currently restricted. */
+  roles?: UserRole[]
 }
 
 interface NavSection {
@@ -92,6 +96,7 @@ const navSections: NavSection[] = [
     items: [
       { to: '/settings/company', label: 'Profil Perusahaan', icon: Settings },
       { to: '/settings/units', label: 'Satuan Part', icon: Ruler },
+      { to: '/settings/users', label: 'Kelola Pengguna', icon: UserRoundCog, roles: ['superadmin'] },
     ],
   },
 ]
@@ -106,7 +111,19 @@ export function AppLayout() {
   const user = useAuthStore((state) => state.user)
   const clearSession = useAuthStore((state) => state.clearSession)
   const sheetOpenCount = useSheetStackStore((state) => state.openCount)
+  const userRoles = useAuthStore((state) => state.user?.roles ?? [])
   const [openGroup, setOpenGroup] = useState<string | null>(null)
+
+  const visibleNavSections = useMemo(
+    () =>
+      navSections
+        .map((section) => ({
+          ...section,
+          items: section.items.filter((item) => !item.roles || item.roles.some((r) => userRoles.includes(r))),
+        }))
+        .filter((section) => section.items.length > 0),
+    [userRoles],
+  )
 
   const mutation = useMutation({
     mutationFn: logoutRequest,
@@ -133,7 +150,7 @@ export function AppLayout() {
         </div>
 
         <nav className="scroll-thin flex flex-1 flex-col items-center gap-1 overflow-y-auto px-2 pb-4">
-          {navSections.map((section) => {
+          {visibleNavSections.map((section) => {
             const isGroup = Boolean(section.label) && section.items.length > 1
 
             if (!isGroup) {
@@ -229,6 +246,7 @@ export function AppLayout() {
             <ProfileMenu
               name={user?.name}
               email={user?.email}
+              avatarUrl={user?.avatar_url}
               onLogout={() => mutation.mutate()}
               isLoggingOut={mutation.isPending}
             />

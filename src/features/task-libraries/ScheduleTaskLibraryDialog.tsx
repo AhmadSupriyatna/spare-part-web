@@ -57,9 +57,7 @@ export function ScheduleTaskLibraryDialog({
     queryFn: () => fetchUsers(),
     enabled: open,
   })
-  const assignableUsers = users?.filter(
-    (user) => user.roles.includes('teknisi') || user.roles.includes('engineer'),
-  )
+  const assignableUsers = users?.filter((user) => user.roles.includes('engineer'))
 
   const {
     register,
@@ -150,7 +148,7 @@ export function ScheduleTaskLibraryDialog({
               render={({ field }) => (
                 <Select value={field.value} onValueChange={field.onChange}>
                   <SelectTrigger>
-                    <SelectValue placeholder="Pilih teknisi/engineer" />
+                    <SelectValue placeholder="Pilih engineer" />
                   </SelectTrigger>
                   <SelectContent>
                     {assignableUsers?.map((user) => (

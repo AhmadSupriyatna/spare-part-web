@@ -12,6 +12,7 @@ import {
 interface ProfileMenuProps {
   name: string | undefined
   email: string | undefined
+  avatarUrl?: string | null
   onLogout: () => void
   isLoggingOut?: boolean
 }
@@ -26,7 +27,7 @@ function initials(name: string | undefined): string {
     .join('')
 }
 
-export function ProfileMenu({ name, email, onLogout, isLoggingOut }: ProfileMenuProps) {
+export function ProfileMenu({ name, email, avatarUrl, onLogout, isLoggingOut }: ProfileMenuProps) {
   return (
     <DropdownMenu>
       <DropdownMenuTrigger
@@ -38,9 +39,13 @@ export function ProfileMenu({ name, email, onLogout, isLoggingOut }: ProfileMenu
           />
         }
       >
-        <div className="flex size-7 shrink-0 items-center justify-center rounded-full bg-primary/10 text-xs font-semibold text-primary">
-          {initials(name)}
-        </div>
+        {avatarUrl ? (
+          <img src={avatarUrl} alt={name} className="size-7 shrink-0 rounded-full object-cover" />
+        ) : (
+          <div className="flex size-7 shrink-0 items-center justify-center rounded-full bg-primary/10 text-xs font-semibold text-primary">
+            {initials(name)}
+          </div>
+        )}
         <span className="text-sm font-medium">{name}</span>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end" className="w-56">
