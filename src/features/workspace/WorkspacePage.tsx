@@ -1,5 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { CalendarDays, ClipboardCheck, Inbox } from 'lucide-react'
+import { AlertTriangle, CalendarDays, CheckCircle2, ClipboardCheck, Inbox } from 'lucide-react'
 import { useMemo, useState } from 'react'
 import { useSearchParams } from 'react-router'
 import { toast } from 'sonner'
@@ -11,10 +11,12 @@ import { TaskRow } from '@/features/tasks/TaskRow'
 import { useBranchStore } from '@/stores/branch-store'
 import { useCanApprove, useHasRole } from '@/stores/use-has-role'
 import { mondayOf, toDateKey } from '@/lib/dates'
+import { cn } from '@/lib/utils'
 import type { ReplacementRequestStatus } from '@/types/breakdown'
 import { EmptyState } from '@/components/EmptyState'
 import { PageHeader } from '@/components/PageHeader'
 import { Button } from '@/components/ui/button'
+import { Card, CardContent } from '@/components/ui/card'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
@@ -169,6 +171,75 @@ function ApprovalBoard({ branchId }: { branchId: number }) {
 }
 
 /**
+ * Two KPIs sitting above the Tugas/Approval tabs, visible regardless of
+ * which one is active — same ['tasks','mine',branchId] query TaskPoolTab
+ * uses, so react-query dedupes the fetch rather than hitting the API
+ * twice. "Minggu ini" here means the same Monday-Sunday window as the
+ * Tugas tab's own filter, just always-on for the KPI instead of toggled.
+ */
+function WorkspaceKpis({ branchId }: { branchId: number }) {
+  const { data: tasks } = useQuery({
+    queryKey: ['tasks', 'mine', branchId],
+    queryFn: () => fetchMyTasks(branchId),
+  })
+
+  const overdueCount = (tasks ?? []).filter(
+    (task) => task.is_overdue && task.status !== 'completed' && task.status !== 'cancelled',
+  ).length
+
+  const weekStart = mondayOf(new Date())
+  const weekEnd = new Date(weekStart)
+  weekEnd.setDate(weekEnd.getDate() + 6)
+  const startKey = toDateKey(weekStart)
+  const endKey = toDateKey(weekEnd)
+
+  const weeklyTasks = (tasks ?? []).filter((task) => {
+    if (!task.due_date) return false
+    const key = toDateKey(new Date(task.due_date))
+    return key >= startKey && key <= endKey
+  })
+  const weeklyDone = weeklyTasks.filter((task) => task.status === 'completed').length
+  const weeklyTotal = weeklyTasks.length
+  const weeklyRemaining = weeklyTotal - weeklyDone
+  const weeklyPercent = weeklyTotal > 0 ? Math.round((weeklyDone / weeklyTotal) * 100) : 0
+
+  return (
+    <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+      <Card>
+        <CardContent className="flex flex-col gap-2">
+          <div className="flex items-center justify-between">
+            <p className="text-sm text-muted-foreground">Progress WO Minggu Ini</p>
+            <span className="text-xs text-muted-foreground">
+              {weeklyDone}/{weeklyTotal} selesai
+            </span>
+          </div>
+          <p className="text-2xl font-semibold tabular-nums">{weeklyRemaining} WO tersisa</p>
+          <div className="h-2 w-full overflow-hidden rounded-full bg-muted">
+            <div className="h-full rounded-full bg-primary transition-all" style={{ width: `${weeklyPercent}%` }} />
+          </div>
+        </CardContent>
+      </Card>
+      <Card>
+        <CardContent className="flex items-center gap-4">
+          <div
+            className={cn(
+              'flex size-10 shrink-0 items-center justify-center rounded-lg',
+              overdueCount > 0 ? 'bg-destructive/10 text-destructive' : 'bg-success/15 text-success',
+            )}
+          >
+            {overdueCount > 0 ? <AlertTriangle className="size-5" /> : <CheckCircle2 className="size-5" />}
+          </div>
+          <div>
+            <p className="text-sm text-muted-foreground">WO Overdue</p>
+            <p className="text-2xl font-semibold tabular-nums">{overdueCount}</p>
+          </div>
+        </CardContent>
+      </Card>
+    </div>
+  )
+}
+
+/**
  * The Tugas tab — a shared WO pool rather than a per-person inbox: a WO
  * stays unclaimed (assigned_to null) until an Engineer or Supervisor
  * presses Mulai on it, which is also the moment TaskController::
@@ -267,6 +338,8 @@ export function WorkspacePage() {
   return (
     <div className="flex flex-col gap-4">
       <PageHeader title="Workspace" />
+
+      {activeBranchId && <WorkspaceKpis branchId={activeBranchId} />}
 
       <Tabs value={tab} onValueChange={(value) => setSearchParams(value === 'tasks' ? {} : { tab: value })}>
         <TabsList>
