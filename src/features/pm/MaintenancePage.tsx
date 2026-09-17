@@ -13,7 +13,7 @@ import { TaskLibraryBrowser } from '@/features/task-libraries/TaskLibraryBrowser
 import { fetchTaskLibrariesForBranch } from '@/features/task-libraries/api'
 import { fetchPmTasksForBranch, rescheduleTask } from '@/features/tasks/api'
 import { useBranchStore } from '@/stores/branch-store'
-import { toDateKey } from '@/lib/dates'
+import { diffInDays, toDateKey } from '@/lib/dates'
 import { cn } from '@/lib/utils'
 import type { Task } from '@/types/tasks'
 import { Badge } from '@/components/ui/badge'
@@ -24,13 +24,6 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 
 const WEEKDAYS = ['Sen', 'Sel', 'Rab', 'Kam', 'Jum', 'Sab', 'Min']
 const VISIBLE_TASKS_PER_DAY = 3
-
-function diffInDays(a: string, b: string): number {
-  const [ay, am, ad] = a.split('-').map(Number)
-  const [by, bm, bd] = b.split('-').map(Number)
-  const msPerDay = 24 * 60 * 60 * 1000
-  return Math.round((Date.UTC(by, bm - 1, bd) - Date.UTC(ay, am - 1, ad)) / msPerDay)
-}
 
 type MaintenanceView = 'library' | 'calendar' | 'list'
 

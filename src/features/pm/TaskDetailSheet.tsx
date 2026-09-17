@@ -27,9 +27,9 @@ interface TaskDetailSheetProps {
 
 /**
  * Read-only push-drawer for a PM task clicked on the calendar. WOs are no
- * longer handed to a specific person from here — Engineer/Supervisor claim
- * a WO themselves by pressing Mulai in the Workspace, so "Ditugaskan ke"
- * just reflects whoever has claimed it (or "Belum diklaim").
+ * longer handed to a specific person from here — Engineer/Supervisor pick
+ * a WO up themselves by pressing Mulai in the Workspace, so "Ditugaskan ke"
+ * just reflects whoever has started working it (or "Belum dikerjakan").
  */
 export function TaskDetailSheet({ task, onOpenChange }: TaskDetailSheetProps) {
   return (
@@ -67,7 +67,7 @@ export function TaskDetailSheet({ task, onOpenChange }: TaskDetailSheetProps) {
                 </div>
                 <div>
                   <p className="text-xs text-muted-foreground">Ditugaskan ke</p>
-                  <p className="font-medium">{task.assignee_name ?? 'Belum diklaim'}</p>
+                  <p className="font-medium">{task.assignee_name ?? 'Belum dikerjakan'}</p>
                 </div>
               </div>
 

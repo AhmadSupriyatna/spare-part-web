@@ -1,5 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { ChevronLeft, ChevronRight, ClipboardCheck, Inbox, Search, ShieldCheck } from 'lucide-react'
+import { ChevronLeft, ClipboardCheck, Inbox, Search, ShieldCheck } from 'lucide-react'
 import { useMemo, useState } from 'react'
 import { toast } from 'sonner'
 import { approveReplacementRequest, fetchReplacementRequests } from '@/features/breakdown/api'
@@ -10,7 +10,6 @@ import { fetchMyTasks } from '@/features/tasks/api'
 import { WoCard } from '@/features/workspace/WoCard'
 import { useBranchStore } from '@/stores/branch-store'
 import { useCanApprove, useHasRole } from '@/stores/use-has-role'
-import { isoWeekNumber, mondayOf, toDateKey } from '@/lib/dates'
 import type { ReplacementRequestStatus } from '@/types/breakdown'
 import { EmptyState } from '@/components/EmptyState'
 import { PageHeader } from '@/components/PageHeader'
@@ -173,9 +172,10 @@ function ApprovalBoard({ branchId }: { branchId: number }) {
  * The Tugas view — a shared WO pool rather than a per-person inbox: a WO
  * stays unclaimed (assigned_to null) until an Engineer or Supervisor acts
  * on it, which is also the moment TaskController::ensureCanWork() claims
- * it for them. Always scoped to one week (no "show everything" escape
- * hatch anymore) — prev/next arrows move the window, matching how the old
- * per-person "Tugas Saya" week strip worked before it grew a day-picker.
+ * it for them. Shows every not-yet-worked WO regardless of due date — a
+ * week window was tried here and dropped as redundant with the Maintenance
+ * calendar, which already handles date-based browsing; this view is purely
+ * "what's outstanding," sorted nearest-due-first (from the API).
  */
 function TaskPoolView({ branchId }: { branchId: number }) {
   const { data: tasks, isLoading } = useQuery({
@@ -183,55 +183,28 @@ function TaskPoolView({ branchId }: { branchId: number }) {
     queryFn: () => fetchMyTasks(branchId),
   })
 
-  const [weekStart, setWeekStart] = useState(() => mondayOf(new Date()))
   const [search, setSearch] = useState('')
 
-  const weekEnd = useMemo(() => {
-    const end = new Date(weekStart)
-    end.setDate(end.getDate() + 6)
-    return end
-  }, [weekStart])
-
-  const weekTasks = useMemo(() => {
-    const startKey = toDateKey(weekStart)
-    const endKey = toDateKey(weekEnd)
-    return (tasks ?? []).filter((task) => {
-      if (!task.due_date) return false
-      const key = toDateKey(new Date(task.due_date))
-      return key >= startKey && key <= endKey
-    })
-  }, [tasks, weekStart, weekEnd])
+  const openTasks = useMemo(
+    () => (tasks ?? []).filter((task) => task.status === 'pending' || task.status === 'in_progress'),
+    [tasks],
+  )
 
   const visibleTasks = useMemo(() => {
     const term = search.trim().toLowerCase()
-    if (!term) return weekTasks
-    return weekTasks.filter((task) =>
+    if (!term) return openTasks
+    return openTasks.filter((task) =>
       [task.title, task.equipment_name, task.machine_name, task.line_name, ...(task.part_checks ?? []).map((c) => c.part_name)]
         .filter(Boolean)
         .join(' ')
         .toLowerCase()
         .includes(term),
     )
-  }, [weekTasks, search])
-
-  const weeklyDone = weekTasks.filter((task) => task.status === 'completed').length
-  const weeklyTotal = weekTasks.length
-  const weeklyRemaining = weeklyTotal - weeklyDone
-  const weeklyPercent = weeklyTotal > 0 ? Math.round((weeklyDone / weeklyTotal) * 100) : 0
+  }, [openTasks, search])
 
   return (
     <div className="flex flex-col gap-4">
-      <div className="flex items-center justify-between text-xs text-muted-foreground">
-        <span>
-          Minggu ke-{isoWeekNumber(weekStart)} · {weeklyRemaining} WO tersisa
-        </span>
-        <span>
-          {weeklyDone}/{weeklyTotal} selesai
-        </span>
-      </div>
-      <div className="h-2 w-full overflow-hidden rounded-full bg-muted">
-        <div className="h-full rounded-full bg-primary transition-all" style={{ width: `${weeklyPercent}%` }} />
-      </div>
+      <p className="text-xs text-muted-foreground">{openTasks.length} WO belum dikerjakan</p>
 
       <div className="relative">
         <Search className="pointer-events-none absolute top-1/2 left-2.5 size-4 -translate-y-1/2 text-muted-foreground" />
@@ -243,35 +216,12 @@ function TaskPoolView({ branchId }: { branchId: number }) {
         />
       </div>
 
-      <div className="flex items-center justify-center gap-2">
-        <Button
-          variant="outline"
-          size="icon-sm"
-          aria-label="Minggu sebelumnya"
-          onClick={() => setWeekStart((prev) => new Date(prev.getFullYear(), prev.getMonth(), prev.getDate() - 7))}
-        >
-          <ChevronLeft />
-        </Button>
-        <p className="w-48 text-center text-sm font-medium">
-          {weekStart.toLocaleDateString('id-ID', { day: 'numeric', month: 'short' })} —{' '}
-          {weekEnd.toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' })}
-        </p>
-        <Button
-          variant="outline"
-          size="icon-sm"
-          aria-label="Minggu berikutnya"
-          onClick={() => setWeekStart((prev) => new Date(prev.getFullYear(), prev.getMonth(), prev.getDate() + 7))}
-        >
-          <ChevronRight />
-        </Button>
-      </div>
-
       {isLoading ? (
         <Skeleton className="h-40 w-full" />
       ) : visibleTasks.length === 0 ? (
         <EmptyState
           icon={ClipboardCheck}
-          title={search ? 'Tidak ada WO yang cocok' : 'Tidak ada WO di minggu ini'}
+          title={search ? 'Tidak ada WO yang cocok' : 'Tidak ada WO yang belum dikerjakan'}
           description="WO baru (dari Task Library, Part Lifetime, atau Breakdown) akan muncul di sini begitu dijadwalkan."
         />
       ) : (

@@ -100,10 +100,8 @@ export function PrintWoChecklistPage() {
             <thead>
               <tr className="border-b">
                 <th className="py-1">Part</th>
-                <th className="py-1 text-right">Rencana</th>
                 <th className="py-1 text-center">Diganti?</th>
-                <th className="py-1 text-right">Dipakai</th>
-                <th className="py-1">Alasan (jika tidak)</th>
+                <th className="py-1 text-right">Qty</th>
               </tr>
             </thead>
             <tbody>
@@ -115,12 +113,10 @@ export function PrintWoChecklistPage() {
                       {check.item_master_no}
                     </div>
                   </td>
-                  <td className="py-1.5 text-right">{check.quantity_planned}</td>
                   <td className="py-1.5 text-center">
                     {isDone ? (check.is_replaced ? 'Ya' : 'Tidak') : '☐ Ya   ☐ Tidak'}
                   </td>
                   <td className="py-1.5 text-right">{isDone ? (check.quantity_used ?? '-') : '____'}</td>
-                  <td className="py-1.5">{isDone ? (check.reason ?? '-') : ''}</td>
                 </tr>
               ))}
             </tbody>
@@ -129,7 +125,7 @@ export function PrintWoChecklistPage() {
 
         {isDone && task.completion_notes && (
           <div>
-            <p className="text-xs text-muted-foreground">Catatan Penyelesaian</p>
+            <p className="text-xs font-semibold tracking-wide uppercase">Keterangan</p>
             <p>{task.completion_notes}</p>
           </div>
         )}

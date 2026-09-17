@@ -7,12 +7,16 @@ import { taskSource } from '@/features/pm/taskColors'
 import { cancelTask, completeTask, startTask } from '@/features/tasks/api'
 import { useAuthStore } from '@/stores/auth-store'
 import { useHasRole } from '@/stores/use-has-role'
+import { dueDateBadge } from '@/lib/dates'
 import { cn } from '@/lib/utils'
 import type { Task } from '@/types/tasks'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Checkbox } from '@/components/ui/checkbox'
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
+import { Textarea } from '@/components/ui/textarea'
 
 const statusLabels: Record<Task['status'], string> = {
   pending: 'Belum Mulai',
@@ -54,8 +58,11 @@ export function WoCard({ task, invalidateKey }: WoCardProps) {
   const canAct = isMine || (task.assigned_to === null && canClaim)
   const isDone = task.status === 'completed' || task.status === 'cancelled'
   const source = taskSource(task)
+  const dueBadge = dueDateBadge(task.due_date)
 
   const [rows, setRows] = useState<Record<number, ChecklistRowState>>({})
+  const [completeDialogOpen, setCompleteDialogOpen] = useState(false)
+  const [keterangan, setKeterangan] = useState('')
 
   useEffect(() => {
     const next: Record<number, ChecklistRowState> = {}
@@ -94,11 +101,14 @@ export function WoCard({ task, invalidateKey }: WoCardProps) {
   })
 
   const hasChecklist = (task.part_checks?.length ?? 0) > 0
+  const anyNotReplaced = (task.part_checks ?? []).some((check) => !(rows[check.part_id]?.checked ?? false))
+  const keteranganRequired = hasChecklist && anyNotReplaced
 
   const completeMutation = useMutation({
-    mutationFn: () =>
+    mutationFn: (notes: string) =>
       hasChecklist
         ? completeTask(task.id, {
+            notes: notes || undefined,
             checks: (task.part_checks ?? []).map((check) => {
               const row = rows[check.part_id]
               const checked = row?.checked ?? false
@@ -106,17 +116,20 @@ export function WoCard({ task, invalidateKey }: WoCardProps) {
                 part_id: check.part_id,
                 is_replaced: checked,
                 quantity_used: checked ? Number(row?.qty || check.quantity_planned) : null,
-                reason: checked ? null : 'Tidak diganti',
+                reason: checked ? null : notes,
               }
             }),
           })
         : completeTask(task.id, {
+            notes: notes || undefined,
             part_stock_id: task.part_stock_id ?? null,
             quantity_used: task.quantity_used ?? null,
           }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: invalidateKey })
       toast.success('WO berhasil diselesaikan.')
+      setCompleteDialogOpen(false)
+      setKeterangan('')
     },
     onError: (error: unknown) => reportError(error, 'Gagal menyelesaikan WO.'),
   })
@@ -163,9 +176,13 @@ export function WoCard({ task, invalidateKey }: WoCardProps) {
         </div>
       </div>
 
-      <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-muted-foreground">
-        <span>Diklaim oleh: {task.assignee_name ?? 'Belum diklaim'}</span>
-        <span>Jatuh tempo: {task.due_date ? new Date(task.due_date).toLocaleDateString('id-ID') : '-'}</span>
+      <div className="flex flex-wrap items-center gap-x-4 gap-y-1.5 text-xs text-muted-foreground">
+        <span>Dikerjakan oleh: {task.assignee_name ?? 'Belum dikerjakan'}</span>
+        {isDone ? (
+          <span>Jatuh tempo: {task.due_date ? new Date(task.due_date).toLocaleDateString('id-ID') : '-'}</span>
+        ) : (
+          dueBadge && <Badge variant={dueBadge.variant}>{dueBadge.label}</Badge>
+        )}
       </div>
 
       {hasChecklist && (
@@ -194,7 +211,7 @@ export function WoCard({ task, invalidateKey }: WoCardProps) {
                     <span className="font-mono text-xs text-muted-foreground">({check.item_master_no})</span>
                   </span>
                 </label>
-                {row.checked && (
+                {row.checked && check.quantity_planned > 1 && (
                   <Input
                     type="number"
                     min={1}
@@ -222,11 +239,56 @@ export function WoCard({ task, invalidateKey }: WoCardProps) {
               Mulai
             </Button>
           )}
-          <Button size="sm" onClick={() => completeMutation.mutate()} disabled={completeMutation.isPending}>
-            {completeMutation.isPending ? 'Menyimpan...' : 'Selesai'}
+          <Button size="sm" onClick={() => setCompleteDialogOpen(true)}>
+            Selesai
           </Button>
         </div>
       )}
+
+      <Dialog
+        open={completeDialogOpen}
+        onOpenChange={(next) => {
+          setCompleteDialogOpen(next)
+          if (!next) setKeterangan('')
+        }}
+      >
+        <DialogContent className="sm:max-w-sm">
+          <DialogHeader>
+            <DialogTitle>Selesaikan WO</DialogTitle>
+            <DialogDescription>
+              {keteranganRequired
+                ? 'Ada part yang tidak diganti — isi keterangan alasannya.'
+                : 'Tambahkan keterangan kalau perlu, atau langsung simpan.'}
+            </DialogDescription>
+          </DialogHeader>
+          <div className="flex flex-col gap-2">
+            <Label htmlFor="wo-keterangan">Keterangan</Label>
+            <Textarea
+              id="wo-keterangan"
+              value={keterangan}
+              onChange={(e) => setKeterangan(e.target.value)}
+              placeholder={keteranganRequired ? 'Misal: part masih dalam kondisi baik' : 'Catatan (opsional)'}
+            />
+          </div>
+          <DialogFooter>
+            <Button
+              variant="ghost"
+              onClick={() => {
+                setCompleteDialogOpen(false)
+                setKeterangan('')
+              }}
+            >
+              Batal
+            </Button>
+            <Button
+              onClick={() => completeMutation.mutate(keterangan)}
+              disabled={completeMutation.isPending || (keteranganRequired && !keterangan.trim())}
+            >
+              {completeMutation.isPending ? 'Menyimpan...' : 'Simpan'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }
