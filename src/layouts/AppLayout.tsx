@@ -13,7 +13,6 @@ import {
   QrCode,
   Ruler,
   Settings,
-  ShieldCheck,
   Truck,
   UserRoundCog,
   Warehouse,
@@ -76,19 +75,20 @@ const navSections: NavSection[] = [
     ],
   },
   {
-    label: 'Kerja Saya',
-    items: [{ to: '/my-tasks', label: 'Tugas Saya', icon: ClipboardList }],
+    items: [
+      {
+        to: '/workspace',
+        label: 'Workspace',
+        icon: ClipboardList,
+        roles: ['superadmin', 'supervisor', 'engineer'],
+      },
+    ],
   },
   {
     items: [{ to: '/pm/calendar', label: 'Maintenance', icon: Wrench }],
   },
   {
-    label: 'Breakdown',
-    icon: AlertTriangle,
-    items: [
-      { to: '/breakdown/approvals', label: 'Papan Approval', icon: ShieldCheck },
-      { to: '/breakdown/print-qr', label: 'Cetak QR Code', icon: QrCode },
-    ],
+    items: [{ to: '/breakdown/print-qr', label: 'Cetak QR Code', icon: QrCode }],
   },
   {
     label: 'Pengaturan',

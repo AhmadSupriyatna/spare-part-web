@@ -2,7 +2,6 @@ import { BrowserRouter, Navigate, Route, Routes } from 'react-router'
 import { AlertsPage } from '@/features/alerts/AlertsPage'
 import { LoginPage } from '@/features/auth/LoginPage'
 import { BranchesPage } from '@/features/branches/BranchesPage'
-import { BreakdownApprovalBoardPage } from '@/features/breakdown/BreakdownApprovalBoardPage'
 import { BreakdownScanPage } from '@/features/breakdown/BreakdownScanPage'
 import { PrintQrCodesPage } from '@/features/breakdown/PrintQrCodesPage'
 import { DashboardPage } from '@/features/dashboard/DashboardPage'
@@ -22,9 +21,9 @@ import { PrintWoChecklistPage } from '@/features/pm/PrintWoChecklistPage'
 import { CompanySettingsPage } from '@/features/settings/CompanySettingsPage'
 import { SupplierDetailPage } from '@/features/suppliers/SupplierDetailPage'
 import { SuppliersPage } from '@/features/suppliers/SuppliersPage'
-import { MyTasksPage } from '@/features/tasks/MyTasksPage'
 import { UnitsPage } from '@/features/units/UnitsPage'
 import { UsersPage } from '@/features/users/UsersPage'
+import { WorkspacePage } from '@/features/workspace/WorkspacePage'
 import { AppLayout } from '@/layouts/AppLayout'
 import { ProtectedRoute } from '@/routes/ProtectedRoute'
 
@@ -55,8 +54,7 @@ function App() {
             <Route path="locations/:id" element={<LocationDetailPage />} />
             <Route path="lines" element={<LineHierarchyPage />} />
             <Route path="equipment/:id" element={<EquipmentDetailPage />} />
-            <Route path="my-tasks" element={<MyTasksPage />} />
-            <Route path="breakdown/approvals" element={<BreakdownApprovalBoardPage />} />
+            <Route path="workspace" element={<WorkspacePage />} />
             <Route path="breakdown/print-qr" element={<PrintQrCodesPage />} />
             <Route path="settings/company" element={<CompanySettingsPage />} />
             <Route path="settings/units" element={<UnitsPage />} />

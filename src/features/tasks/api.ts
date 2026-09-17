@@ -21,8 +21,10 @@ export async function fetchTask(id: number): Promise<Task> {
   return data.data
 }
 
-export async function fetchMyTasks(): Promise<Task[]> {
-  const { data } = await apiClient.get<{ data: Task[] }>('/tasks/mine')
+export async function fetchMyTasks(branchId: number | null): Promise<Task[]> {
+  const { data } = await apiClient.get<{ data: Task[] }>('/tasks/mine', {
+    params: { branch_id: branchId ?? undefined },
+  })
   return data.data
 }
 

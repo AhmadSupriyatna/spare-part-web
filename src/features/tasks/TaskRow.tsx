@@ -6,6 +6,7 @@ import { CompleteChecklistDialog } from '@/features/tasks/CompleteChecklistDialo
 import { CompleteTaskDialog } from '@/features/tasks/CompleteTaskDialog'
 import { cancelTask, startTask } from '@/features/tasks/api'
 import { useAuthStore } from '@/stores/auth-store'
+import { useHasRole } from '@/stores/use-has-role'
 import type { Task } from '@/types/tasks'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -27,10 +28,13 @@ interface TaskRowProps {
 export function TaskRow({ task, invalidateKey }: TaskRowProps) {
   const queryClient = useQueryClient()
   const currentUserId = useAuthStore((state) => state.user?.id)
-  // The server only lets the assignee start/complete/cancel a task — mirror
-  // that here so the buttons don't invite a 403 for everyone else viewing
-  // this equipment's task list.
+  const canClaim = useHasRole(['engineer', 'supervisor', 'superadmin'])
+  // The server lets either the current claimant act, or — for an
+  // unclaimed WO — any Engineer/Supervisor/Superadmin claim it by acting
+  // on it (see TaskController::ensureCanWork()); mirror that here so the
+  // buttons don't invite a 403 for someone who can't act on this row.
   const isMine = task.assigned_to === currentUserId
+  const canAct = isMine || (task.assigned_to === null && canClaim)
 
   function reportError(error: unknown, fallback: string) {
     const message =
@@ -91,7 +95,7 @@ export function TaskRow({ task, invalidateKey }: TaskRowProps) {
       <TableCell className="text-muted-foreground">
         {task.due_date ? new Date(task.due_date).toLocaleDateString('id-ID') : '-'}
       </TableCell>
-      <TableCell className="text-muted-foreground">{task.assignee_name ?? '-'}</TableCell>
+      <TableCell className="text-muted-foreground">{task.assignee_name ?? 'Belum diklaim'}</TableCell>
       <TableCell className="flex justify-end gap-2">
         {task.task_library_id && (
           <Button
@@ -105,20 +109,20 @@ export function TaskRow({ task, invalidateKey }: TaskRowProps) {
             <Printer />
           </Button>
         )}
-        {isMine && task.status === 'pending' && (
+        {canAct && task.status === 'pending' && (
           <Button size="sm" variant="outline" onClick={() => startMutation.mutate()}>
             Mulai
           </Button>
         )}
-        {isMine && task.status === 'in_progress' && task.part_checks && task.part_checks.length > 0 && (
+        {canAct && task.status === 'in_progress' && task.part_checks && task.part_checks.length > 0 && (
           <CompleteChecklistDialog task={task} invalidateKey={invalidateKey} />
         )}
-        {isMine &&
+        {canAct &&
           task.status === 'in_progress' &&
           (!task.part_checks || task.part_checks.length === 0) && (
             <CompleteTaskDialog task={task} invalidateKey={invalidateKey} />
           )}
-        {isMine && (task.status === 'pending' || task.status === 'in_progress') && (
+        {canAct && (task.status === 'pending' || task.status === 'in_progress') && (
           <Button size="sm" variant="outline" onClick={() => cancelMutation.mutate()}>
             Batal
           </Button>

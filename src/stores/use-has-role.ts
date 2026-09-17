@@ -21,11 +21,14 @@ export function useCanManageEngineering(): boolean {
 }
 
 /**
- * Breakdown replacement / part-unit-action approval boards, mirroring the
- * `engineer|supervisor|superadmin` route group on the backend.
+ * Deciding on the Breakdown replacement / part-unit-action approval
+ * boards, mirroring the `supervisor|superadmin` route group on the
+ * backend — Engineer can still see these boards (a separate, broader read
+ * gate) but can't approve/reject from them, and Admin Spare Part never
+ * had a say here since it isn't an inventory decision.
  */
 export function useCanApprove(): boolean {
-  return useHasRole(['engineer', 'supervisor', 'superadmin'])
+  return useHasRole(['supervisor', 'superadmin'])
 }
 
 /**

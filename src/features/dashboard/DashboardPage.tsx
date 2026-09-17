@@ -7,7 +7,7 @@ import { fetchParts } from '@/features/parts/api'
 import { fetchMyTasks } from '@/features/tasks/api'
 import { useAuthStore } from '@/stores/auth-store'
 import { useBranchStore } from '@/stores/branch-store'
-import { useCanApprove } from '@/stores/use-has-role'
+import { useCanApprove, useHasRole } from '@/stores/use-has-role'
 import { PageHeader } from '@/components/PageHeader'
 import { Card, CardContent } from '@/components/ui/card'
 import { Skeleton } from '@/components/ui/skeleton'
@@ -53,6 +53,7 @@ export function DashboardPage() {
   const user = useAuthStore((state) => state.user)
   const activeBranchId = useBranchStore((state) => state.activeBranchId)
   const canApprove = useCanApprove()
+  const canWork = useHasRole(['engineer', 'supervisor', 'superadmin'])
 
   const { data: parts, isLoading: partsLoading } = useQuery({
     queryKey: ['parts'],
@@ -66,8 +67,9 @@ export function DashboardPage() {
   })
 
   const { data: tasks, isLoading: tasksLoading } = useQuery({
-    queryKey: ['tasks', 'mine'],
-    queryFn: fetchMyTasks,
+    queryKey: ['tasks', 'mine', activeBranchId],
+    queryFn: () => fetchMyTasks(activeBranchId),
+    enabled: !!activeBranchId && canWork,
   })
 
   const { data: pendingReplacements, isLoading: replacementsLoading } = useQuery({
@@ -112,19 +114,21 @@ export function DashboardPage() {
             tone={alerts && alerts.length > 0 ? 'destructive' : 'default'}
             loading={alertsLoading}
           />
-          <SummaryCard
-            title="Tugas Saya Aktif"
-            value={activeTaskCount}
-            icon={ClipboardList}
-            href="/my-tasks"
-            loading={tasksLoading}
-          />
+          {canWork && (
+            <SummaryCard
+              title="WO Bisa Dikerjakan"
+              value={activeTaskCount}
+              icon={ClipboardList}
+              href="/workspace"
+              loading={tasksLoading}
+            />
+          )}
           {canApprove && (
             <SummaryCard
               title="Breakdown Menunggu"
               value={pendingReplacements?.length ?? 0}
               icon={ShieldCheck}
-              href="/breakdown/approvals"
+              href="/workspace?tab=approval"
               tone={pendingReplacements && pendingReplacements.length > 0 ? 'warning' : 'default'}
               loading={replacementsLoading}
             />

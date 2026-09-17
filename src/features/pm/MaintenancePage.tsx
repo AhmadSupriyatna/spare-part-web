@@ -439,11 +439,7 @@ export function MaintenancePage() {
         </div>
       )}
 
-      <TaskDetailSheet
-        task={detailTask}
-        branchId={activeBranchId}
-        onOpenChange={(open) => !open && setDetailTask(null)}
-      />
+      <TaskDetailSheet task={detailTask} onOpenChange={(open) => !open && setDetailTask(null)} />
 
       <RescheduleReasonDialog
         pending={pendingReschedule}
