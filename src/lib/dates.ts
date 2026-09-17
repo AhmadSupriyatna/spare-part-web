@@ -14,3 +14,12 @@ export function mondayOf(date: Date): Date {
   monday.setHours(0, 0, 0, 0)
   return monday
 }
+
+/** ISO-8601 week number (1-53) for the "Minggu ke-N" label in Workspace. */
+export function isoWeekNumber(date: Date): number {
+  const d = new Date(Date.UTC(date.getFullYear(), date.getMonth(), date.getDate()))
+  const dayNum = d.getUTCDay() || 7
+  d.setUTCDate(d.getUTCDate() + 4 - dayNum)
+  const yearStart = new Date(Date.UTC(d.getUTCFullYear(), 0, 1))
+  return Math.ceil(((d.getTime() - yearStart.getTime()) / 86400000 + 1) / 7)
+}

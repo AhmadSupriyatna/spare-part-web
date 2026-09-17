@@ -1,22 +1,21 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { AlertTriangle, CalendarDays, CheckCircle2, ClipboardCheck, Inbox } from 'lucide-react'
+import { ChevronLeft, ChevronRight, ClipboardCheck, Inbox, Search, ShieldCheck } from 'lucide-react'
 import { useMemo, useState } from 'react'
-import { useSearchParams } from 'react-router'
 import { toast } from 'sonner'
 import { approveReplacementRequest, fetchReplacementRequests } from '@/features/breakdown/api'
 import { RejectRequestDialog } from '@/features/breakdown/RejectRequestDialog'
+import { fetchPartUnitActionRequests } from '@/features/part-unit-actions/api'
 import { PartUnitActionRequestsTable } from '@/features/part-unit-actions/PartUnitActionRequestsTable'
 import { fetchMyTasks } from '@/features/tasks/api'
-import { TaskRow } from '@/features/tasks/TaskRow'
+import { WoCard } from '@/features/workspace/WoCard'
 import { useBranchStore } from '@/stores/branch-store'
 import { useCanApprove, useHasRole } from '@/stores/use-has-role'
-import { mondayOf, toDateKey } from '@/lib/dates'
-import { cn } from '@/lib/utils'
+import { isoWeekNumber, mondayOf, toDateKey } from '@/lib/dates'
 import type { ReplacementRequestStatus } from '@/types/breakdown'
 import { EmptyState } from '@/components/EmptyState'
 import { PageHeader } from '@/components/PageHeader'
 import { Button } from '@/components/ui/button'
-import { Card, CardContent } from '@/components/ui/card'
+import { Input } from '@/components/ui/input'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
@@ -171,150 +170,116 @@ function ApprovalBoard({ branchId }: { branchId: number }) {
 }
 
 /**
- * Two KPIs sitting above the Tugas/Approval tabs, visible regardless of
- * which one is active — same ['tasks','mine',branchId] query TaskPoolTab
- * uses, so react-query dedupes the fetch rather than hitting the API
- * twice. "Minggu ini" here means the same Monday-Sunday window as the
- * Tugas tab's own filter, just always-on for the KPI instead of toggled.
+ * The Tugas view — a shared WO pool rather than a per-person inbox: a WO
+ * stays unclaimed (assigned_to null) until an Engineer or Supervisor acts
+ * on it, which is also the moment TaskController::ensureCanWork() claims
+ * it for them. Always scoped to one week (no "show everything" escape
+ * hatch anymore) — prev/next arrows move the window, matching how the old
+ * per-person "Tugas Saya" week strip worked before it grew a day-picker.
  */
-function WorkspaceKpis({ branchId }: { branchId: number }) {
-  const { data: tasks } = useQuery({
+function TaskPoolView({ branchId }: { branchId: number }) {
+  const { data: tasks, isLoading } = useQuery({
     queryKey: ['tasks', 'mine', branchId],
     queryFn: () => fetchMyTasks(branchId),
   })
 
-  const overdueCount = (tasks ?? []).filter(
-    (task) => task.is_overdue && task.status !== 'completed' && task.status !== 'cancelled',
-  ).length
+  const [weekStart, setWeekStart] = useState(() => mondayOf(new Date()))
+  const [search, setSearch] = useState('')
 
-  const weekStart = mondayOf(new Date())
-  const weekEnd = new Date(weekStart)
-  weekEnd.setDate(weekEnd.getDate() + 6)
-  const startKey = toDateKey(weekStart)
-  const endKey = toDateKey(weekEnd)
+  const weekEnd = useMemo(() => {
+    const end = new Date(weekStart)
+    end.setDate(end.getDate() + 6)
+    return end
+  }, [weekStart])
 
-  const weeklyTasks = (tasks ?? []).filter((task) => {
-    if (!task.due_date) return false
-    const key = toDateKey(new Date(task.due_date))
-    return key >= startKey && key <= endKey
-  })
-  const weeklyDone = weeklyTasks.filter((task) => task.status === 'completed').length
-  const weeklyTotal = weeklyTasks.length
-  const weeklyRemaining = weeklyTotal - weeklyDone
-  const weeklyPercent = weeklyTotal > 0 ? Math.round((weeklyDone / weeklyTotal) * 100) : 0
-
-  return (
-    <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-      <Card>
-        <CardContent className="flex flex-col gap-2">
-          <div className="flex items-center justify-between">
-            <p className="text-sm text-muted-foreground">Progress WO Minggu Ini</p>
-            <span className="text-xs text-muted-foreground">
-              {weeklyDone}/{weeklyTotal} selesai
-            </span>
-          </div>
-          <p className="text-2xl font-semibold tabular-nums">{weeklyRemaining} WO tersisa</p>
-          <div className="h-2 w-full overflow-hidden rounded-full bg-muted">
-            <div className="h-full rounded-full bg-primary transition-all" style={{ width: `${weeklyPercent}%` }} />
-          </div>
-        </CardContent>
-      </Card>
-      <Card>
-        <CardContent className="flex items-center gap-4">
-          <div
-            className={cn(
-              'flex size-10 shrink-0 items-center justify-center rounded-lg',
-              overdueCount > 0 ? 'bg-destructive/10 text-destructive' : 'bg-success/15 text-success',
-            )}
-          >
-            {overdueCount > 0 ? <AlertTriangle className="size-5" /> : <CheckCircle2 className="size-5" />}
-          </div>
-          <div>
-            <p className="text-sm text-muted-foreground">WO Overdue</p>
-            <p className="text-2xl font-semibold tabular-nums">{overdueCount}</p>
-          </div>
-        </CardContent>
-      </Card>
-    </div>
-  )
-}
-
-/**
- * The Tugas tab — a shared WO pool rather than a per-person inbox: a WO
- * stays unclaimed (assigned_to null) until an Engineer or Supervisor
- * presses Mulai on it, which is also the moment TaskController::
- * ensureCanWork() claims it for them. fetchMyTasks() already returns
- * "mine + unclaimed" for those roles (see TaskController::mine()), so this
- * component doesn't need to know about claiming itself.
- */
-function TaskPoolTab() {
-  const activeBranchId = useBranchStore((state) => state.activeBranchId)
-  const { data: tasks, isLoading } = useQuery({
-    queryKey: ['tasks', 'mine', activeBranchId],
-    queryFn: () => fetchMyTasks(activeBranchId),
-    enabled: !!activeBranchId,
-  })
-
-  const [thisWeekOnly, setThisWeekOnly] = useState(false)
-
-  const visibleTasks = useMemo(() => {
-    if (!tasks) return []
-    if (!thisWeekOnly) return tasks
-
-    const weekStart = mondayOf(new Date())
-    const weekEnd = new Date(weekStart)
-    weekEnd.setDate(weekEnd.getDate() + 6)
+  const weekTasks = useMemo(() => {
     const startKey = toDateKey(weekStart)
     const endKey = toDateKey(weekEnd)
-
-    return tasks.filter((task) => {
+    return (tasks ?? []).filter((task) => {
       if (!task.due_date) return false
       const key = toDateKey(new Date(task.due_date))
       return key >= startKey && key <= endKey
     })
-  }, [tasks, thisWeekOnly])
+  }, [tasks, weekStart, weekEnd])
 
-  if (!activeBranchId) {
-    return <p className="text-muted-foreground">Pilih cabang terlebih dahulu.</p>
-  }
+  const visibleTasks = useMemo(() => {
+    const term = search.trim().toLowerCase()
+    if (!term) return weekTasks
+    return weekTasks.filter((task) =>
+      [task.title, task.equipment_name, task.machine_name, task.line_name, ...(task.part_checks ?? []).map((c) => c.part_name)]
+        .filter(Boolean)
+        .join(' ')
+        .toLowerCase()
+        .includes(term),
+    )
+  }, [weekTasks, search])
+
+  const weeklyDone = weekTasks.filter((task) => task.status === 'completed').length
+  const weeklyTotal = weekTasks.length
+  const weeklyRemaining = weeklyTotal - weeklyDone
+  const weeklyPercent = weeklyTotal > 0 ? Math.round((weeklyDone / weeklyTotal) * 100) : 0
 
   return (
     <div className="flex flex-col gap-4">
-      <Button
-        variant={thisWeekOnly ? 'default' : 'outline'}
-        size="sm"
-        className="self-start"
-        onClick={() => setThisWeekOnly((prev) => !prev)}
-      >
-        <CalendarDays className="size-3.5" />
-        Minggu Ini
-      </Button>
+      <div className="flex items-center justify-between text-xs text-muted-foreground">
+        <span>
+          Minggu ke-{isoWeekNumber(weekStart)} · {weeklyRemaining} WO tersisa
+        </span>
+        <span>
+          {weeklyDone}/{weeklyTotal} selesai
+        </span>
+      </div>
+      <div className="h-2 w-full overflow-hidden rounded-full bg-muted">
+        <div className="h-full rounded-full bg-primary transition-all" style={{ width: `${weeklyPercent}%` }} />
+      </div>
+
+      <div className="relative">
+        <Search className="pointer-events-none absolute top-1/2 left-2.5 size-4 -translate-y-1/2 text-muted-foreground" />
+        <Input
+          placeholder="Cari WO, equipment, atau part..."
+          className="pl-8"
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+        />
+      </div>
+
+      <div className="flex items-center justify-center gap-2">
+        <Button
+          variant="outline"
+          size="icon-sm"
+          aria-label="Minggu sebelumnya"
+          onClick={() => setWeekStart((prev) => new Date(prev.getFullYear(), prev.getMonth(), prev.getDate() - 7))}
+        >
+          <ChevronLeft />
+        </Button>
+        <p className="w-48 text-center text-sm font-medium">
+          {weekStart.toLocaleDateString('id-ID', { day: 'numeric', month: 'short' })} —{' '}
+          {weekEnd.toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' })}
+        </p>
+        <Button
+          variant="outline"
+          size="icon-sm"
+          aria-label="Minggu berikutnya"
+          onClick={() => setWeekStart((prev) => new Date(prev.getFullYear(), prev.getMonth(), prev.getDate() + 7))}
+        >
+          <ChevronRight />
+        </Button>
+      </div>
 
       {isLoading ? (
         <Skeleton className="h-40 w-full" />
       ) : visibleTasks.length === 0 ? (
         <EmptyState
           icon={ClipboardCheck}
-          title={thisWeekOnly ? 'Tidak ada WO minggu ini' : 'Tidak ada tugas yang bisa dikerjakan saat ini'}
-          description="WO baru (dari Task Library, Part Lifetime, atau Breakdown) akan muncul di sini begitu dijadwalkan, diurutkan dari yang jatuh tempo terdekat."
+          title={search ? 'Tidak ada WO yang cocok' : 'Tidak ada WO di minggu ini'}
+          description="WO baru (dari Task Library, Part Lifetime, atau Breakdown) akan muncul di sini begitu dijadwalkan."
         />
       ) : (
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead>Judul</TableHead>
-              <TableHead>Status</TableHead>
-              <TableHead>Jatuh Tempo</TableHead>
-              <TableHead>Diklaim oleh</TableHead>
-              <TableHead className="text-right">Aksi</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {visibleTasks.map((task) => (
-              <TaskRow key={task.id} task={task} invalidateKey={['tasks', 'mine', activeBranchId]} />
-            ))}
-          </TableBody>
-        </Table>
+        <div className="flex flex-col gap-3">
+          {visibleTasks.map((task) => (
+            <WoCard key={task.id} task={task} invalidateKey={['tasks', 'mine', branchId]} />
+          ))}
+        </div>
       )}
     </div>
   )
@@ -326,41 +291,59 @@ function TaskPoolTab() {
  * see TaskController::mine()/ensureCanWork()) plus the approval boards
  * that used to live on their own page. Admin Spare Part has no read or
  * write access to either half, so it never sees this nav item at all (see
- * AppLayout's `roles` filter); Engineer can see the Approval tab but only
- * Supervisor/Superadmin get the Setujui/Tolak controls inside it.
+ * AppLayout's `roles` filter); Engineer can see the Approval board but
+ * only Supervisor/Superadmin get the Setujui/Tolak controls inside it.
+ * The two views are no longer a two-way tab strip — Approval is a single
+ * top-right button (badged with the pending count) since it's the
+ * secondary, occasional view; a back button returns to the WO pool.
  */
 export function WorkspacePage() {
   const activeBranchId = useBranchStore((state) => state.activeBranchId)
   const canSeeApprovalBoard = useHasRole(['engineer', 'supervisor', 'superadmin'])
-  const [searchParams, setSearchParams] = useSearchParams()
-  const tab = searchParams.get('tab') === 'approval' && canSeeApprovalBoard ? 'approval' : 'tasks'
+  const [view, setView] = useState<'tasks' | 'approval'>('tasks')
+
+  const { data: pendingReplacements } = useQuery({
+    queryKey: ['replacement-requests', activeBranchId, 'pending'],
+    queryFn: () => fetchReplacementRequests(activeBranchId!, 'pending'),
+    enabled: !!activeBranchId && canSeeApprovalBoard,
+  })
+  const { data: pendingUnitActions } = useQuery({
+    queryKey: ['part-unit-action-requests', activeBranchId, 'pending'],
+    queryFn: () => fetchPartUnitActionRequests(activeBranchId!, 'pending'),
+    enabled: !!activeBranchId && canSeeApprovalBoard,
+  })
+  const pendingApprovalCount = (pendingReplacements?.length ?? 0) + (pendingUnitActions?.length ?? 0)
 
   return (
     <div className="flex flex-col gap-4">
-      <PageHeader title="Workspace" />
-
-      {activeBranchId && <WorkspaceKpis branchId={activeBranchId} />}
-
-      <Tabs value={tab} onValueChange={(value) => setSearchParams(value === 'tasks' ? {} : { tab: value })}>
-        <TabsList>
-          <TabsTrigger value="tasks">Tugas</TabsTrigger>
-          {canSeeApprovalBoard && <TabsTrigger value="approval">Approval</TabsTrigger>}
-        </TabsList>
-
-        <TabsContent value="tasks" className="mt-4">
-          <TaskPoolTab />
-        </TabsContent>
-
-        {canSeeApprovalBoard && (
-          <TabsContent value="approval" className="mt-4">
-            {activeBranchId ? (
-              <ApprovalBoard branchId={activeBranchId} />
-            ) : (
-              <p className="text-muted-foreground">Pilih cabang terlebih dahulu.</p>
+      <div className="flex items-start justify-between gap-3">
+        <PageHeader title="Workspace" />
+        {canSeeApprovalBoard && view === 'tasks' && (
+          <Button variant="outline" size="sm" className="relative shrink-0" onClick={() => setView('approval')}>
+            <ShieldCheck className="size-3.5" />
+            Approval
+            {pendingApprovalCount > 0 && (
+              <span className="absolute -top-2 -right-2 flex size-5 items-center justify-center rounded-full bg-destructive text-[10px] font-semibold text-destructive-foreground">
+                {pendingApprovalCount}
+              </span>
             )}
-          </TabsContent>
+          </Button>
         )}
-      </Tabs>
+        {view === 'approval' && (
+          <Button variant="ghost" size="sm" className="shrink-0" onClick={() => setView('tasks')}>
+            <ChevronLeft className="size-3.5" />
+            Kembali ke Tugas
+          </Button>
+        )}
+      </div>
+
+      {!activeBranchId ? (
+        <p className="text-muted-foreground">Pilih cabang terlebih dahulu.</p>
+      ) : view === 'tasks' ? (
+        <TaskPoolView branchId={activeBranchId} />
+      ) : (
+        <ApprovalBoard branchId={activeBranchId} />
+      )}
     </div>
   )
 }
