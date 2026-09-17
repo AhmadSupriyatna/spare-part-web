@@ -1,9 +1,11 @@
-import { useMutation, useQueryClient } from '@tanstack/react-query'
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { Printer } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router'
 import { toast } from 'sonner'
 import { taskSource } from '@/features/pm/taskColors'
+import { fetchPartInstallations } from '@/features/part-installations/api'
+import { InstallationSlotPicker } from '@/features/part-installations/InstallationSlotPicker'
 import { cancelTask, completeTask, startTask } from '@/features/tasks/api'
 import { useAuthStore } from '@/stores/auth-store'
 import { useHasRole } from '@/stores/use-has-role'
@@ -34,6 +36,8 @@ const sourceDotClass: Record<ReturnType<typeof taskSource>, string> = {
 interface ChecklistRowState {
   checked: boolean
   qty: string
+  oldInstallationId: number | null
+  picking: boolean
 }
 
 interface WoCardProps {
@@ -64,12 +68,23 @@ export function WoCard({ task, invalidateKey }: WoCardProps) {
   const [completeDialogOpen, setCompleteDialogOpen] = useState(false)
   const [keterangan, setKeterangan] = useState('')
 
+  const { data: installations } = useQuery({
+    queryKey: ['part-installations', task.equipment_id],
+    queryFn: () => fetchPartInstallations(task.equipment_id),
+  })
+
+  function activeInstallationsFor(partId: number) {
+    return (installations ?? []).filter((installation) => installation.part_id === partId && installation.is_active)
+  }
+
   useEffect(() => {
     const next: Record<number, ChecklistRowState> = {}
     for (const check of task.part_checks ?? []) {
       next[check.part_id] = {
         checked: check.is_replaced ?? false,
         qty: String(check.quantity_used ?? check.quantity_planned),
+        oldInstallationId: null,
+        picking: false,
       }
     }
     setRows(next)
@@ -117,6 +132,7 @@ export function WoCard({ task, invalidateKey }: WoCardProps) {
                 is_replaced: checked,
                 quantity_used: checked ? Number(row?.qty || check.quantity_planned) : null,
                 reason: checked ? null : notes,
+                old_installation_id: checked ? (row?.oldInstallationId ?? null) : null,
               }
             }),
           })
@@ -189,39 +205,88 @@ export function WoCard({ task, invalidateKey }: WoCardProps) {
         <div className="flex flex-col gap-1.5">
           <p className="text-xs font-medium tracking-wide text-muted-foreground uppercase">Ganti Part</p>
           {(task.part_checks ?? []).map((check) => {
-            const row = rows[check.part_id] ?? { checked: false, qty: String(check.quantity_planned) }
+            const row = rows[check.part_id] ?? {
+              checked: false,
+              qty: String(check.quantity_planned),
+              oldInstallationId: null,
+              picking: false,
+            }
+            const activeSamePart = activeInstallationsFor(check.part_id)
             return (
               <div
                 key={check.id}
                 className={cn(
-                  'flex items-center justify-between gap-2 rounded-md border p-2 transition-colors',
+                  'flex flex-col gap-2 rounded-md border p-2 transition-colors',
                   row.checked && 'border-success bg-success/10',
                 )}
               >
-                <label className={cn('flex min-w-0 items-center gap-2 text-sm', canAct && !isDone && 'cursor-pointer')}>
-                  <Checkbox
-                    checked={row.checked}
-                    disabled={!canAct || isDone}
-                    onCheckedChange={(value) =>
-                      setRows((prev) => ({ ...prev, [check.part_id]: { ...row, checked: value === true } }))
-                    }
-                  />
-                  <span className="min-w-0 truncate">
-                    {check.part_name ?? `Part #${check.part_id}`}{' '}
-                    <span className="font-mono text-xs text-muted-foreground">({check.item_master_no})</span>
-                  </span>
-                </label>
-                {row.checked && check.quantity_planned > 1 && (
-                  <Input
-                    type="number"
-                    min={1}
-                    disabled={!canAct || isDone}
-                    className="h-7 w-16 shrink-0"
-                    value={row.qty}
-                    onChange={(e) =>
-                      setRows((prev) => ({ ...prev, [check.part_id]: { ...row, qty: e.target.value } }))
-                    }
-                  />
+                <div className="flex items-center justify-between gap-2">
+                  <label className={cn('flex min-w-0 items-center gap-2 text-sm', canAct && !isDone && 'cursor-pointer')}>
+                    <Checkbox
+                      checked={row.checked}
+                      disabled={!canAct || isDone}
+                      onCheckedChange={(value) => {
+                        if (value !== true) {
+                          setRows((prev) => ({
+                            ...prev,
+                            [check.part_id]: { ...row, checked: false, oldInstallationId: null, picking: false },
+                          }))
+                          return
+                        }
+
+                        if (activeSamePart.length > 1) {
+                          setRows((prev) => ({ ...prev, [check.part_id]: { ...row, picking: true } }))
+                          return
+                        }
+
+                        setRows((prev) => ({
+                          ...prev,
+                          [check.part_id]: {
+                            ...row,
+                            checked: true,
+                            oldInstallationId: activeSamePart[0]?.id ?? null,
+                          },
+                        }))
+                      }}
+                    />
+                    <span className="min-w-0 truncate">
+                      {check.part_name ?? `Part #${check.part_id}`}{' '}
+                      <span className="font-mono text-xs text-muted-foreground">({check.item_master_no})</span>
+                    </span>
+                  </label>
+                  {row.checked && check.quantity_planned > 1 && (
+                    <Input
+                      type="number"
+                      min={1}
+                      disabled={!canAct || isDone}
+                      className="h-7 w-16 shrink-0"
+                      value={row.qty}
+                      onChange={(e) =>
+                        setRows((prev) => ({ ...prev, [check.part_id]: { ...row, qty: e.target.value } }))
+                      }
+                    />
+                  )}
+                </div>
+                {row.picking && (
+                  <div className="flex flex-col gap-1 pl-6">
+                    <p className="text-[11px] text-muted-foreground">
+                      Ada {activeSamePart.length} unit terpasang — pilih yang diganti:
+                    </p>
+                    <InstallationSlotPicker
+                      installations={activeSamePart}
+                      onSelect={(installation) =>
+                        setRows((prev) => ({
+                          ...prev,
+                          [check.part_id]: {
+                            ...row,
+                            checked: true,
+                            picking: false,
+                            oldInstallationId: installation.id,
+                          },
+                        }))
+                      }
+                    />
+                  </div>
                 )}
               </div>
             )

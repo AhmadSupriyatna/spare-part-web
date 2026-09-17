@@ -4,13 +4,15 @@ import { useMemo, useState } from 'react'
 import { toast } from 'sonner'
 import { approveReplacementRequest, fetchReplacementRequests } from '@/features/breakdown/api'
 import { RejectRequestDialog } from '@/features/breakdown/RejectRequestDialog'
+import { fetchPartInstallations } from '@/features/part-installations/api'
+import { InstallationSlotPicker } from '@/features/part-installations/InstallationSlotPicker'
 import { fetchPartUnitActionRequests } from '@/features/part-unit-actions/api'
 import { PartUnitActionRequestsTable } from '@/features/part-unit-actions/PartUnitActionRequestsTable'
 import { fetchMyTasks } from '@/features/tasks/api'
 import { WoCard } from '@/features/workspace/WoCard'
 import { useBranchStore } from '@/stores/branch-store'
 import { useCanApprove, useHasRole } from '@/stores/use-has-role'
-import type { ReplacementRequestStatus } from '@/types/breakdown'
+import type { ReplacementRequestStatus, ReplacementRequest } from '@/types/breakdown'
 import { EmptyState } from '@/components/EmptyState'
 import { PageHeader } from '@/components/PageHeader'
 import { Button } from '@/components/ui/button'
@@ -25,6 +27,51 @@ const replacementStatusLabels: Record<ReplacementRequestStatus, string> = {
   rejected: 'Ditolak',
 }
 
+/**
+ * Plain "Setujui" when the equipment has at most one active installation of
+ * this part — auto-resolved server-side, no need to ask. Once there's more
+ * than one, tapping straight through the Setujui button would be ambiguous
+ * (PartLifecycleService::resolveActiveInstallation() would 422), so this
+ * shows the A/B/C picker instead and approves the moment one is tapped.
+ */
+function ApproveReplacementAction({
+  request,
+  onApprove,
+  isPending,
+}: {
+  request: ReplacementRequest
+  onApprove: (oldInstallationId?: number | null) => void
+  isPending: boolean
+}) {
+  const { data: installations } = useQuery({
+    queryKey: ['part-installations', request.equipment_id],
+    queryFn: () => fetchPartInstallations(request.equipment_id),
+  })
+
+  const activeSamePart = (installations ?? []).filter(
+    (installation) => installation.part_id === request.part_id && installation.is_active,
+  )
+
+  if (activeSamePart.length > 1) {
+    return (
+      <div className="flex flex-col items-end gap-1">
+        <p className="text-[11px] text-muted-foreground">Pilih unit yang diganti:</p>
+        <InstallationSlotPicker
+          installations={activeSamePart}
+          disabled={isPending}
+          onSelect={(installation) => onApprove(installation.id)}
+        />
+      </div>
+    )
+  }
+
+  return (
+    <Button size="sm" onClick={() => onApprove(null)} disabled={isPending}>
+      Setujui
+    </Button>
+  )
+}
+
 function ReplacementRequestsTable({ branchId, status }: { branchId: number; status: ReplacementRequestStatus }) {
   const queryClient = useQueryClient()
   const canApprove = useCanApprove()
@@ -35,7 +82,8 @@ function ReplacementRequestsTable({ branchId, status }: { branchId: number; stat
   })
 
   const approveMutation = useMutation({
-    mutationFn: (id: number) => approveReplacementRequest(id),
+    mutationFn: ({ id, oldInstallationId }: { id: number; oldInstallationId?: number | null }) =>
+      approveReplacementRequest(id, undefined, oldInstallationId),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['replacement-requests', branchId] })
       toast.success('Penggantian disetujui — part lama dilepas, stok otomatis berkurang.')
@@ -99,10 +147,12 @@ function ReplacementRequestsTable({ branchId, status }: { branchId: number; stat
               </TableCell>
             )}
             {status === 'pending' && canApprove && (
-              <TableCell className="flex justify-end gap-2">
-                <Button size="sm" onClick={() => approveMutation.mutate(req.id)} disabled={approveMutation.isPending}>
-                  Setujui
-                </Button>
+              <TableCell className="flex items-start justify-end gap-2">
+                <ApproveReplacementAction
+                  request={req}
+                  isPending={approveMutation.isPending}
+                  onApprove={(oldInstallationId) => approveMutation.mutate({ id: req.id, oldInstallationId })}
+                />
                 <RejectRequestDialog requestId={req.id} branchId={branchId} />
               </TableCell>
             )}

@@ -12,6 +12,7 @@ import {
   DialogTitle,
   DialogTrigger,
 } from '@/components/ui/dialog'
+import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
 
@@ -30,12 +31,14 @@ export function SendToRepairDialog({
 }: SendToRepairDialogProps) {
   const [open, setOpen] = useState(false)
   const [notes, setNotes] = useState('')
+  const [estimatedCompletionDate, setEstimatedCompletionDate] = useState('')
   const queryClient = useQueryClient()
 
   const mutation = useMutation({
     mutationFn: () =>
       createPartRepair(partUnitId, {
         part_installation_id: partInstallationId,
+        estimated_completion_date: estimatedCompletionDate || null,
         notes: notes || null,
       }),
     onSuccess: () => {
@@ -43,6 +46,7 @@ export function SendToRepairDialog({
       toast.success('Unit dikirim ke perbaikan.')
       setOpen(false)
       setNotes('')
+      setEstimatedCompletionDate('')
     },
     onError: () => toast.error('Gagal membuka catatan perbaikan.'),
   })
@@ -58,6 +62,15 @@ export function SendToRepairDialog({
             (sedang diperbaiki / selesai / dibuang) dari halaman Perbaikan Part.
           </DialogDescription>
         </DialogHeader>
+        <div className="flex flex-col gap-2">
+          <Label htmlFor="repair-eta">Estimasi Selesai (opsional)</Label>
+          <Input
+            id="repair-eta"
+            type="date"
+            value={estimatedCompletionDate}
+            onChange={(e) => setEstimatedCompletionDate(e.target.value)}
+          />
+        </div>
         <div className="flex flex-col gap-2">
           <Label htmlFor="repair-notes">Catatan (opsional)</Label>
           <Textarea

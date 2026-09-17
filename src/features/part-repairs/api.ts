@@ -10,6 +10,7 @@ export async function fetchPartRepairs(disposition?: PartRepairDisposition): Pro
 
 export interface CreatePartRepairPayload {
   part_installation_id?: number | null
+  estimated_completion_date?: string | null
   notes?: string | null
 }
 
@@ -23,6 +24,7 @@ export async function createPartRepair(
 
 export interface UpdatePartRepairPayload {
   disposition: PartRepairDisposition
+  estimated_completion_date?: string | null
   notes?: string | null
 }
 

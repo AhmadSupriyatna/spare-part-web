@@ -50,6 +50,7 @@ function RepairsTable({ disposition }: { disposition: PartRepairDisposition }) {
           <TableHead>Part / Unit</TableHead>
           <TableHead>Dilepas Dari</TableHead>
           <TableHead>Tanggal Dilepas</TableHead>
+          <TableHead>Estimasi Selesai</TableHead>
           <TableHead>Catatan</TableHead>
           <TableHead className="text-right">Aksi</TableHead>
         </TableRow>
@@ -73,6 +74,11 @@ function RepairsTable({ disposition }: { disposition: PartRepairDisposition }) {
             </TableCell>
             <TableCell className="text-muted-foreground">
               {new Date(repair.removed_at).toLocaleDateString('id-ID')}
+            </TableCell>
+            <TableCell className="text-muted-foreground">
+              {repair.estimated_completion_date
+                ? new Date(repair.estimated_completion_date).toLocaleDateString('id-ID')
+                : '-'}
             </TableCell>
             <TableCell className="max-w-xs truncate text-muted-foreground" title={repair.notes ?? ''}>
               {repair.notes ?? '-'}

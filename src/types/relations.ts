@@ -75,6 +75,7 @@ export interface PartRepair {
   machine_name?: string | null
   line_name?: string | null
   removed_at: string
+  estimated_completion_date: string | null
   disposition: PartRepairDisposition
   repaired_at: string | null
   notes: string | null

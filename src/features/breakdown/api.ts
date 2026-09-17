@@ -87,10 +87,11 @@ export async function fetchReplacementRequests(
 export async function approveReplacementRequest(
   id: number,
   notes?: string,
+  oldInstallationId?: number | null,
 ): Promise<ReplacementRequest> {
   const { data } = await apiClient.post<{ data: ReplacementRequest }>(
     `/replacement-requests/${id}/approve`,
-    { notes },
+    { notes, old_installation_id: oldInstallationId },
   )
   return data.data
 }
