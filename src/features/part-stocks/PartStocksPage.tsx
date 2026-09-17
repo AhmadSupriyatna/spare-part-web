@@ -6,6 +6,7 @@ import { AdjustStockDialog } from '@/features/part-stocks/AdjustStockDialog'
 import { fetchPartStocksForBranch } from '@/features/part-stocks/api'
 import { ReceiveStockDialog } from '@/features/part-stocks/ReceiveStockDialog'
 import { SetPartLocationDialog } from '@/features/part-stocks/SetPartLocationDialog'
+import { StockLedgerTab } from '@/features/part-stocks/StockLedgerTab'
 import { fetchParts } from '@/features/parts/api'
 import { useBranchStore } from '@/stores/branch-store'
 import { useCanManage } from '@/stores/use-has-role'
@@ -16,16 +17,15 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 
-export function PartStocksPage() {
+function PartStocksTable({ activeBranchId }: { activeBranchId: number }) {
   const [search, setSearch] = useState('')
-  const activeBranchId = useBranchStore((state) => state.activeBranchId)
   const canManage = useCanManage()
 
   const { data: stocks, isLoading } = useQuery({
     queryKey: ['part-stocks', activeBranchId],
-    queryFn: () => fetchPartStocksForBranch(activeBranchId!),
-    enabled: !!activeBranchId,
+    queryFn: () => fetchPartStocksForBranch(activeBranchId),
   })
 
   const { data: parts } = useQuery({
@@ -45,14 +45,8 @@ export function PartStocksPage() {
     )
   })
 
-  if (!activeBranchId) {
-    return <p className="text-muted-foreground">Pilih cabang terlebih dahulu.</p>
-  }
-
   return (
     <div className="flex flex-col gap-4">
-      <PageHeader title="Stok Part" description="Posisi stok part di cabang yang sedang aktif." />
-
       <Input
         placeholder="Cari nama part, Item Master, atau lokasi..."
         value={search}
@@ -167,6 +161,33 @@ export function PartStocksPage() {
           </TableBody>
         </Table>
       )}
+    </div>
+  )
+}
+
+export function PartStocksPage() {
+  const activeBranchId = useBranchStore((state) => state.activeBranchId)
+
+  if (!activeBranchId) {
+    return <p className="text-muted-foreground">Pilih cabang terlebih dahulu.</p>
+  }
+
+  return (
+    <div className="flex flex-col gap-4">
+      <PageHeader title="Kelola Stok" description="Posisi stok, dan riwayat keluar-masuk part di cabang yang sedang aktif." />
+
+      <Tabs defaultValue="stok">
+        <TabsList>
+          <TabsTrigger value="stok">Daftar Stok</TabsTrigger>
+          <TabsTrigger value="ledger">Ledger Keluar-Masuk</TabsTrigger>
+        </TabsList>
+        <TabsContent value="stok" className="mt-4">
+          <PartStocksTable activeBranchId={activeBranchId} />
+        </TabsContent>
+        <TabsContent value="ledger" className="mt-4">
+          <StockLedgerTab branchId={activeBranchId} />
+        </TabsContent>
+      </Tabs>
     </div>
   )
 }

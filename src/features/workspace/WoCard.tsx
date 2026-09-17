@@ -73,14 +73,31 @@ export function WoCard({ task, invalidateKey }: WoCardProps) {
     queryFn: () => fetchPartInstallations(task.equipment_id),
   })
 
-  function activeInstallationsFor(partId: number) {
-    return (installations ?? []).filter((installation) => installation.part_id === partId && installation.is_active)
+  /**
+   * Candidates for one checklist row's picker — active installations of
+   * that part, minus whichever ones a *sibling* row (same part_id, a
+   * different address on the same task — see PmSchedulingService::
+   * schedule()'s one-row-per-unit split) has already claimed in the
+   * current in-progress edit, so two rows can't both point at the same
+   * installation.
+   */
+  function activeInstallationsFor(check: { id: number; part_id: number }) {
+    const claimedBySiblings = new Set(
+      (task.part_checks ?? [])
+        .filter((c) => c.id !== check.id && c.part_id === check.part_id)
+        .map((c) => rows[c.id]?.oldInstallationId)
+        .filter((id): id is number => id != null),
+    )
+    return (installations ?? []).filter(
+      (installation) =>
+        installation.part_id === check.part_id && installation.is_active && !claimedBySiblings.has(installation.id),
+    )
   }
 
   useEffect(() => {
     const next: Record<number, ChecklistRowState> = {}
     for (const check of task.part_checks ?? []) {
-      next[check.part_id] = {
+      next[check.id] = {
         checked: check.is_replaced ?? false,
         qty: String(check.quantity_used ?? check.quantity_planned),
         oldInstallationId: null,
@@ -116,7 +133,7 @@ export function WoCard({ task, invalidateKey }: WoCardProps) {
   })
 
   const hasChecklist = (task.part_checks?.length ?? 0) > 0
-  const anyNotReplaced = (task.part_checks ?? []).some((check) => !(rows[check.part_id]?.checked ?? false))
+  const anyNotReplaced = (task.part_checks ?? []).some((check) => !(rows[check.id]?.checked ?? false))
   const keteranganRequired = hasChecklist && anyNotReplaced
 
   const completeMutation = useMutation({
@@ -125,9 +142,10 @@ export function WoCard({ task, invalidateKey }: WoCardProps) {
         ? completeTask(task.id, {
             notes: notes || undefined,
             checks: (task.part_checks ?? []).map((check) => {
-              const row = rows[check.part_id]
+              const row = rows[check.id]
               const checked = row?.checked ?? false
               return {
+                id: check.id,
                 part_id: check.part_id,
                 is_replaced: checked,
                 quantity_used: checked ? Number(row?.qty || check.quantity_planned) : null,
@@ -205,13 +223,13 @@ export function WoCard({ task, invalidateKey }: WoCardProps) {
         <div className="flex flex-col gap-1.5">
           <p className="text-xs font-medium tracking-wide text-muted-foreground uppercase">Ganti Part</p>
           {(task.part_checks ?? []).map((check) => {
-            const row = rows[check.part_id] ?? {
+            const row = rows[check.id] ?? {
               checked: false,
               qty: String(check.quantity_planned),
               oldInstallationId: null,
               picking: false,
             }
-            const activeSamePart = activeInstallationsFor(check.part_id)
+            const activeSamePart = activeInstallationsFor(check)
             return (
               <div
                 key={check.id}
@@ -229,19 +247,19 @@ export function WoCard({ task, invalidateKey }: WoCardProps) {
                         if (value !== true) {
                           setRows((prev) => ({
                             ...prev,
-                            [check.part_id]: { ...row, checked: false, oldInstallationId: null, picking: false },
+                            [check.id]: { ...row, checked: false, oldInstallationId: null, picking: false },
                           }))
                           return
                         }
 
                         if (activeSamePart.length > 1) {
-                          setRows((prev) => ({ ...prev, [check.part_id]: { ...row, picking: true } }))
+                          setRows((prev) => ({ ...prev, [check.id]: { ...row, picking: true } }))
                           return
                         }
 
                         setRows((prev) => ({
                           ...prev,
-                          [check.part_id]: {
+                          [check.id]: {
                             ...row,
                             checked: true,
                             oldInstallationId: activeSamePart[0]?.id ?? null,
@@ -261,9 +279,7 @@ export function WoCard({ task, invalidateKey }: WoCardProps) {
                       disabled={!canAct || isDone}
                       className="h-7 w-16 shrink-0"
                       value={row.qty}
-                      onChange={(e) =>
-                        setRows((prev) => ({ ...prev, [check.part_id]: { ...row, qty: e.target.value } }))
-                      }
+                      onChange={(e) => setRows((prev) => ({ ...prev, [check.id]: { ...row, qty: e.target.value } }))}
                     />
                   )}
                 </div>
@@ -277,7 +293,7 @@ export function WoCard({ task, invalidateKey }: WoCardProps) {
                       onSelect={(installation) =>
                         setRows((prev) => ({
                           ...prev,
-                          [check.part_id]: {
+                          [check.id]: {
                             ...row,
                             checked: true,
                             picking: false,

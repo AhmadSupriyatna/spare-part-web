@@ -28,6 +28,40 @@ export async function fetchPartStockLedger(id: number): Promise<PaginatedRespons
   return data
 }
 
+export interface StockLedgerReportEntry {
+  id: number
+  occurred_at: string
+  part_id: number
+  part_name: string
+  item_master_no: string
+  type: string
+  channel: string
+  quantity_change: number
+  balance_after: number
+  notes: string | null
+  user_name: string | null
+  line_id: number | null
+  line_name: string | null
+  equipment_name: string | null
+}
+
+export interface StockLedgerReportFilters {
+  from?: string
+  to?: string
+  part_id?: number
+  line_id?: number
+}
+
+export async function fetchStockLedgerReport(
+  branchId: number,
+  filters: StockLedgerReportFilters,
+): Promise<StockLedgerReportEntry[]> {
+  const { data } = await apiClient.get<{ data: StockLedgerReportEntry[] }>(`/branches/${branchId}/stock-ledger`, {
+    params: filters,
+  })
+  return data.data
+}
+
 export async function receiveStock(id: number, payload: ReceiveStockPayload): Promise<PartStock> {
   const { data } = await apiClient.post<{ data: PartStock }>(`/part-stocks/${id}/receive`, payload)
   return data.data

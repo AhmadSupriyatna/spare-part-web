@@ -61,6 +61,7 @@ export interface CompleteTaskPayload {
 export interface CompleteChecklistPayload {
   notes?: string
   checks: Array<{
+    id: number
     part_id: number
     is_replaced: boolean
     quantity_used?: number | null
