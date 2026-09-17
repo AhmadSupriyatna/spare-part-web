@@ -1,8 +1,16 @@
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { Printer } from 'lucide-react'
+import { useEffect, useState } from 'react'
 import { Link } from 'react-router'
+import { toast } from 'sonner'
+import { taskSource, taskSourceLabel } from '@/features/pm/taskColors'
+import { fetchUsers } from '@/features/users/api'
+import { updateTask } from '@/features/tasks/api'
+import { useCanManage } from '@/stores/use-has-role'
 import type { Task, TaskStatus } from '@/types/tasks'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Sheet, SheetContent, SheetDescription, SheetTitle } from '@/components/ui/sheet'
 
 const statusLabels: Record<TaskStatus, string> = {
@@ -19,17 +27,49 @@ const statusVariants: Record<TaskStatus, 'secondary' | 'default' | 'success' | '
   cancelled: 'destructive',
 }
 
+const UNASSIGNED_VALUE = 'unassigned'
+
 interface TaskDetailSheetProps {
   task: Task | null
+  branchId: number | null
   onOpenChange: (open: boolean) => void
 }
 
 /**
- * Read-focused push-drawer for a PM task clicked on the calendar — Sheet
- * registers with the global sheet-stack automatically, so the page behind
- * it pushes over rather than being covered, same as every other drawer.
+ * Push-drawer for a PM task clicked on the calendar. Mostly read-only, but
+ * "Ditugaskan ke" is editable for Admin Spare Part/Superadmin (mirroring
+ * the PUT /tasks/{task} role gate) — this is the only place an auto-
+ * generated WO (Task Library/Part Lifetime schedules always start
+ * unassigned, see PmSchedulingService) can actually be handed to someone,
+ * which is what makes it show up in that person's "Tugas Saya".
  */
-export function TaskDetailSheet({ task, onOpenChange }: TaskDetailSheetProps) {
+export function TaskDetailSheet({ task, branchId, onOpenChange }: TaskDetailSheetProps) {
+  const canManage = useCanManage()
+  const queryClient = useQueryClient()
+  const [assignedTo, setAssignedTo] = useState<string>(UNASSIGNED_VALUE)
+
+  useEffect(() => {
+    setAssignedTo(task?.assigned_to ? String(task.assigned_to) : UNASSIGNED_VALUE)
+  }, [task])
+
+  const { data: users } = useQuery({
+    queryKey: ['users'],
+    queryFn: () => fetchUsers(),
+    enabled: canManage && !!task,
+  })
+  const assignableUsers = users?.filter((user) => user.roles.includes('engineer'))
+
+  const assignMutation = useMutation({
+    mutationFn: (value: string) =>
+      updateTask(task!.id, { assigned_to: value === UNASSIGNED_VALUE ? null : Number(value) }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['pm-tasks', branchId] })
+      queryClient.invalidateQueries({ queryKey: ['tasks', 'mine'] })
+      toast.success('Penugasan berhasil diperbarui.')
+    },
+    onError: () => toast.error('Gagal mengubah penugasan.'),
+  })
+
   return (
     <Sheet open={!!task} onOpenChange={onOpenChange} modal={false}>
       <SheetContent className="gap-0 p-0" showOverlay={false}>
@@ -47,8 +87,12 @@ export function TaskDetailSheet({ task, onOpenChange }: TaskDetailSheetProps) {
                 {task.is_overdue && task.status !== 'completed' && task.status !== 'cancelled' && (
                   <Badge variant="destructive">Terlambat</Badge>
                 )}
-                <Badge variant={task.task_library_id != null ? 'default' : 'warning'}>
-                  {task.task_library_id != null ? 'Dari Task Library' : 'Dari Part Lifetime'}
+                <Badge
+                  variant={
+                    taskSource(task) === 'library' ? 'default' : taskSource(task) === 'lifetime' ? 'warning' : 'destructive'
+                  }
+                >
+                  {taskSourceLabel[taskSource(task)]}
                 </Badge>
               </div>
 
@@ -61,7 +105,30 @@ export function TaskDetailSheet({ task, onOpenChange }: TaskDetailSheetProps) {
                 </div>
                 <div>
                   <p className="text-xs text-muted-foreground">Ditugaskan ke</p>
-                  <p className="font-medium">{task.assignee_name ?? '-'}</p>
+                  {canManage ? (
+                    <Select
+                      value={assignedTo}
+                      onValueChange={(value) => {
+                        const next = value ?? UNASSIGNED_VALUE
+                        setAssignedTo(next)
+                        assignMutation.mutate(next)
+                      }}
+                    >
+                      <SelectTrigger size="sm" className="mt-0.5 w-full">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value={UNASSIGNED_VALUE}>Belum ditugaskan</SelectItem>
+                        {assignableUsers?.map((user) => (
+                          <SelectItem key={user.id} value={String(user.id)}>
+                            {user.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  ) : (
+                    <p className="font-medium">{task.assignee_name ?? '-'}</p>
+                  )}
                 </div>
               </div>
 

@@ -5,7 +5,7 @@ import { toast } from 'sonner'
 import { fetchNationalHolidays, fetchTaskRescheduleHistory } from '@/features/pm/api'
 import { PartLifetimePanel } from '@/features/pm/PartLifetimePanel'
 import { RescheduleReasonDialog } from '@/features/pm/RescheduleReasonDialog'
-import { taskChipVariant } from '@/features/pm/taskColors'
+import { taskChipVariant, taskSource } from '@/features/pm/taskColors'
 import { TaskDetailSheet } from '@/features/pm/TaskDetailSheet'
 import { WoListView } from '@/features/pm/WoListView'
 import { ScheduleTaskLibraryDialog } from '@/features/task-libraries/ScheduleTaskLibraryDialog'
@@ -308,19 +308,28 @@ export function MaintenancePage() {
                       <div className="flex flex-col gap-0.5">
                         {dayTasks.slice(0, VISIBLE_TASKS_PER_DAY).map((task) => {
                           const tag = scheduleTag(task)
+                          const isBreakdown = taskSource(task) === 'breakdown'
                           return (
                             <button
                               key={task.id}
                               type="button"
-                              draggable
+                              draggable={!isBreakdown}
+                              title={isBreakdown ? 'WO Breakdown tidak bisa dijadwal ulang dari kalender ini' : undefined}
                               onDragStart={(e) => {
+                                if (isBreakdown) {
+                                  e.preventDefault()
+                                  return
+                                }
                                 e.dataTransfer.setData('text/plain', String(task.id))
                                 e.dataTransfer.effectAllowed = 'move'
                                 setDraggingTask(task)
                               }}
                               onDragEnd={() => setDraggingTask(null)}
                               onClick={() => setDetailTask(task)}
-                              className="block w-full cursor-grab truncate rounded text-left text-[10px] leading-tight active:cursor-grabbing"
+                              className={cn(
+                                'block w-full truncate rounded text-left text-[10px] leading-tight',
+                                isBreakdown ? 'cursor-pointer' : 'cursor-grab active:cursor-grabbing',
+                              )}
                             >
                               <Badge variant={taskChipVariant(task)} className="max-w-full px-1 py-0">
                                 {tag && <span className="font-bold">{tag}</span>}
@@ -430,7 +439,11 @@ export function MaintenancePage() {
         </div>
       )}
 
-      <TaskDetailSheet task={detailTask} onOpenChange={(open) => !open && setDetailTask(null)} />
+      <TaskDetailSheet
+        task={detailTask}
+        branchId={activeBranchId}
+        onOpenChange={(open) => !open && setDetailTask(null)}
+      />
 
       <RescheduleReasonDialog
         pending={pendingReschedule}
