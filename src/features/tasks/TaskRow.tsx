@@ -5,12 +5,20 @@ import { toast } from 'sonner'
 import { CompleteChecklistDialog } from '@/features/tasks/CompleteChecklistDialog'
 import { CompleteTaskDialog } from '@/features/tasks/CompleteTaskDialog'
 import { cancelTask, startTask } from '@/features/tasks/api'
+import { taskSource } from '@/features/pm/taskColors'
 import { useAuthStore } from '@/stores/auth-store'
 import { useHasRole } from '@/stores/use-has-role'
+import { cn } from '@/lib/utils'
 import type { Task } from '@/types/tasks'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { TableCell, TableRow } from '@/components/ui/table'
+
+const sourceBorderClass: Record<ReturnType<typeof taskSource>, string> = {
+  library: 'border-l-primary',
+  lifetime: 'border-l-warning',
+  breakdown: 'border-l-destructive',
+}
 
 const statusLabels: Record<Task['status'], string> = {
   pending: 'Belum Mulai',
@@ -60,9 +68,11 @@ export function TaskRow({ task, invalidateKey }: TaskRowProps) {
     onError: (error: unknown) => reportError(error, 'Gagal membatalkan tugas.'),
   })
 
+  const source = taskSource(task)
+
   return (
     <TableRow>
-      <TableCell>
+      <TableCell className={cn('border-l-4', sourceBorderClass[source])}>
         <div className="font-medium">{task.title}</div>
         {task.cause && <div className="text-xs text-muted-foreground">Penyebab: {task.cause}</div>}
         {task.part_stock_id && (
@@ -72,7 +82,18 @@ export function TaskRow({ task, invalidateKey }: TaskRowProps) {
           </div>
         )}
         {task.part_checks && task.part_checks.length > 0 && (
-          <div className="text-xs text-muted-foreground">{task.part_checks.length} part di checklist PM</div>
+          <div className="mt-1 flex flex-col gap-0.5">
+            {task.part_checks.map((check) => (
+              <div key={check.id} className="text-xs text-muted-foreground">
+                {check.part_name ?? `Part #${check.part_id}`}
+                {check.is_replaced === null && ' — Belum diputuskan'}
+                {check.is_replaced === true && <span className="text-success"> — Diganti</span>}
+                {check.is_replaced === false && (
+                  <span> — Tidak diganti{check.reason ? `: ${check.reason}` : ''}</span>
+                )}
+              </div>
+            ))}
+          </div>
         )}
       </TableCell>
       <TableCell>
