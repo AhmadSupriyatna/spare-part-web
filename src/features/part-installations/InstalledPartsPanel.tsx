@@ -105,8 +105,13 @@ export function InstalledPartsPanel({ equipmentId }: { equipmentId: number }) {
           </div>
           <div className="flex flex-1 flex-wrap justify-end gap-1">
             {group.installations.map((installation) => {
+              // The address (slot_label) is what approval/WO pickers use to
+              // ask "which one" — only worth showing once there's actually
+              // more than one to tell apart. unit_code (PartUnit's own,
+              // global-per-part identity) stays reserved for that unit's own
+              // detail page, linked to below.
               const label = [
-                installation.unit_code ?? '?',
+                group.installations.length > 1 ? `Unit ${installation.slot_label ?? '?'}` : null,
                 installation.percent_used != null ? `${Math.round(installation.percent_used)}%` : null,
               ]
                 .filter(Boolean)

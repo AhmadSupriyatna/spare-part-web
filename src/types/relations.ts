@@ -26,6 +26,7 @@ export interface PartInstallation {
   item_master_no: string
   part_unit_id: number | null
   unit_code?: string | null
+  slot_label: string | null
   estimated_lifetime_hours?: number | null
   installed_at: string
   installed_at_runtime_hours: number | null

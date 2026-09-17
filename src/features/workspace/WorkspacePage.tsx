@@ -240,6 +240,15 @@ function TaskPoolView({ branchId }: { branchId: number }) {
     [tasks],
   )
 
+  // Progress reflects the whole pool (every claimed-or-claimable task, not
+  // just what's currently open) — cancelled ones don't count either way,
+  // they were never going to be "done."
+  const relevantTasks = useMemo(() => (tasks ?? []).filter((task) => task.status !== 'cancelled'), [tasks])
+  const doneCount = relevantTasks.filter((task) => task.status === 'completed').length
+  const totalCount = relevantTasks.length
+  const remainingCount = totalCount - doneCount
+  const percent = totalCount > 0 ? Math.round((doneCount / totalCount) * 100) : 0
+
   const visibleTasks = useMemo(() => {
     const term = search.trim().toLowerCase()
     if (!term) return openTasks
@@ -254,7 +263,15 @@ function TaskPoolView({ branchId }: { branchId: number }) {
 
   return (
     <div className="flex flex-col gap-4">
-      <p className="text-xs text-muted-foreground">{openTasks.length} WO belum dikerjakan</p>
+      <div className="flex items-center justify-between text-xs text-muted-foreground">
+        <span>{remainingCount} WO tersisa</span>
+        <span>
+          {doneCount}/{totalCount} selesai
+        </span>
+      </div>
+      <div className="h-2 w-full overflow-hidden rounded-full bg-muted">
+        <div className="h-full rounded-full bg-primary transition-all" style={{ width: `${percent}%` }} />
+      </div>
 
       <div className="relative">
         <Search className="pointer-events-none absolute top-1/2 left-2.5 size-4 -translate-y-1/2 text-muted-foreground" />

@@ -77,6 +77,7 @@ export function EquipmentDetailPage() {
             <TableHeader>
               <TableRow>
                 <TableHead>Part</TableHead>
+                <TableHead>Alamat</TableHead>
                 <TableHead>Unit</TableHead>
                 <TableHead>Tanggal Pasang</TableHead>
                 <TableHead className="text-right">Usia</TableHead>
@@ -93,6 +94,9 @@ export function EquipmentDetailPage() {
                       {installation.part_name}
                     </Link>
                     <p className="font-mono text-xs text-muted-foreground">{installation.item_master_no}</p>
+                  </TableCell>
+                  <TableCell className="text-muted-foreground">
+                    {installation.slot_label ? <Badge variant="outline">{installation.slot_label}</Badge> : '-'}
                   </TableCell>
                   <TableCell className="text-muted-foreground">
                     {installation.part_unit_id ? (
