@@ -20,6 +20,11 @@ interface DeleteWithPasswordDialogProps {
   onConfirm: (password: string) => Promise<void>
   onSuccess: () => void
   trigger: React.ReactNode
+  /** Defaults to "Hapus Permanen" — override for a non-delete action (e.g. archiving) that still warrants a password re-check. */
+  submitLabel?: string
+  submitPendingLabel?: string
+  /** Defaults to "destructive" — pass "default" for an action that isn't itself a deletion. */
+  variant?: 'destructive' | 'default'
 }
 
 /**
@@ -34,6 +39,9 @@ export function DeleteWithPasswordDialog({
   onConfirm,
   onSuccess,
   trigger,
+  submitLabel = 'Hapus Permanen',
+  submitPendingLabel = 'Menghapus...',
+  variant = 'destructive',
 }: DeleteWithPasswordDialogProps) {
   const [open, setOpen] = useState(false)
   const [password, setPassword] = useState('')
@@ -86,12 +94,8 @@ export function DeleteWithPasswordDialog({
             />
           </div>
           <DialogFooter>
-            <Button
-              type="submit"
-              variant="destructive"
-              disabled={mutation.isPending || password.length === 0}
-            >
-              {mutation.isPending ? 'Menghapus...' : 'Hapus Permanen'}
+            <Button type="submit" variant={variant} disabled={mutation.isPending || password.length === 0}>
+              {mutation.isPending ? submitPendingLabel : submitLabel}
             </Button>
           </DialogFooter>
         </form>

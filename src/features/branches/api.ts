@@ -23,6 +23,16 @@ export async function updateBranch(id: number, payload: Partial<BranchPayload>):
   return data.data
 }
 
-export async function deleteBranch(id: number): Promise<void> {
-  await apiClient.delete(`/branches/${id}`)
+export async function deleteBranch(id: number, password: string): Promise<void> {
+  await apiClient.delete(`/branches/${id}`, { data: { password } })
+}
+
+export async function archiveBranch(id: number, password: string): Promise<Branch> {
+  const { data } = await apiClient.post<{ data: Branch }>(`/branches/${id}/archive`, { password })
+  return data.data
+}
+
+export async function unarchiveBranch(id: number): Promise<Branch> {
+  const { data } = await apiClient.post<{ data: Branch }>(`/branches/${id}/unarchive`)
+  return data.data
 }

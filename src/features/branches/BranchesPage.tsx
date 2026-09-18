@@ -1,8 +1,10 @@
-import { useQuery } from '@tanstack/react-query'
-import { Pencil } from 'lucide-react'
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { Archive, ArchiveRestore, Pencil } from 'lucide-react'
+import { toast } from 'sonner'
 import { BranchFormDialog } from '@/features/branches/BranchFormDialog'
-import { fetchBranches } from '@/features/branches/api'
-import { useCanManage } from '@/stores/use-has-role'
+import { archiveBranch, fetchBranches, unarchiveBranch } from '@/features/branches/api'
+import { useCanManage, useIsSuperadmin } from '@/stores/use-has-role'
+import { DeleteWithPasswordDialog } from '@/components/DeleteWithPasswordDialog'
 import { PageHeader } from '@/components/PageHeader'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -11,10 +13,21 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 
 export function BranchesPage() {
   const canManage = useCanManage()
+  const isSuperadmin = useIsSuperadmin()
+  const queryClient = useQueryClient()
 
   const { data: branches, isLoading } = useQuery({
     queryKey: ['branches'],
     queryFn: fetchBranches,
+  })
+
+  const unarchiveMutation = useMutation({
+    mutationFn: unarchiveBranch,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['branches'] })
+      toast.success('Plant berhasil diaktifkan kembali.')
+    },
+    onError: () => toast.error('Gagal mengaktifkan kembali plant.'),
   })
 
   return (
@@ -56,7 +69,7 @@ export function BranchesPage() {
                   )}
                 </TableCell>
                 {canManage && (
-                  <TableCell className="text-right">
+                  <TableCell className="flex justify-end gap-1">
                     <BranchFormDialog
                       branch={branch}
                       trigger={
@@ -65,6 +78,36 @@ export function BranchesPage() {
                         </Button>
                       }
                     />
+                    {isSuperadmin &&
+                      (branch.is_active === false ? (
+                        <Button
+                          variant="ghost"
+                          size="icon-sm"
+                          aria-label="Aktifkan kembali plant"
+                          title="Aktifkan kembali plant"
+                          onClick={() => unarchiveMutation.mutate(branch.id)}
+                          disabled={unarchiveMutation.isPending}
+                        >
+                          <ArchiveRestore />
+                        </Button>
+                      ) : (
+                        <DeleteWithPasswordDialog
+                          title={`Arsipkan Plant "${branch.name}"?`}
+                          description="Plant ini akan berhenti muncul untuk role yang dibatasi per plant (Supervisor/Admin Spare Part/Engineer). Semua data (part, stok, supplier, dst.) tetap tersimpan utuh — bisa diaktifkan kembali kapan saja."
+                          onConfirm={async (password) => {
+                            await archiveBranch(branch.id, password)
+                          }}
+                          onSuccess={() => queryClient.invalidateQueries({ queryKey: ['branches'] })}
+                          submitLabel="Arsipkan Plant"
+                          submitPendingLabel="Mengarsipkan..."
+                          variant="default"
+                          trigger={
+                            <Button variant="ghost" size="icon-sm" aria-label="Arsipkan plant" title="Arsipkan plant">
+                              <Archive />
+                            </Button>
+                          }
+                        />
+                      ))}
                   </TableCell>
                 )}
               </TableRow>
