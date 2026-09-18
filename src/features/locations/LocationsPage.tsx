@@ -320,7 +320,7 @@ export function LocationsPage() {
 
         <div
           className={cn(
-            'relative flex w-full shrink-0 lg:sticky lg:top-4 lg:self-stretch',
+            'relative flex w-full shrink-0 lg:sticky lg:top-4 lg:h-[calc(100vh-8rem)]',
             drawerCollapsed ? 'lg:w-6' : 'lg:flex-[3]',
           )}
         >
@@ -333,7 +333,7 @@ export function LocationsPage() {
           >
             {drawerCollapsed ? <ChevronLeft className="size-3.5" /> : <ChevronRight className="size-3.5" />}
           </button>
-          <div className={cn('w-full', drawerCollapsed && 'lg:hidden')}>
+          <div className={cn('w-full lg:h-full', drawerCollapsed && 'lg:hidden')}>
             <LocationPartDrawer
               hidden={false}
               branchId={activeBranchId}
