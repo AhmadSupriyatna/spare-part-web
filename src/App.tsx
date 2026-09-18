@@ -1,4 +1,5 @@
 import { BrowserRouter, Navigate, Route, Routes } from 'react-router'
+import { ActivityLogPage } from '@/features/activity-log/ActivityLogPage'
 import { AlertsPage } from '@/features/alerts/AlertsPage'
 import { LoginPage } from '@/features/auth/LoginPage'
 import { BranchesPage } from '@/features/branches/BranchesPage'
@@ -62,6 +63,7 @@ function App() {
             <Route path="settings/units" element={<UnitsPage />} />
             <Route path="settings/categories" element={<CategoriesPage />} />
             <Route path="settings/users" element={<UsersPage />} />
+            <Route path="settings/activity-log" element={<ActivityLogPage />} />
             <Route path="part-units/:id" element={<PartUnitDetailPage />} />
             <Route path="pm/calendar" element={<MaintenancePage />} />
             <Route path="pm/tasks/:id/print" element={<PrintWoChecklistPage />} />

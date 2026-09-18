@@ -8,6 +8,7 @@ import {
   ClipboardList,
   Factory,
   Hammer,
+  History,
   LayoutDashboard,
   List,
   MapPin,
@@ -115,6 +116,12 @@ const navSections: NavSection[] = [
       { to: '/settings/units', label: 'Satuan Part', icon: Ruler },
       { to: '/settings/categories', label: 'Kategori Part', icon: Tag },
       { to: '/settings/users', label: 'Kelola Pengguna', icon: UserRoundCog, roles: ['superadmin'] },
+      {
+        to: '/settings/activity-log',
+        label: 'Log Aktivitas',
+        icon: History,
+        roles: ['admin_spare_part', 'supervisor', 'superadmin'],
+      },
     ],
   },
 ]
