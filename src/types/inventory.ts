@@ -24,6 +24,7 @@ export interface PartStock {
   part_id: number
   part_name?: string
   item_master_no?: string
+  category?: string | null
   branch_id: number
   branch_name?: string
   supplier_id: number | null
@@ -53,11 +54,29 @@ export interface Supplier {
 export interface Location {
   id: number
   branch_id: number
+  rack_level_id: number
+  bin_number: number
   code: string
-  rack: string
-  bin: string
+  rack_label?: string
+  level_number?: number
   description: string | null
   is_active: boolean
+  part_stocks_count?: number
+}
+
+export interface RackLevel {
+  id: number
+  rack_id: number
+  level_number: number
+  code: string
+  locations: Location[]
+}
+
+export interface Rack {
+  id: number
+  branch_id: number
+  label: string
+  levels: RackLevel[]
 }
 
 export interface StockLedgerEntry {

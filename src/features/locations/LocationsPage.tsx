@@ -1,11 +1,22 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { Eye, MapPin, Pencil, Trash2 } from 'lucide-react'
-import { Link } from 'react-router'
+import { MapPin, Package, Plus, Trash2 } from 'lucide-react'
+import { useState } from 'react'
 import { toast } from 'sonner'
-import { deleteLocation, fetchLocations } from '@/features/locations/api'
-import { LocationFormDialog } from '@/features/locations/LocationFormDialog'
+import { BinCell } from '@/features/locations/BinCell'
+import {
+  createLocation,
+  createRack,
+  createRackLevel,
+  deleteLocation,
+  deleteRack,
+  deleteRackLevel,
+  fetchRacks,
+} from '@/features/locations/api'
+import { LocationPartDrawer } from '@/features/locations/LocationPartDrawer'
+import { updatePartStockLocation } from '@/features/part-stocks/api'
 import { useBranchStore } from '@/stores/branch-store'
 import { useCanManage } from '@/stores/use-has-role'
+import type { PartStock } from '@/types/inventory'
 import { EmptyState } from '@/components/EmptyState'
 import { PageHeader } from '@/components/PageHeader'
 import {
@@ -19,29 +30,97 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from '@/components/ui/alert-dialog'
-import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Skeleton } from '@/components/ui/skeleton'
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 
 export function LocationsPage() {
   const activeBranchId = useBranchStore((state) => state.activeBranchId)
   const canManage = useCanManage()
   const queryClient = useQueryClient()
 
-  const { data: locations, isLoading } = useQuery({
-    queryKey: ['locations', activeBranchId],
-    queryFn: () => fetchLocations(activeBranchId!),
+  const [drawerOpen, setDrawerOpen] = useState(false)
+  const [draggingStock, setDraggingStock] = useState<PartStock | null>(null)
+  const [armedStock, setArmedStock] = useState<PartStock | null>(null)
+
+  const { data: racks, isLoading } = useQuery({
+    queryKey: ['racks', activeBranchId],
+    queryFn: () => fetchRacks(activeBranchId!),
     enabled: !!activeBranchId,
   })
 
-  const deleteMutation = useMutation({
-    mutationFn: deleteLocation,
+  function invalidateMap() {
+    queryClient.invalidateQueries({ queryKey: ['racks', activeBranchId] })
+  }
+
+  const addRackMutation = useMutation({
+    mutationFn: () => createRack(activeBranchId!),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['locations', activeBranchId] })
-      toast.success('Lokasi berhasil dihapus.')
+      invalidateMap()
+      toast.success('Rak baru ditambahkan.')
     },
   })
+
+  const addLevelMutation = useMutation({
+    mutationFn: (rackId: number) => createRackLevel(rackId),
+    onSuccess: () => {
+      invalidateMap()
+      toast.success('Tingkat baru ditambahkan.')
+    },
+  })
+
+  const addBinMutation = useMutation({
+    mutationFn: (rackLevelId: number) => createLocation(rackLevelId),
+    onSuccess: () => {
+      invalidateMap()
+      toast.success('Bin baru ditambahkan.')
+    },
+  })
+
+  const deleteRackMutation = useMutation({
+    mutationFn: deleteRack,
+    onSuccess: () => {
+      invalidateMap()
+      toast.success('Rak dihapus.')
+    },
+  })
+
+  const deleteLevelMutation = useMutation({
+    mutationFn: deleteRackLevel,
+    onSuccess: () => {
+      invalidateMap()
+      toast.success('Tingkat dihapus.')
+    },
+  })
+
+  const deleteBinMutation = useMutation({
+    mutationFn: deleteLocation,
+    onSuccess: () => {
+      invalidateMap()
+      toast.success('Bin dihapus.')
+    },
+  })
+
+  const assignMutation = useMutation({
+    mutationFn: ({ partStockId, locationId }: { partStockId: number; locationId: number }) =>
+      updatePartStockLocation(partStockId, locationId),
+    onSuccess: (_, variables) => {
+      invalidateMap()
+      queryClient.invalidateQueries({ queryKey: ['part-stocks', activeBranchId] })
+      toast.success('Part berhasil ditempatkan.')
+      if (armedStock?.id === variables.partStockId) setArmedStock(null)
+    },
+    onError: () => toast.error('Gagal menempatkan part ke bin ini.'),
+  })
+
+  function handleDropOnBin(locationId: number) {
+    if (!draggingStock) return
+    assignMutation.mutate({ partStockId: draggingStock.id, locationId })
+  }
+
+  function handleClickBin(locationId: number) {
+    if (!armedStock) return
+    assignMutation.mutate({ partStockId: armedStock.id, locationId })
+  }
 
   if (!activeBranchId) {
     return <p className="text-muted-foreground">Pilih cabang terlebih dahulu.</p>
@@ -50,124 +129,189 @@ export function LocationsPage() {
   return (
     <div className="flex flex-col gap-4">
       <PageHeader
-        title="Lokasi (Rak/Bin)"
-        description="Titik simpan fisik part di cabang ini."
+        title="Lokasi (Rak & Bin)"
+        description="Peta rak penyimpanan part di cabang ini."
         action={
-          canManage && (
-            <LocationFormDialog branchId={activeBranchId} trigger={<Button>Tambah Lokasi</Button>} />
-          )
+          <div className="flex gap-2">
+            <Button variant="outline" onClick={() => setDrawerOpen(true)}>
+              <Package />
+              Tempatkan Part
+            </Button>
+            {canManage && (
+              <Button onClick={() => addRackMutation.mutate()} disabled={addRackMutation.isPending}>
+                <Plus />
+                Tambah Rak
+              </Button>
+            )}
+          </div>
         }
       />
 
+      {armedStock && (
+        <div className="flex items-center justify-between gap-2 rounded-md border border-primary/40 bg-primary/5 px-3 py-2 text-sm">
+          <span>
+            Menempatkan <strong>{armedStock.part_name}</strong> — tap salah satu bin di bawah untuk memilih tujuan.
+          </span>
+          <Button variant="ghost" size="sm" onClick={() => setArmedStock(null)}>
+            Batal
+          </Button>
+        </div>
+      )}
+
       {isLoading ? (
         <div className="flex flex-col gap-2">
-          {Array.from({ length: 4 }).map((_, i) => (
-            <Skeleton key={i} className="h-10 w-full" />
-          ))}
+          <Skeleton className="h-32 w-full" />
+          <Skeleton className="h-32 w-full" />
         </div>
-      ) : locations?.length === 0 ? (
+      ) : !racks || racks.length === 0 ? (
         <EmptyState
           icon={MapPin}
-          title="Belum ada lokasi di cabang ini"
-          description="Tambahkan rak/bin supaya part bisa ditempatkan dan mudah dicari saat pengambilan."
+          title="Belum ada rak di cabang ini"
+          description="Tambahkan rak pertama, lalu tingkat dan bin di dalamnya, untuk mulai menempatkan part."
           action={
             canManage && (
-              <LocationFormDialog
-                branchId={activeBranchId}
-                trigger={<Button size="sm">Tambah Lokasi</Button>}
-              />
+              <Button size="sm" onClick={() => addRackMutation.mutate()}>
+                <Plus />
+                Tambah Rak
+              </Button>
             )
           }
         />
       ) : (
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead>Kode</TableHead>
-              <TableHead>Rak</TableHead>
-              <TableHead>Bin</TableHead>
-              <TableHead>Deskripsi</TableHead>
-              <TableHead>Status</TableHead>
-              <TableHead className="text-right">Aksi</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {locations?.map((location) => (
-              <TableRow key={location.id}>
-                <TableCell className="font-mono font-medium">{location.code}</TableCell>
-                <TableCell className="text-muted-foreground">{location.rack}</TableCell>
-                <TableCell className="text-muted-foreground">{location.bin}</TableCell>
-                <TableCell className="text-muted-foreground">{location.description ?? '-'}</TableCell>
-                <TableCell>
-                  {location.is_active ? (
-                    <Badge variant="success">Aktif</Badge>
-                  ) : (
-                    <Badge variant="secondary">Nonaktif</Badge>
-                  )}
-                </TableCell>
-                <TableCell className="flex justify-end gap-1">
-                  <Button
-                    variant="ghost"
-                    size="icon-sm"
-                    nativeButton={false}
-                    aria-label="Lihat detail"
-                    title="Lihat detail"
-                    render={<Link to={`/locations/${location.id}`} />}
-                  >
-                    <Eye />
-                  </Button>
-                  {canManage && (
-                    <>
-                      <LocationFormDialog
-                        branchId={activeBranchId}
-                        location={location}
-                        trigger={
-                          <Button
-                            variant="ghost"
-                            size="icon-sm"
-                            aria-label="Ubah lokasi"
-                            title="Ubah lokasi"
-                          >
-                            <Pencil />
-                          </Button>
+        <div className="flex flex-col gap-3">
+          {racks.map((rack) => (
+            <div key={rack.id} className="rounded-lg border p-3">
+              <div className="flex items-center justify-between gap-2">
+                <h3 className="text-sm font-semibold">Rak {rack.label}</h3>
+                {canManage && (
+                  <div className="flex gap-1">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => addLevelMutation.mutate(rack.id)}
+                      disabled={addLevelMutation.isPending}
+                    >
+                      <Plus className="size-3.5" />
+                      Tingkat
+                    </Button>
+                    <AlertDialog>
+                      <AlertDialogTrigger
+                        render={
+                          <Button variant="ghost" size="icon-sm" aria-label="Hapus rak" title="Hapus rak" />
                         }
-                      />
-                      <AlertDialog>
-                        <AlertDialogTrigger
-                          render={
+                      >
+                        <Trash2 className="size-3.5" />
+                      </AlertDialogTrigger>
+                      <AlertDialogContent>
+                        <AlertDialogHeader>
+                          <AlertDialogTitle>Hapus Rak {rack.label}?</AlertDialogTitle>
+                          <AlertDialogDescription>
+                            Semua tingkat dan bin di rak ini ikut terhapus. Part yang tersimpan di dalamnya akan
+                            kehilangan lokasinya (bukan ikut terhapus).
+                          </AlertDialogDescription>
+                        </AlertDialogHeader>
+                        <AlertDialogFooter>
+                          <AlertDialogCancel>Batal</AlertDialogCancel>
+                          <AlertDialogAction onClick={() => deleteRackMutation.mutate(rack.id)}>
+                            Hapus
+                          </AlertDialogAction>
+                        </AlertDialogFooter>
+                      </AlertDialogContent>
+                    </AlertDialog>
+                  </div>
+                )}
+              </div>
+
+              {rack.levels.length === 0 ? (
+                <p className="mt-2 text-xs text-muted-foreground">Belum ada tingkat di rak ini.</p>
+              ) : (
+                <div className="mt-2 flex flex-col gap-2">
+                  {rack.levels.map((level) => (
+                    <div key={level.id} className="rounded-md border bg-muted/30 p-2">
+                      <div className="mb-1.5 flex items-center justify-between">
+                        <span className="text-xs font-medium text-muted-foreground">
+                          Tingkat {level.level_number} <span className="font-mono">({level.code})</span>
+                        </span>
+                        {canManage && (
+                          <div className="flex gap-1">
                             <Button
                               variant="ghost"
-                              size="icon-sm"
-                              aria-label="Hapus lokasi"
-                              title="Hapus lokasi"
+                              size="icon-xs"
+                              aria-label="Tambah bin"
+                              title="Tambah bin"
+                              onClick={() => addBinMutation.mutate(level.id)}
+                              disabled={addBinMutation.isPending}
+                            >
+                              <Plus className="size-3.5" />
+                            </Button>
+                            <AlertDialog>
+                              <AlertDialogTrigger
+                                render={
+                                  <Button
+                                    variant="ghost"
+                                    size="icon-xs"
+                                    aria-label="Hapus tingkat"
+                                    title="Hapus tingkat"
+                                  />
+                                }
+                              >
+                                <Trash2 className="size-3.5" />
+                              </AlertDialogTrigger>
+                              <AlertDialogContent>
+                                <AlertDialogHeader>
+                                  <AlertDialogTitle>Hapus Tingkat {level.code}?</AlertDialogTitle>
+                                  <AlertDialogDescription>
+                                    Semua bin di tingkat ini ikut terhapus. Part di dalamnya akan kehilangan
+                                    lokasinya.
+                                  </AlertDialogDescription>
+                                </AlertDialogHeader>
+                                <AlertDialogFooter>
+                                  <AlertDialogCancel>Batal</AlertDialogCancel>
+                                  <AlertDialogAction onClick={() => deleteLevelMutation.mutate(level.id)}>
+                                    Hapus
+                                  </AlertDialogAction>
+                                </AlertDialogFooter>
+                              </AlertDialogContent>
+                            </AlertDialog>
+                          </div>
+                        )}
+                      </div>
+                      {level.locations.length === 0 ? (
+                        <p className="text-xs text-muted-foreground">Belum ada bin di tingkat ini.</p>
+                      ) : (
+                        <div className="flex flex-wrap gap-1.5">
+                          {level.locations.map((bin) => (
+                            <BinCell
+                              key={bin.id}
+                              location={bin}
+                              isDragging={!!draggingStock}
+                              isArmed={!!armedStock}
+                              canManage={canManage}
+                              onDrop={() => handleDropOnBin(bin.id)}
+                              onClick={() => handleClickBin(bin.id)}
+                              onDelete={() => deleteBinMutation.mutate(bin.id)}
                             />
-                          }
-                        >
-                          <Trash2 />
-                        </AlertDialogTrigger>
-                        <AlertDialogContent>
-                          <AlertDialogHeader>
-                            <AlertDialogTitle>Hapus lokasi ini?</AlertDialogTitle>
-                            <AlertDialogDescription>
-                              "{location.code}" akan dihapus permanen.
-                            </AlertDialogDescription>
-                          </AlertDialogHeader>
-                          <AlertDialogFooter>
-                            <AlertDialogCancel>Batal</AlertDialogCancel>
-                            <AlertDialogAction onClick={() => deleteMutation.mutate(location.id)}>
-                              Hapus
-                            </AlertDialogAction>
-                          </AlertDialogFooter>
-                        </AlertDialogContent>
-                      </AlertDialog>
-                    </>
-                  )}
-                </TableCell>
-              </TableRow>
-            ))}
-          </TableBody>
-        </Table>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          ))}
+        </div>
       )}
+
+      <LocationPartDrawer
+        open={drawerOpen}
+        onOpenChange={setDrawerOpen}
+        branchId={activeBranchId}
+        armedStockId={armedStock?.id ?? null}
+        onArmPart={setArmedStock}
+        onDragStartPart={setDraggingStock}
+        onDragEndPart={() => setDraggingStock(null)}
+      />
     </div>
   )
 }

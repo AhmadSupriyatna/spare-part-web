@@ -33,7 +33,7 @@ export function LocationDetailPage() {
       <div>
         <h1 className="text-2xl font-semibold">{location.code}</h1>
         <p className="text-sm text-muted-foreground">
-          Rak {location.rack} &middot; Bin {location.bin}
+          Rak {location.rack_label} &middot; Tingkat {location.level_number} &middot; Bin {location.bin_number}
         </p>
         {location.description && <p className="mt-1 text-muted-foreground">{location.description}</p>}
         <div className="mt-2">
