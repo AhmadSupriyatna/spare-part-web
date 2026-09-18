@@ -13,6 +13,7 @@ import {
   MapPin,
   NotebookPen,
   Package,
+  PiggyBank,
   QrCode,
   Ruler,
   Settings,
@@ -65,6 +66,12 @@ const navSections: NavSection[] = [
       { to: '/alerts', label: 'Peringatan', icon: AlertTriangle },
       { to: '/suppliers', label: 'Supplier', icon: Truck },
       { to: '/locations', label: 'Lokasi', icon: MapPin },
+      {
+        to: '/budgets',
+        label: 'Budget',
+        icon: PiggyBank,
+        roles: ['superadmin', 'supervisor', 'admin_spare_part'],
+      },
     ],
   },
   {

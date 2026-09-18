@@ -4,6 +4,7 @@ import { LoginPage } from '@/features/auth/LoginPage'
 import { BranchesPage } from '@/features/branches/BranchesPage'
 import { BreakdownScanPage } from '@/features/breakdown/BreakdownScanPage'
 import { PrintQrCodesPage } from '@/features/breakdown/PrintQrCodesPage'
+import { BudgetsPage } from '@/features/budgets/BudgetsPage'
 import { DashboardPage } from '@/features/dashboard/DashboardPage'
 import { EquipmentDetailPage } from '@/features/equipment/EquipmentDetailPage'
 import { LineHierarchyPage } from '@/features/lines/LineHierarchyPage'
@@ -51,6 +52,7 @@ function App() {
             <Route path="suppliers/:id" element={<SupplierDetailPage />} />
             <Route path="locations" element={<LocationsPage />} />
             <Route path="locations/:id" element={<LocationDetailPage />} />
+            <Route path="budgets" element={<BudgetsPage />} />
             <Route path="lines" element={<LineHierarchyPage />} />
             <Route path="equipment/:id" element={<EquipmentDetailPage />} />
             <Route path="workspace" element={<WorkspacePage />} />
