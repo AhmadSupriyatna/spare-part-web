@@ -3,6 +3,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useEffect, useRef, useState } from 'react'
 import { Controller, useForm } from 'react-hook-form'
 import { toast } from 'sonner'
+import { fetchCategories } from '@/features/categories/api'
 import { createPart, updatePart } from '@/features/parts/api'
 import { partSchema, type PartFormValues } from '@/features/parts/schema'
 import { fetchUnits } from '@/features/units/api'
@@ -12,6 +13,8 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
+
+const NO_CATEGORY = '__tanpa_kategori__'
 
 interface PartFormDialogProps {
   part?: Part
@@ -29,6 +32,10 @@ export function PartFormDialog({ part, trigger }: PartFormDialogProps) {
   const { data: units } = useQuery({
     queryKey: ['units'],
     queryFn: fetchUnits,
+  })
+  const { data: categories } = useQuery({
+    queryKey: ['categories'],
+    queryFn: fetchCategories,
   })
 
   const {
@@ -137,7 +144,28 @@ export function PartFormDialog({ part, trigger }: PartFormDialogProps) {
         </div>
         <div className="flex flex-col gap-2">
           <Label htmlFor="category">Kategori</Label>
-          <Input id="category" placeholder="Mekanikal" {...register('category')} />
+          <Controller
+            control={control}
+            name="category"
+            render={({ field }) => (
+              <Select
+                value={field.value || NO_CATEGORY}
+                onValueChange={(value) => field.onChange(value === NO_CATEGORY ? '' : value)}
+              >
+                <SelectTrigger id="category">
+                  <SelectValue placeholder="Pilih kategori" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value={NO_CATEGORY}>Tanpa Kategori</SelectItem>
+                  {categories?.map((category) => (
+                    <SelectItem key={category.id} value={category.name}>
+                      {category.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            )}
+          />
         </div>
       </div>
       <div className="flex flex-col gap-2">

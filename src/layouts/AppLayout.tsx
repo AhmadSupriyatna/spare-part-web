@@ -17,6 +17,7 @@ import {
   QrCode,
   Ruler,
   Settings,
+  Tag,
   Truck,
   UserRoundCog,
   Warehouse,
@@ -112,6 +113,7 @@ const navSections: NavSection[] = [
     items: [
       { to: '/settings/company', label: 'Profil Perusahaan', icon: Settings },
       { to: '/settings/units', label: 'Satuan Part', icon: Ruler },
+      { to: '/settings/categories', label: 'Kategori Part', icon: Tag },
       { to: '/settings/users', label: 'Kelola Pengguna', icon: UserRoundCog, roles: ['superadmin'] },
     ],
   },
