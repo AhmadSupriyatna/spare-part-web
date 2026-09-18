@@ -9,6 +9,10 @@ export interface Budget {
   planned_amount: string
   corrective_amount: string
   total_amount: string
+  actual_planned?: string
+  actual_unplanned?: string
+  actual_total?: string
+  unpriced_transactions?: number
   notes: string | null
   created_by: number | null
   created_by_name?: string | null

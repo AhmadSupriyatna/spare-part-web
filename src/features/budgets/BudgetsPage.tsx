@@ -19,6 +19,7 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from '@/components/ui/alert-dialog'
+import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -26,6 +27,17 @@ import { Skeleton } from '@/components/ui/skeleton'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 
 const currencyFormatter = new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR' })
+
+function percentUsedBadge(actualTotal: number, budgetTotal: number) {
+  if (budgetTotal <= 0) return null
+  const percent = Math.round((actualTotal / budgetTotal) * 100)
+  const variant = percent >= 100 ? 'destructive' : percent >= 80 ? 'warning' : 'success'
+  return (
+    <Badge variant={variant} className="tabular-nums">
+      {percent}% terpakai
+    </Badge>
+  )
+}
 
 export function BudgetsPage() {
   const activeBranchId = useBranchStore((state) => state.activeBranchId)
@@ -49,6 +61,7 @@ export function BudgetsPage() {
 
   const totalPlanned = (budgets ?? []).reduce((sum, b) => sum + Number(b.planned_amount), 0)
   const totalCorrective = (budgets ?? []).reduce((sum, b) => sum + Number(b.corrective_amount), 0)
+  const totalActual = (budgets ?? []).reduce((sum, b) => sum + Number(b.actual_total ?? 0), 0)
 
   if (!activeBranchId) {
     return <p className="text-muted-foreground">Pilih plant terlebih dahulu.</p>
@@ -87,6 +100,10 @@ export function BudgetsPage() {
               <p className="text-muted-foreground">Total Anggaran {year}</p>
               <p className="font-semibold tabular-nums">{currencyFormatter.format(totalPlanned + totalCorrective)}</p>
             </div>
+            <div>
+              <p className="text-muted-foreground">Total Realisasi</p>
+              <p className="font-semibold tabular-nums">{currencyFormatter.format(totalActual)}</p>
+            </div>
           </div>
         )}
       </div>
@@ -113,7 +130,8 @@ export function BudgetsPage() {
               <TableHead>Kategori</TableHead>
               <TableHead className="text-right">Terencana (PM/Life Cycle)</TableHead>
               <TableHead className="text-right">Corrective</TableHead>
-              <TableHead className="text-right">Total</TableHead>
+              <TableHead className="text-right">Total Budget</TableHead>
+              <TableHead className="text-right">Realisasi (Planned/Unplanned)</TableHead>
               <TableHead>Dibuat Oleh</TableHead>
               <TableHead className="text-right">Aksi</TableHead>
             </TableRow>
@@ -130,6 +148,16 @@ export function BudgetsPage() {
                 </TableCell>
                 <TableCell className="text-right font-semibold tabular-nums">
                   {currencyFormatter.format(Number(budget.total_amount))}
+                </TableCell>
+                <TableCell className="text-right">
+                  <div className="flex flex-col items-end gap-1">
+                    <span className="tabular-nums">{currencyFormatter.format(Number(budget.actual_total ?? 0))}</span>
+                    <span className="text-xs text-muted-foreground tabular-nums">
+                      {currencyFormatter.format(Number(budget.actual_planned ?? 0))} /{' '}
+                      {currencyFormatter.format(Number(budget.actual_unplanned ?? 0))}
+                    </span>
+                    {percentUsedBadge(Number(budget.actual_total ?? 0), Number(budget.total_amount))}
+                  </div>
                 </TableCell>
                 <TableCell className="text-muted-foreground">{budget.created_by_name ?? '-'}</TableCell>
                 <TableCell className="flex justify-end gap-1">
