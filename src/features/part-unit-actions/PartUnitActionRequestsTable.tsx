@@ -7,6 +7,17 @@ import { RejectPartUnitActionDialog } from '@/features/part-unit-actions/RejectP
 import type { PartUnitActionRequestStatus } from '@/types/part-unit-actions'
 import { useCanApprove } from '@/stores/use-has-role'
 import { EmptyState } from '@/components/EmptyState'
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from '@/components/ui/alert-dialog'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Skeleton } from '@/components/ui/skeleton'
@@ -103,9 +114,27 @@ export function PartUnitActionRequestsTable({
             )}
             {status === 'pending' && canApprove && (
               <TableCell className="flex justify-end gap-2">
-                <Button size="sm" onClick={() => approveMutation.mutate(req.id)} disabled={approveMutation.isPending}>
-                  Setujui
-                </Button>
+                <AlertDialog>
+                  <AlertDialogTrigger render={<Button size="sm" disabled={approveMutation.isPending} />}>
+                    Setujui
+                  </AlertDialogTrigger>
+                  <AlertDialogContent>
+                    <AlertDialogHeader>
+                      <AlertDialogTitle>
+                        Setujui {req.action === 'remove' ? 'pelepasan' : 'pemasangan'} unit ini?
+                      </AlertDialogTitle>
+                      <AlertDialogDescription>
+                        Unit <strong>{req.unit_code}</strong> ({req.part_name}) di{' '}
+                        <strong>{req.equipment_name}</strong> akan {req.action === 'remove' ? 'dilepas' : 'dipasang'}{' '}
+                        begitu disetujui.
+                      </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                      <AlertDialogCancel>Batal</AlertDialogCancel>
+                      <AlertDialogAction onClick={() => approveMutation.mutate(req.id)}>Setujui</AlertDialogAction>
+                    </AlertDialogFooter>
+                  </AlertDialogContent>
+                </AlertDialog>
                 <RejectPartUnitActionDialog requestId={req.id} branchId={branchId} />
               </TableCell>
             )}

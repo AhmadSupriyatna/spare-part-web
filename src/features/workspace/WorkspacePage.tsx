@@ -15,6 +15,17 @@ import { useCanApprove, useHasRole } from '@/stores/use-has-role'
 import type { ReplacementRequestStatus, ReplacementRequest } from '@/types/breakdown'
 import { EmptyState } from '@/components/EmptyState'
 import { PageHeader } from '@/components/PageHeader'
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from '@/components/ui/alert-dialog'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Skeleton } from '@/components/ui/skeleton'
@@ -66,9 +77,22 @@ function ApproveReplacementAction({
   }
 
   return (
-    <Button size="sm" onClick={() => onApprove(null)} disabled={isPending}>
-      Setujui
-    </Button>
+    <AlertDialog>
+      <AlertDialogTrigger render={<Button size="sm" disabled={isPending} />}>Setujui</AlertDialogTrigger>
+      <AlertDialogContent>
+        <AlertDialogHeader>
+          <AlertDialogTitle>Setujui penggantian part ini?</AlertDialogTitle>
+          <AlertDialogDescription>
+            Part lama di <strong>{request.equipment_name}</strong> akan dilepas dan stok otomatis
+            berkurang. Tindakan ini tidak bisa dibatalkan begitu diproses.
+          </AlertDialogDescription>
+        </AlertDialogHeader>
+        <AlertDialogFooter>
+          <AlertDialogCancel>Batal</AlertDialogCancel>
+          <AlertDialogAction onClick={() => onApprove(null)}>Setujui</AlertDialogAction>
+        </AlertDialogFooter>
+      </AlertDialogContent>
+    </AlertDialog>
   )
 }
 

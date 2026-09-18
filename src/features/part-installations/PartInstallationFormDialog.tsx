@@ -5,7 +5,6 @@ import { Controller, useForm } from 'react-hook-form'
 import { toast } from 'sonner'
 import { z } from 'zod'
 import { installPart } from '@/features/part-installations/api'
-import { fetchUnitsForPart } from '@/features/part-units/api'
 import { fetchParts } from '@/features/parts/api'
 import { Button } from '@/components/ui/button'
 import {
@@ -21,11 +20,8 @@ import { Label } from '@/components/ui/label'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Textarea } from '@/components/ui/textarea'
 
-const NEW_UNIT_VALUE = 'new'
-
 const partInstallationSchema = z.object({
   part_id: z.string().min(1, 'Pilih part'),
-  part_unit_id: z.string().min(1, 'Pilih unit'),
   installed_at: z.string().optional(),
   notes: z.string().optional(),
 })
@@ -37,6 +33,16 @@ interface PartInstallationFormDialogProps {
   trigger: React.ReactNode
 }
 
+/**
+ * Only ever installs a brand-new unit — no picker for reinstalling an
+ * existing repaired unit. That option used to live here (as a `part_unit_id`
+ * dropdown) and let anyone with Admin Spare Part reinstall a repaired unit
+ * with zero oversight, bypassing the Supervisor approval that the QR-scan
+ * reinstall flow (scan the unit's printed QR from the Repair Part board)
+ * always goes through. This dialog is for genuinely new installs — initial
+ * data setup or freshly received parts — not for putting a repaired unit
+ * back into service.
+ */
 export function PartInstallationFormDialog({ equipmentId, trigger }: PartInstallationFormDialogProps) {
   const [open, setOpen] = useState(false)
   const queryClient = useQueryClient()
@@ -47,28 +53,18 @@ export function PartInstallationFormDialog({ equipmentId, trigger }: PartInstall
     register,
     control,
     handleSubmit,
-    watch,
     reset,
     formState: { errors },
   } = useForm<PartInstallationFormValues>({
     resolver: zodResolver(partInstallationSchema),
-    defaultValues: { part_id: '', part_unit_id: NEW_UNIT_VALUE, installed_at: '', notes: '' },
+    defaultValues: { part_id: '', installed_at: '', notes: '' },
   })
-
-  const partId = watch('part_id')
-
-  const { data: units } = useQuery({
-    queryKey: ['part-units', partId],
-    queryFn: () => fetchUnitsForPart(Number(partId)),
-    enabled: open && !!partId,
-  })
-  const availableUnits = units?.filter((unit) => unit.status === 'available')
 
   const mutation = useMutation({
     mutationFn: (values: PartInstallationFormValues) =>
       installPart(equipmentId, {
         part_id: Number(values.part_id),
-        part_unit_id: values.part_unit_id === NEW_UNIT_VALUE ? null : Number(values.part_unit_id),
+        part_unit_id: null,
         installed_at: values.installed_at || null,
         notes: values.notes || null,
       }),
@@ -91,7 +87,7 @@ export function PartInstallationFormDialog({ equipmentId, trigger }: PartInstall
       <DialogTrigger render={trigger as React.ReactElement} />
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>Pasang Part</DialogTitle>
+          <DialogTitle>Pasang Part Baru</DialogTitle>
         </DialogHeader>
         <form className="flex flex-col gap-4" onSubmit={handleSubmit((values) => mutation.mutate(values))}>
           <div className="flex flex-col gap-2">
@@ -100,12 +96,7 @@ export function PartInstallationFormDialog({ equipmentId, trigger }: PartInstall
               control={control}
               name="part_id"
               render={({ field }) => (
-                <Select
-                  value={field.value}
-                  onValueChange={(value) => {
-                    field.onChange(value)
-                  }}
-                >
+                <Select value={field.value} onValueChange={field.onChange}>
                   <SelectTrigger>
                     <SelectValue placeholder="Pilih part" />
                   </SelectTrigger>
@@ -120,36 +111,11 @@ export function PartInstallationFormDialog({ equipmentId, trigger }: PartInstall
               )}
             />
             {errors.part_id && <p className="text-sm text-destructive">{errors.part_id.message}</p>}
-          </div>
-
-          <div className="flex flex-col gap-2">
-            <Label>Unit</Label>
-            <Controller
-              control={control}
-              name="part_unit_id"
-              render={({ field }) => (
-                <Select value={field.value} onValueChange={field.onChange} disabled={!partId}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Pilih unit" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value={NEW_UNIT_VALUE}>+ Unit baru</SelectItem>
-                    {availableUnits?.map((unit) => (
-                      <SelectItem key={unit.id} value={String(unit.id)}>
-                        Unit {unit.unit_code} — sudah dipakai {unit.percent_used ?? 0}%
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              )}
-            />
             <p className="text-xs text-muted-foreground">
-              Pilih "Unit baru" kalau ini part yang belum pernah dipasang. Pilih unit yang ada di daftar
-              kalau ini pemasangan ulang unit bekas yang sudah selesai diperbaiki.
+              Ini selalu memasang unit baru. Untuk memasang ulang unit bekas yang sudah selesai
+              diperbaiki, gunakan tombol Scan QR di kartu part tersebut pada Papan Repair — perlu
+              persetujuan Supervisor.
             </p>
-            {errors.part_unit_id && (
-              <p className="text-sm text-destructive">{errors.part_unit_id.message}</p>
-            )}
           </div>
 
           <div className="flex flex-col gap-2">

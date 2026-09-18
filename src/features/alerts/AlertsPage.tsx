@@ -14,6 +14,17 @@ import { useCanManage } from '@/stores/use-has-role'
 import type { ReorderStatus } from '@/types/inventory'
 import { EmptyState } from '@/components/EmptyState'
 import { PageHeader } from '@/components/PageHeader'
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from '@/components/ui/alert-dialog'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
@@ -196,9 +207,24 @@ export function AlertsPage() {
                     {canManage && (
                       <TableCell className="flex justify-end gap-2">
                         {req.status === 'pending' && (
-                          <Button size="sm" onClick={() => approveMutation.mutate(req.id)}>
-                            Setujui
-                          </Button>
+                          <AlertDialog>
+                            <AlertDialogTrigger render={<Button size="sm" />}>Setujui</AlertDialogTrigger>
+                            <AlertDialogContent>
+                              <AlertDialogHeader>
+                                <AlertDialogTitle>Setujui pemesanan ulang ini?</AlertDialogTitle>
+                                <AlertDialogDescription>
+                                  Permintaan {req.quantity_requested} unit <strong>{req.part_name}</strong> akan
+                                  disetujui untuk dipesan.
+                                </AlertDialogDescription>
+                              </AlertDialogHeader>
+                              <AlertDialogFooter>
+                                <AlertDialogCancel>Batal</AlertDialogCancel>
+                                <AlertDialogAction onClick={() => approveMutation.mutate(req.id)}>
+                                  Setujui
+                                </AlertDialogAction>
+                              </AlertDialogFooter>
+                            </AlertDialogContent>
+                          </AlertDialog>
                         )}
                         {req.status === 'approved' && (
                           <Button size="sm" onClick={() => orderedMutation.mutate(req.id)}>
