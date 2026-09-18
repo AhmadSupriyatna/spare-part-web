@@ -77,7 +77,7 @@ export function BinCell({ location, isDragging, isArmed, canManage, onDrop, onCl
           <button
             type="button"
             className={cn(
-              'flex h-14 w-16 shrink-0 flex-col items-center justify-center gap-0.5 rounded-md border text-xs transition-colors',
+              'flex h-14 min-w-16 flex-1 flex-col items-center justify-center gap-0.5 rounded-md border text-xs transition-colors',
               dropActive &&
                 'border-primary bg-primary/10 outline-2 -outline-offset-2 outline-primary/50 outline-dashed',
               isArmed && !dropActive && 'border-primary/40 hover:bg-primary/5',

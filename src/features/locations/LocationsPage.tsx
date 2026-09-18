@@ -240,7 +240,9 @@ export function LocationsPage() {
                     <p className="mt-2 text-xs text-muted-foreground">Belum ada tingkat di rak ini.</p>
                   ) : (
                     <div className="mt-2 flex flex-col gap-2">
-                      {rack.levels.map((level) => (
+                      {/* API orders levels ascending (1 = ground); reversed here so 1 renders at the
+                          bottom of the stack and each new level added appears above it, like a real rack. */}
+                      {[...rack.levels].reverse().map((level) => (
                         <div key={level.id} className="rounded-md border bg-muted/30 p-2">
                           <div className="mb-1.5 flex items-center justify-between">
                             <span className="text-xs font-medium text-muted-foreground">
