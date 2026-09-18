@@ -1,6 +1,6 @@
 import { useQueries, useQuery } from '@tanstack/react-query'
 import { NotebookPen, Search } from 'lucide-react'
-import { useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useSearchParams } from 'react-router'
 import { fetchEquipmentList } from '@/features/equipment/api'
 import { fetchLines } from '@/features/lines/api'
@@ -60,19 +60,40 @@ export function TaskLibraryBrowser() {
 
   const term = search.trim().toLowerCase()
 
+  /**
+   * Merges into whatever params are already there (namely
+   * MaintenancePage's `tab`) instead of replacing the whole query string —
+   * this browser is only ever embedded inside that page's toggle now, so a
+   * plain `setSearchParams({...})` here would silently wipe `tab` out from
+   * under it.
+   */
+  const mergeSearchParams = useCallback(
+    (patch: Record<string, string | null>, options?: { replace?: boolean }) => {
+      setSearchParams((prev) => {
+        const next = new URLSearchParams(prev)
+        for (const [key, value] of Object.entries(patch)) {
+          if (value === null) next.delete(key)
+          else next.set(key, value)
+        }
+        return next
+      }, options)
+    },
+    [setSearchParams],
+  )
+
   useEffect(() => {
     if (!selectedLineId && lines && lines.length > 0) {
-      setSearchParams({ line: String(lines[0].id) }, { replace: true })
+      mergeSearchParams({ line: String(lines[0].id) }, { replace: true })
     }
-  }, [selectedLineId, lines, setSearchParams])
+  }, [selectedLineId, lines, mergeSearchParams])
 
   function selectLine(lineId: number) {
     setSearch('')
-    setSearchParams({ line: String(lineId) })
+    mergeSearchParams({ line: String(lineId), equipment: null })
   }
 
   function selectEquipment(equipmentId: number) {
-    setSearchParams({ line: String(selectedLineId), equipment: String(equipmentId) })
+    mergeSearchParams({ line: String(selectedLineId), equipment: String(equipmentId) })
   }
 
   const selectedEquipment = equipmentQueries
@@ -80,7 +101,7 @@ export function TaskLibraryBrowser() {
     .find((equipment) => equipment.id === selectedEquipmentId)
 
   if (!activeBranchId) {
-    return <p className="text-muted-foreground">Pilih cabang terlebih dahulu.</p>
+    return <p className="text-muted-foreground">Pilih plant terlebih dahulu.</p>
   }
 
   return (

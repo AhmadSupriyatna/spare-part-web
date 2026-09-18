@@ -5,7 +5,6 @@ import { Breadcrumb } from '@/components/Breadcrumb'
 import { fetchEquipment } from '@/features/equipment/api'
 import { PartInstallationFormDialog } from '@/features/part-installations/PartInstallationFormDialog'
 import { fetchPartInstallations, removePartInstallation } from '@/features/part-installations/api'
-import { SendToRepairDialog } from '@/features/part-repairs/SendToRepairDialog'
 import { useCanManage } from '@/stores/use-has-role'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -148,18 +147,6 @@ export function EquipmentDetailPage() {
                         >
                           Lepas
                         </Button>
-                      )}
-                      {!installation.is_active && installation.part_unit_id && (
-                        <SendToRepairDialog
-                          partUnitId={installation.part_unit_id}
-                          partInstallationId={installation.id}
-                          invalidateKeys={[['part-installations', equipmentId]]}
-                          trigger={
-                            <Button variant="outline" size="sm">
-                              Kirim ke Perbaikan
-                            </Button>
-                          }
-                        />
                       )}
                     </TableCell>
                   )}

@@ -1,6 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { CalendarDays, ChevronLeft, ChevronRight, List, NotebookPen, Plus } from 'lucide-react'
+import { CalendarDays, ChevronLeft, ChevronRight, List, NotebookPen, Plus, Wrench } from 'lucide-react'
 import { useMemo, useState } from 'react'
+import { useSearchParams } from 'react-router'
 import { toast } from 'sonner'
 import { fetchNationalHolidays, fetchTaskRescheduleHistory } from '@/features/pm/api'
 import { PartLifetimePanel } from '@/features/pm/PartLifetimePanel'
@@ -8,6 +9,7 @@ import { RescheduleReasonDialog } from '@/features/pm/RescheduleReasonDialog'
 import { taskChipVariant, taskSource } from '@/features/pm/taskColors'
 import { TaskDetailSheet } from '@/features/pm/TaskDetailSheet'
 import { WoListView } from '@/features/pm/WoListView'
+import { RepairBoard } from '@/features/part-repairs/RepairBoard'
 import { ScheduleTaskLibraryDialog } from '@/features/task-libraries/ScheduleTaskLibraryDialog'
 import { TaskLibraryBrowser } from '@/features/task-libraries/TaskLibraryBrowser'
 import { fetchTaskLibrariesForBranch } from '@/features/task-libraries/api'
@@ -25,12 +27,18 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 const WEEKDAYS = ['Sen', 'Sel', 'Rab', 'Kam', 'Jum', 'Sab', 'Min']
 const VISIBLE_TASKS_PER_DAY = 3
 
-type MaintenanceView = 'library' | 'calendar' | 'list'
+type MaintenanceView = 'library' | 'calendar' | 'list' | 'repair'
 
 export function MaintenancePage() {
   const activeBranchId = useBranchStore((state) => state.activeBranchId)
   const queryClient = useQueryClient()
-  const [view, setView] = useState<MaintenanceView>('calendar')
+  const [searchParams, setSearchParams] = useSearchParams()
+  const tabParam = searchParams.get('tab')
+  const view: MaintenanceView =
+    tabParam === 'library' || tabParam === 'list' || tabParam === 'repair' ? tabParam : 'calendar'
+  function setView(next: MaintenanceView) {
+    setSearchParams({ tab: next })
+  }
   const [monthCursor, setMonthCursor] = useState(() => {
     const now = new Date()
     return new Date(now.getFullYear(), now.getMonth(), 1)
@@ -155,12 +163,12 @@ export function MaintenancePage() {
   }
 
   if (!activeBranchId) {
-    return <p className="text-muted-foreground">Pilih cabang terlebih dahulu.</p>
+    return <p className="text-muted-foreground">Pilih plant terlebih dahulu.</p>
   }
 
   return (
     <div className="flex flex-col gap-3">
-      <div className="flex items-center gap-3">
+      <div className="flex items-center justify-between gap-3">
         <h1 className="text-base font-semibold">Maintenance</h1>
         <div className="flex gap-1 rounded-md border p-1">
           <Button
@@ -183,12 +191,18 @@ export function MaintenancePage() {
             <List className="size-3.5" />
             WO
           </Button>
+          <Button variant={view === 'repair' ? 'default' : 'ghost'} size="sm" onClick={() => setView('repair')}>
+            <Wrench className="size-3.5" />
+            Repair Part
+          </Button>
         </div>
       </div>
 
       {view === 'library' && <TaskLibraryBrowser />}
 
       {view === 'list' && <WoListView tasks={tasks} isLoading={tasksLoading} onSelect={setDetailTask} />}
+
+      {view === 'repair' && <RepairBoard branchId={activeBranchId} />}
 
       {view === 'calendar' && (
         <div className="grid grid-cols-1 gap-4 lg:grid-cols-[70fr_30fr]">

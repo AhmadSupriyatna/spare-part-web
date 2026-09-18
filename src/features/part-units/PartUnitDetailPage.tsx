@@ -1,13 +1,10 @@
 import { useQuery } from '@tanstack/react-query'
-import { PrinterIcon } from 'lucide-react'
-import { QRCodeSVG } from 'qrcode.react'
 import { Link, useParams } from 'react-router'
 import { fetchPartUnit } from '@/features/part-units/api'
-import { fetchCompanySetting } from '@/features/settings/api'
 import { Breadcrumb } from '@/components/Breadcrumb'
 import { PageHeader } from '@/components/PageHeader'
+import { PartUnitQrPrint } from '@/components/PartUnitQrPrint'
 import { Badge } from '@/components/ui/badge'
-import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
@@ -52,27 +49,12 @@ export function PartUnitDetailPage() {
     queryFn: () => fetchPartUnit(unitId),
   })
 
-  const { data: companySetting } = useQuery({
-    queryKey: ['settings', 'company'],
-    queryFn: fetchCompanySetting,
-  })
-
   if (isLoading || !unit) {
     return <Skeleton className="h-64 w-full" />
   }
 
-  const scanUrl = `${window.location.origin}/part-units/${unit.id}/scan`
-
   return (
     <div className="flex flex-col gap-6">
-      <style>{`
-        @media print {
-          body * { visibility: hidden; }
-          #qr-print-area, #qr-print-area * { visibility: visible; }
-          #qr-print-area { position: absolute; inset: 0; padding: 8px; display: flex !important; }
-        }
-      `}</style>
-
       <div>
         <Breadcrumb
           segments={[
@@ -87,41 +69,15 @@ export function PartUnitDetailPage() {
           action={
             <div className="flex items-center gap-2">
               <Badge variant={statusVariants[unit.status]}>{statusLabels[unit.status]}</Badge>
-              <Button
-                size="icon-sm"
-                variant="outline"
-                title="Cetak QR Unit"
-                aria-label="Cetak QR Unit"
-                onClick={() => requestAnimationFrame(() => window.print())}
-              >
-                <PrinterIcon />
-              </Button>
+              <PartUnitQrPrint
+                unitId={unit.id}
+                partName={unit.part_name}
+                itemMasterNo={unit.item_master_no}
+                unitCode={unit.unit_code}
+              />
             </div>
           }
         />
-      </div>
-
-      <div
-        id="qr-print-area"
-        className="hidden w-fit flex-col items-center gap-1 rounded-md border p-2 text-center print:flex"
-      >
-        <div className="flex w-full items-center justify-center gap-1 border-b pb-1">
-          {companySetting?.logo_url ? (
-            <img src={companySetting.logo_url} alt="" className="h-5 w-auto max-w-6 object-contain" />
-          ) : (
-            <div className="flex size-5 items-center justify-center rounded border border-dashed text-[6px] text-muted-foreground">
-              Logo
-            </div>
-          )}
-          <p className="text-[9px] font-semibold leading-none">
-            {companySetting?.name ?? 'Nama Perusahaan'}
-          </p>
-        </div>
-        <QRCodeSVG value={scanUrl} size={96} />
-        <p className="text-[11px] font-medium leading-tight">{unit.part_name}</p>
-        <p className="font-mono text-[10px] text-muted-foreground">
-          {unit.item_master_no} · Unit {unit.unit_code}
-        </p>
       </div>
 
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">

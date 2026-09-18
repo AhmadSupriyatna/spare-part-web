@@ -4,11 +4,14 @@ import {
   Bell,
   Boxes,
   Building2,
+  CalendarDays,
   ClipboardList,
   Factory,
   Hammer,
   LayoutDashboard,
+  List,
   MapPin,
+  NotebookPen,
   Package,
   QrCode,
   Ruler,
@@ -62,14 +65,13 @@ const navSections: NavSection[] = [
       { to: '/alerts', label: 'Peringatan', icon: AlertTriangle },
       { to: '/suppliers', label: 'Supplier', icon: Truck },
       { to: '/locations', label: 'Lokasi', icon: MapPin },
-      { to: '/part-repairs', label: 'Perbaikan Part', icon: Hammer },
     ],
   },
   {
     label: 'Aset & Produksi',
     icon: Factory,
     items: [
-      { to: '/branches', label: 'Cabang', icon: Building2 },
+      { to: '/branches', label: 'Plant', icon: Building2 },
       { to: '/lines', label: 'Line Equipment', icon: Factory },
       { to: '/parts', label: 'Part', icon: Package },
     ],
@@ -85,7 +87,14 @@ const navSections: NavSection[] = [
     ],
   },
   {
-    items: [{ to: '/pm/calendar', label: 'Maintenance', icon: Wrench }],
+    label: 'Maintenance',
+    icon: Wrench,
+    items: [
+      { to: '/pm/calendar?tab=library', label: 'Library', icon: NotebookPen, end: true },
+      { to: '/pm/calendar?tab=calendar', label: 'Kalender', icon: CalendarDays, end: true },
+      { to: '/pm/calendar?tab=list', label: 'WO', icon: List, end: true },
+      { to: '/pm/calendar?tab=repair', label: 'Repair Part', icon: Hammer, end: true },
+    ],
   },
   {
     items: [{ to: '/breakdown/print-qr', label: 'Cetak QR Code', icon: QrCode }],
@@ -134,7 +143,10 @@ export function AppLayout() {
   })
 
   function isItemActive(item: NavItem) {
-    return item.end ? location.pathname === item.to : location.pathname.startsWith(item.to)
+    const [path, search] = item.to.split('?')
+    const pathMatches = item.end ? location.pathname === path : location.pathname.startsWith(path)
+    if (!pathMatches) return false
+    return !search || location.search.replace(/^\?/, '') === search
   }
 
   return (
@@ -204,14 +216,12 @@ export function AppLayout() {
                         to={item.to}
                         end={item.end}
                         onClick={() => setOpenGroup(null)}
-                        className={({ isActive }) =>
-                          cn(
-                            'flex items-center gap-2.5 rounded-md px-2 py-2 text-sm font-medium transition-colors',
-                            isActive
-                              ? 'bg-sidebar-primary/10 text-sidebar-primary'
-                              : 'text-foreground/80 hover:bg-accent hover:text-accent-foreground',
-                          )
-                        }
+                        className={cn(
+                          'flex items-center gap-2.5 rounded-md px-2 py-2 text-sm font-medium transition-colors',
+                          isItemActive(item)
+                            ? 'bg-sidebar-primary/10 text-sidebar-primary'
+                            : 'text-foreground/80 hover:bg-accent hover:text-accent-foreground',
+                        )}
                       >
                         <item.icon className="size-4 shrink-0" />
                         {item.label}

@@ -75,9 +75,12 @@ export interface PartRepair {
   equipment_name?: string | null
   machine_name?: string | null
   line_name?: string | null
+  percent_used: number | null
+  total_runtime_hours_used: number | null
   removed_at: string
   estimated_completion_date: string | null
   disposition: PartRepairDisposition
+  is_overdue: boolean
   repaired_at: string | null
   notes: string | null
   reinstalled_installation_id: number | null

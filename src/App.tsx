@@ -13,7 +13,6 @@ import { PartDetailPage } from '@/features/parts/PartDetailPage'
 import { PartsPage } from '@/features/parts/PartsPage'
 import { PartStockDetailPage } from '@/features/part-stocks/PartStockDetailPage'
 import { PartStocksPage } from '@/features/part-stocks/PartStocksPage'
-import { PartRepairsPage } from '@/features/part-repairs/PartRepairsPage'
 import { PartUnitScanPage } from '@/features/part-unit-actions/PartUnitScanPage'
 import { PartUnitDetailPage } from '@/features/part-units/PartUnitDetailPage'
 import { MaintenancePage } from '@/features/pm/MaintenancePage'
@@ -59,7 +58,6 @@ function App() {
             <Route path="settings/company" element={<CompanySettingsPage />} />
             <Route path="settings/units" element={<UnitsPage />} />
             <Route path="settings/users" element={<UsersPage />} />
-            <Route path="part-repairs" element={<PartRepairsPage />} />
             <Route path="part-units/:id" element={<PartUnitDetailPage />} />
             <Route path="pm/calendar" element={<MaintenancePage />} />
             <Route path="pm/tasks/:id/print" element={<PrintWoChecklistPage />} />
