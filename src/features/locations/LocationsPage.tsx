@@ -141,14 +141,14 @@ export function LocationsPage() {
   }
 
   if (!activeBranchId) {
-    return <p className="text-muted-foreground">Pilih cabang terlebih dahulu.</p>
+    return <p className="text-muted-foreground">Pilih plant terlebih dahulu.</p>
   }
 
   return (
     <div className="flex flex-col gap-4">
       <PageHeader
         title="Lokasi (Rak & Bin)"
-        description="Peta rak penyimpanan part di cabang ini."
+        description="Peta rak penyimpanan part di plant ini."
         action={
           canManage && (
             <Button onClick={() => addRackMutation.mutate()} disabled={addRackMutation.isPending}>
@@ -180,7 +180,7 @@ export function LocationsPage() {
           ) : !racks || racks.length === 0 ? (
             <EmptyState
               icon={MapPin}
-              title="Belum ada rak di cabang ini"
+              title="Belum ada rak di plant ini"
               description="Tambahkan rak pertama, lalu tingkat dan bin di dalamnya, untuk mulai menempatkan part."
               action={
                 canManage && (

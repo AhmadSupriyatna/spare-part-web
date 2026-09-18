@@ -69,10 +69,10 @@ export function BranchFormDialog({ branch, trigger }: BranchFormDialogProps) {
       // selector picks up a newly created branch without a re-login.
       const freshUser = await fetchCurrentUser()
       updateUser(freshUser)
-      toast.success(isEdit ? 'Cabang berhasil diperbarui.' : 'Cabang berhasil ditambahkan.')
+      toast.success(isEdit ? 'Plant berhasil diperbarui.' : 'Plant berhasil ditambahkan.')
       setOpen(false)
     },
-    onError: () => toast.error('Gagal menyimpan cabang.'),
+    onError: () => toast.error('Gagal menyimpan plant.'),
   })
 
   return (
@@ -80,7 +80,7 @@ export function BranchFormDialog({ branch, trigger }: BranchFormDialogProps) {
       <DialogTrigger render={trigger as React.ReactElement} />
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>{isEdit ? 'Ubah Cabang' : 'Tambah Cabang'}</DialogTitle>
+          <DialogTitle>{isEdit ? 'Ubah Plant' : 'Tambah Plant'}</DialogTitle>
         </DialogHeader>
         <form className="flex flex-col gap-4" onSubmit={handleSubmit((values) => mutation.mutate(values))}>
           <div className="flex flex-col gap-2">
@@ -90,7 +90,7 @@ export function BranchFormDialog({ branch, trigger }: BranchFormDialogProps) {
           </div>
           <div className="flex flex-col gap-2">
             <Label htmlFor="name">Nama</Label>
-            <Input id="name" placeholder="Cabang Jakarta" {...register('name')} />
+            <Input id="name" placeholder="Plant Jakarta" {...register('name')} />
             {errors.name && <p className="text-sm text-destructive">{errors.name.message}</p>}
           </div>
           <div className="flex flex-col gap-2">

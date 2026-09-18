@@ -355,7 +355,7 @@ export function WorkspacePage() {
       </div>
 
       {!activeBranchId ? (
-        <p className="text-muted-foreground">Pilih cabang terlebih dahulu.</p>
+        <p className="text-muted-foreground">Pilih plant terlebih dahulu.</p>
       ) : view === 'tasks' ? (
         <TaskPoolView branchId={activeBranchId} />
       ) : (

@@ -167,7 +167,7 @@ export function UserFormDialog({ user, trigger }: UserFormDialogProps) {
 
       {roleNeedsBranches(role) && (
         <div className="flex flex-col gap-2">
-          <Label>Cabang</Label>
+          <Label>Plant</Label>
           <Controller
             control={control}
             name="branch_ids"

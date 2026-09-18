@@ -8,7 +8,7 @@ import { ChevronDownIcon, CheckIcon, ChevronUpIcon } from "lucide-react"
 /**
  * Base UI's `<Select.Value>` only renders a real label when `Select.Root`
  * is given an `items` map — without it, it falls back to printing the raw
- * value (e.g. "1" instead of "Cabang Pusat") any time the selection wasn't
+ * value (e.g. "1" instead of "Plant Pusat") any time the selection wasn't
  * just picked live from an open popup (a pre-filled edit form, a value
  * restored from the URL, etc.). Recover the {value, label} pairs by walking
  * the `<SelectItem>` elements out of `children` so every consumer gets a

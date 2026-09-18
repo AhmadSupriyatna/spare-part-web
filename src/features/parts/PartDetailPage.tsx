@@ -114,7 +114,7 @@ export function PartDetailPage() {
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead>Cabang</TableHead>
+                <TableHead>Plant</TableHead>
                 <TableHead>Lokasi</TableHead>
                 <TableHead className="text-right">Jumlah</TableHead>
                 <TableHead className="text-right">Harga Modal</TableHead>
@@ -127,7 +127,7 @@ export function PartDetailPage() {
                 <TableRow key={stock.id}>
                   <TableCell>
                     <Link to={`/stock/${stock.id}`} className="font-medium hover:underline">
-                      {stock.branch_name ?? `Cabang #${stock.branch_id}`}
+                      {stock.branch_name ?? `Plant #${stock.branch_id}`}
                     </Link>
                   </TableCell>
                   <TableCell className="text-muted-foreground">
@@ -228,7 +228,7 @@ export function PartDetailPage() {
               <TableHeader>
                 <TableRow>
                   <TableHead>Supplier</TableHead>
-                  <TableHead>Cabang</TableHead>
+                  <TableHead>Plant</TableHead>
                   <TableHead className="text-right">Harga</TableHead>
                   <TableHead className="text-right">Lead Time</TableHead>
                   <TableHead>Status</TableHead>

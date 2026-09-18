@@ -38,7 +38,7 @@ export function WoListView({ tasks, isLoading, onSelect }: WoListViewProps) {
   }
 
   if (!tasks || tasks.length === 0) {
-    return <EmptyState icon={ClipboardList} title="Belum ada WO" description="Belum ada WO yang tercatat di cabang ini." />
+    return <EmptyState icon={ClipboardList} title="Belum ada WO" description="Belum ada WO yang tercatat di plant ini." />
   }
 
   return (

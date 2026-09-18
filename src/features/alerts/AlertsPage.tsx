@@ -85,14 +85,14 @@ export function AlertsPage() {
   })
 
   if (!activeBranchId) {
-    return <p className="text-muted-foreground">Pilih cabang terlebih dahulu.</p>
+    return <p className="text-muted-foreground">Pilih plant terlebih dahulu.</p>
   }
 
   return (
     <div className="flex flex-col gap-4">
       <PageHeader
         title="Peringatan & Pemesanan Ulang"
-        description="Part yang stoknya menipis di cabang ini, dan status pemesanan ulangnya."
+        description="Part yang stoknya menipis di plant ini, dan status pemesanan ulangnya."
       />
 
       <Tabs defaultValue="alerts">
@@ -108,7 +108,7 @@ export function AlertsPage() {
             <EmptyState
               icon={AlertTriangle}
               title="Tidak ada peringatan stok aktif"
-              description="Semua part di cabang ini masih di atas titik reorder-nya."
+              description="Semua part di plant ini masih di atas titik reorder-nya."
             />
           ) : (
             <Table>

@@ -44,14 +44,14 @@ export function SuppliersPage() {
   })
 
   if (!activeBranchId) {
-    return <p className="text-muted-foreground">Pilih cabang terlebih dahulu.</p>
+    return <p className="text-muted-foreground">Pilih plant terlebih dahulu.</p>
   }
 
   return (
     <div className="flex flex-col gap-4">
       <PageHeader
         title="Supplier"
-        description="Daftar pemasok yang terdaftar untuk cabang ini."
+        description="Daftar pemasok yang terdaftar untuk plant ini."
         action={
           canManage && (
             <SupplierFormDialog branchId={activeBranchId} trigger={<Button>Tambah Supplier</Button>} />
@@ -68,7 +68,7 @@ export function SuppliersPage() {
       ) : suppliers?.length === 0 ? (
         <EmptyState
           icon={Truck}
-          title="Belum ada supplier di cabang ini"
+          title="Belum ada supplier di plant ini"
           description="Tambahkan supplier supaya bisa dipilih saat menerima stok atau mengelola part."
           action={
             canManage && (

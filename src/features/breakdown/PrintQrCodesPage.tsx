@@ -135,7 +135,7 @@ export function PrintQrCodesPage() {
 
       {!activeBranchId && (
         <p className="text-sm text-destructive print:hidden">
-          Pilih cabang di header terlebih dahulu — QR akan menyimpan cabang ini agar tidak perlu
+          Pilih plant di header terlebih dahulu — QR akan menyimpan plant ini agar tidak perlu
           dipilih lagi saat scan.
         </p>
       )}

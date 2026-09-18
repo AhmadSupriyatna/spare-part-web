@@ -89,7 +89,7 @@ export function LineHierarchyPage() {
   }
 
   if (!activeBranchId) {
-    return <p className="text-muted-foreground">Pilih cabang terlebih dahulu.</p>
+    return <p className="text-muted-foreground">Pilih plant terlebih dahulu.</p>
   }
 
   return (
@@ -99,7 +99,7 @@ export function LineHierarchyPage() {
         {linesLoading ? (
           Array.from({ length: 3 }).map((_, i) => <Skeleton key={i} className="h-20 w-48 shrink-0" />)
         ) : lines?.length === 0 ? (
-          <p className="text-sm text-muted-foreground">Belum ada line di cabang ini.</p>
+          <p className="text-sm text-muted-foreground">Belum ada line di plant ini.</p>
         ) : (
           lines?.map((line) => (
             <div

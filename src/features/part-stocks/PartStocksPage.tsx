@@ -63,11 +63,11 @@ function PartStocksTable({ activeBranchId }: { activeBranchId: number }) {
       ) : filteredStocks?.length === 0 ? (
         <EmptyState
           icon={Boxes}
-          title={search ? 'Tidak ada stok yang cocok' : 'Belum ada stok di cabang ini'}
+          title={search ? 'Tidak ada stok yang cocok' : 'Belum ada stok di plant ini'}
           description={
             search
               ? 'Coba kata kunci lain, atau hapus pencarian untuk melihat semua stok.'
-              : 'Stok akan muncul di sini setelah part diterima untuk cabang ini.'
+              : 'Stok akan muncul di sini setelah part diterima untuk plant ini.'
           }
         />
       ) : (
@@ -169,12 +169,12 @@ export function PartStocksPage() {
   const activeBranchId = useBranchStore((state) => state.activeBranchId)
 
   if (!activeBranchId) {
-    return <p className="text-muted-foreground">Pilih cabang terlebih dahulu.</p>
+    return <p className="text-muted-foreground">Pilih plant terlebih dahulu.</p>
   }
 
   return (
     <div className="flex flex-col gap-4">
-      <PageHeader title="Kelola Stok" description="Posisi stok, dan riwayat keluar-masuk part di cabang yang sedang aktif." />
+      <PageHeader title="Kelola Stok" description="Posisi stok, dan riwayat keluar-masuk part di plant yang sedang aktif." />
 
       <Tabs defaultValue="stok">
         <TabsList>

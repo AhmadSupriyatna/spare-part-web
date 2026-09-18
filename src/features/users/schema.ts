@@ -16,7 +16,7 @@ export function userSchema(isEdit: boolean) {
         ctx.addIssue({
           code: 'custom',
           path: ['branch_ids'],
-          message: 'Pilih minimal satu cabang',
+          message: 'Pilih minimal satu plant',
         })
       }
     })

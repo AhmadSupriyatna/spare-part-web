@@ -78,7 +78,7 @@ export function UsersPage() {
     <div className="flex flex-col gap-4">
       <PageHeader
         title="Kelola Pengguna"
-        description="Akun, tingkatan akses, dan cabang untuk setiap pengguna."
+        description="Akun, tingkatan akses, dan plant untuk setiap pengguna."
         action={<UserFormDialog trigger={<Button>Tambah Pengguna</Button>} />}
       />
 
@@ -109,7 +109,7 @@ export function UsersPage() {
               <TableHead>Nama</TableHead>
               <TableHead>Email</TableHead>
               <TableHead>Tingkatan</TableHead>
-              <TableHead>Cabang</TableHead>
+              <TableHead>Plant</TableHead>
               <TableHead>Status</TableHead>
               <TableHead className="text-right">Aksi</TableHead>
             </TableRow>
@@ -133,7 +133,7 @@ export function UsersPage() {
                 </TableCell>
                 <TableCell className="text-muted-foreground">
                   {user.roles[0] === 'superadmin'
-                    ? 'Semua Cabang'
+                    ? 'Semua Plant'
                     : user.branches.map((b) => b.code).join(', ') || '-'}
                 </TableCell>
                 <TableCell>

@@ -36,7 +36,7 @@ type RemoveFormValues = z.infer<typeof removeSchema>
 
 const reinstallSchema = z.object({
   requested_by_name: z.string().min(1, 'Nama wajib diisi').max(255),
-  branch_id: z.string().min(1, 'Pilih cabang'),
+  branch_id: z.string().min(1, 'Pilih plant'),
   line_id: z.string().min(1, 'Pilih line'),
   machine_id: z.string().min(1, 'Pilih mesin'),
   equipment_id: z.string().min(1, 'Pilih equipment'),
@@ -177,14 +177,14 @@ function ReinstallForm({ unitId }: { unitId: number }) {
       </div>
 
       <div className="flex flex-col gap-2">
-        <Label>Cabang</Label>
+        <Label>Plant</Label>
         <Controller
           control={control}
           name="branch_id"
           render={({ field }) => (
             <Select value={field.value} onValueChange={field.onChange} disabled={branchesLoading}>
               <SelectTrigger>
-                <SelectValue placeholder={branchesLoading ? 'Memuat...' : 'Pilih cabang'} />
+                <SelectValue placeholder={branchesLoading ? 'Memuat...' : 'Pilih plant'} />
               </SelectTrigger>
               <SelectContent>
                 {branches?.map((b) => (

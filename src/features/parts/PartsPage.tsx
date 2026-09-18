@@ -52,7 +52,7 @@ export function PartsPage() {
     <div className="flex flex-col gap-4">
       <PageHeader
         title="Part"
-        description="Katalog part bersama, dipakai di seluruh cabang."
+        description="Katalog part bersama, dipakai di seluruh plant."
         action={canManage && <PartFormDialog trigger={<Button>Tambah Part</Button>} />}
       />
 
@@ -153,7 +153,7 @@ export function PartsPage() {
                           <AlertDialogHeader>
                             <AlertDialogTitle>Hapus part ini?</AlertDialogTitle>
                             <AlertDialogDescription>
-                              "{part.name}" akan dihapus permanen beserta data stoknya di semua cabang.
+                              "{part.name}" akan dihapus permanen beserta data stoknya di semua plant.
                             </AlertDialogDescription>
                           </AlertDialogHeader>
                           <AlertDialogFooter>

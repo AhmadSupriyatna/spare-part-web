@@ -20,9 +20,9 @@ export function BranchesPage() {
   return (
     <div className="flex flex-col gap-4">
       <PageHeader
-        title="Cabang"
-        description="Daftar cabang/pabrik yang terdaftar dalam sistem."
-        action={canManage && <BranchFormDialog trigger={<Button>Tambah Cabang</Button>} />}
+        title="Plant"
+        description="Daftar plant yang terdaftar dalam sistem."
+        action={canManage && <BranchFormDialog trigger={<Button>Tambah Plant</Button>} />}
       />
 
       {isLoading ? (
@@ -60,7 +60,7 @@ export function BranchesPage() {
                     <BranchFormDialog
                       branch={branch}
                       trigger={
-                        <Button variant="ghost" size="icon-sm" aria-label="Ubah cabang" title="Ubah cabang">
+                        <Button variant="ghost" size="icon-sm" aria-label="Ubah plant" title="Ubah plant">
                           <Pencil />
                         </Button>
                       }

@@ -87,7 +87,7 @@ export function DashboardPage() {
         title={`Halo, ${user?.name?.split(' ')[0] ?? 'kamu'}`}
         description={
           <>
-            Peran: {user?.roles.join(', ') || '-'} &middot; Cabang:{' '}
+            Peran: {user?.roles.join(', ') || '-'} &middot; Plant:{' '}
             {user?.branches.map((branch) => branch.name).join(', ') || '-'}
           </>
         }
@@ -95,7 +95,7 @@ export function DashboardPage() {
 
       {!activeBranchId ? (
         <p className="text-sm text-muted-foreground">
-          Pilih cabang di header untuk melihat ringkasan stok & breakdown cabang tersebut.
+          Pilih plant di header untuk melihat ringkasan stok & breakdown plant tersebut.
         </p>
       ) : (
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">

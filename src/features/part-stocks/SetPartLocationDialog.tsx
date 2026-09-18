@@ -106,7 +106,7 @@ export function SetPartLocationDialog({
             )}
             {locations?.length === 0 && !locationsLoading && (
               <p className="text-xs text-muted-foreground">
-                Belum ada lokasi di cabang ini. Tambah dulu lewat menu Lokasi.
+                Belum ada lokasi di plant ini. Tambah dulu lewat menu Lokasi.
               </p>
             )}
           </div>

@@ -142,7 +142,7 @@ export function BreakdownScanPage() {
               />
               {!equipmentLoading && equipmentList?.length === 0 && (
                 <p className="text-sm text-muted-foreground">
-                  Tidak ada equipment yang terdaftar memakai part ini di cabang tersebut.
+                  Tidak ada equipment yang terdaftar memakai part ini di plant tersebut.
                 </p>
               )}
               {errors.equipment_id && (

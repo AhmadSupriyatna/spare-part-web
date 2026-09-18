@@ -137,10 +137,10 @@ export function PartSupplierFormDialog({
           ) : (
             <>
               <div className="flex flex-col gap-2">
-                <Label>Cabang</Label>
+                <Label>Plant</Label>
                 <Select value={selectedBranchId} onValueChange={handleBranchChange}>
                   <SelectTrigger>
-                    <SelectValue placeholder="Pilih cabang" />
+                    <SelectValue placeholder="Pilih plant" />
                   </SelectTrigger>
                   <SelectContent>
                     {branches?.map((branch) => (
@@ -151,7 +151,7 @@ export function PartSupplierFormDialog({
                   </SelectContent>
                 </Select>
                 <p className="text-xs text-muted-foreground">
-                  Supplier terikat ke satu cabang. Pilih cabangnya dulu untuk melihat daftar suppliernya.
+                  Supplier terikat ke satu plant. Pilih plant-nya dulu untuk melihat daftar suppliernya.
                 </p>
               </div>
               <div className="flex flex-col gap-2">
@@ -169,7 +169,7 @@ export function PartSupplierFormDialog({
                         <SelectValue
                           placeholder={
                             !selectedBranchId
-                              ? 'Pilih cabang dulu'
+                              ? 'Pilih plant dulu'
                               : suppliersLoading
                                 ? 'Memuat supplier...'
                                 : 'Pilih supplier'
@@ -191,7 +191,7 @@ export function PartSupplierFormDialog({
                 )}
                 {selectedBranchId && suppliers?.length === 0 && !suppliersLoading && (
                   <p className="text-xs text-muted-foreground">
-                    Belum ada supplier di cabang ini. Tambah dulu lewat menu Supplier.
+                    Belum ada supplier di plant ini. Tambah dulu lewat menu Supplier.
                   </p>
                 )}
               </div>
