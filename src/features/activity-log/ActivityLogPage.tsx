@@ -106,6 +106,7 @@ export function ActivityLogPage() {
             <TableRow>
               <TableHead>Waktu</TableHead>
               <TableHead>Aktivitas</TableHead>
+              <TableHead>Oleh</TableHead>
               <TableHead>Tipe</TableHead>
               <TableHead>Status</TableHead>
               <TableHead>Detail Perubahan</TableHead>
@@ -118,6 +119,7 @@ export function ActivityLogPage() {
                   {new Date(entry.created_at).toLocaleString('id-ID', { dateStyle: 'medium', timeStyle: 'short' })}
                 </TableCell>
                 <TableCell>{entry.description}</TableCell>
+                <TableCell className="font-medium">{entry.causer_name ?? 'Sistem'}</TableCell>
                 <TableCell>
                   <Badge variant="secondary">{entry.subject_label}</Badge>
                 </TableCell>

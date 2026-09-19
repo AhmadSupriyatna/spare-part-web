@@ -7,6 +7,7 @@ export interface UserSummary {
   email: string
   avatar_url: string | null
   is_active: boolean
+  last_active_at: string | null
   roles: UserRole[]
   branches: Branch[]
 }
@@ -43,6 +44,11 @@ export async function fetchUsers(role?: UserRole): Promise<UserSummary[]> {
   const { data } = await apiClient.get<{ data: UserSummary[] }>('/users', {
     params: role ? { role } : undefined,
   })
+  return data.data
+}
+
+export async function fetchActiveUsers(branchId: number): Promise<UserSummary[]> {
+  const { data } = await apiClient.get<{ data: UserSummary[] }>(`/branches/${branchId}/active-users`)
   return data.data
 }
 

@@ -61,7 +61,7 @@ const navSections: NavSection[] = [
     items: [{ to: '/', label: 'Dashboard', icon: LayoutDashboard, end: true }],
   },
   {
-    label: 'Inventaris',
+    label: 'Kelola Stok',
     icon: Warehouse,
     items: [
       { to: '/stock', label: 'Stok', icon: Boxes },
