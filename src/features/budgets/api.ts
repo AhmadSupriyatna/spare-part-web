@@ -1,5 +1,25 @@
 import { apiClient } from '@/lib/api-client'
 
+export interface BudgetLineBreakdown {
+  line_id: number
+  line_name: string
+  active_installations: number
+  pcs_per_year: number
+  estimated_cost: string
+}
+
+export interface BudgetItem {
+  id: number
+  part_id: number
+  part_name: string
+  item_master_no: string
+  estimated_lifetime_percent: string
+  price_increase_percent: string
+  unit_cost: string
+  estimated_cost: string
+  by_line: BudgetLineBreakdown[]
+}
+
 export interface Budget {
   id: number
   branch_id: number
@@ -9,6 +29,7 @@ export interface Budget {
   planned_amount: string
   corrective_amount: string
   total_amount: string
+  items: BudgetItem[]
   actual_planned?: string
   actual_unplanned?: string
   actual_total?: string
@@ -20,35 +41,27 @@ export interface Budget {
   updated_at: string
 }
 
-export interface BudgetPayload {
-  category?: string
-  year: number
-  planned_amount: number | string
-  corrective_amount?: number | string
-  notes?: string | null
-}
-
-export interface BudgetEstimateItem {
+export interface BudgetCategoryPart {
   part_id: number
   part_name: string
   item_master_no: string
   unit_cost: string
+  estimated_lifetime_hours: number | null
   active_installations: number
-  expected_replacements_per_year: number
-  estimated_cost: string
 }
 
-export interface BudgetEstimateExcludedPart {
+export interface BudgetItemInput {
   part_id: number
-  part_name: string
-  item_master_no: string
-  reason: string
+  estimated_lifetime_percent: number
+  price_increase_percent: number
 }
 
-export interface BudgetEstimate {
-  planned_amount: string
-  items: BudgetEstimateItem[]
-  excluded_parts: BudgetEstimateExcludedPart[]
+export interface BudgetPayload {
+  category?: string
+  year?: number
+  items?: BudgetItemInput[]
+  corrective_amount?: number
+  notes?: string | null
 }
 
 export async function fetchBudgets(branchId: number, year?: number): Promise<Budget[]> {
@@ -58,11 +71,12 @@ export async function fetchBudgets(branchId: number, year?: number): Promise<Bud
   return data.data
 }
 
-export async function estimateBudget(branchId: number, category: string): Promise<BudgetEstimate> {
-  const { data } = await apiClient.get<BudgetEstimate>(`/branches/${branchId}/budgets/estimate`, {
+/** Parts in this category (branch-wide) that currently have an active installation. */
+export async function fetchBudgetPartsForCategory(branchId: number, category: string): Promise<BudgetCategoryPart[]> {
+  const { data } = await apiClient.get<{ data: BudgetCategoryPart[] }>(`/branches/${branchId}/budgets/parts`, {
     params: { category },
   })
-  return data
+  return data.data
 }
 
 export async function createBudget(branchId: number, payload: BudgetPayload): Promise<Budget> {
@@ -70,7 +84,7 @@ export async function createBudget(branchId: number, payload: BudgetPayload): Pr
   return data.data
 }
 
-export async function updateBudget(id: number, payload: Partial<BudgetPayload>): Promise<Budget> {
+export async function updateBudget(id: number, payload: BudgetPayload): Promise<Budget> {
   const { data } = await apiClient.put<{ data: Budget }>(`/budgets/${id}`, payload)
   return data.data
 }

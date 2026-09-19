@@ -1,9 +1,9 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { PiggyBank, Pencil, Trash2 } from 'lucide-react'
-import { useState } from 'react'
+import { ChevronDown, ChevronRight, Wallet, Pencil, Plus, Trash2 } from 'lucide-react'
+import { Fragment, useState } from 'react'
 import { toast } from 'sonner'
-import { BudgetFormDialog } from '@/features/budgets/BudgetFormDialog'
-import { deleteBudget, fetchBudgets } from '@/features/budgets/api'
+import { BudgetDrawer } from '@/features/budgets/BudgetDrawer'
+import { deleteBudget, fetchBudgets, type Budget } from '@/features/budgets/api'
 import { useBranchStore } from '@/stores/branch-store'
 import { useCanManage } from '@/stores/use-has-role'
 import { EmptyState } from '@/components/EmptyState'
@@ -39,11 +39,47 @@ function percentUsedBadge(actualTotal: number, budgetTotal: number) {
   )
 }
 
+/** Per-part / per-Line breakdown shown when a budget row is expanded — this is the "hasil per line" view. */
+function BudgetLineBreakdown({ budget }: { budget: Budget }) {
+  return (
+    <div className="flex flex-col gap-3 bg-muted/20 p-3">
+      {budget.items.map((item) => (
+        <div key={item.id} className="flex flex-col gap-1.5">
+          <p className="text-sm font-medium">
+            {item.part_name}{' '}
+            <span className="font-normal text-muted-foreground">
+              ({item.estimated_lifetime_percent}% life time
+              {Number(item.price_increase_percent) > 0 && `, +${item.price_increase_percent}% harga`})
+            </span>
+          </p>
+          {item.by_line.length === 0 ? (
+            <p className="pl-3 text-xs text-muted-foreground">Tidak ada instalasi aktif saat ini.</p>
+          ) : (
+            <div className="flex flex-col gap-1 pl-3">
+              {item.by_line.map((line) => (
+                <div key={line.line_id} className="flex items-center justify-between text-xs">
+                  <span className="text-muted-foreground">
+                    {line.line_name} · {line.active_installations} unit terpasang · {line.pcs_per_year} pcs/tahun
+                  </span>
+                  <span className="tabular-nums font-medium">{currencyFormatter.format(Number(line.estimated_cost))}</span>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      ))}
+    </div>
+  )
+}
+
 export function BudgetsPage() {
   const activeBranchId = useBranchStore((state) => state.activeBranchId)
   const canManage = useCanManage()
   const queryClient = useQueryClient()
   const [year, setYear] = useState(() => new Date().getFullYear() + 1)
+  const [drawerOpen, setDrawerOpen] = useState(false)
+  const [editingBudget, setEditingBudget] = useState<Budget | null>(null)
+  const [expandedId, setExpandedId] = useState<number | null>(null)
 
   const { data: budgets, isLoading } = useQuery({
     queryKey: ['budgets', activeBranchId, year],
@@ -63,6 +99,16 @@ export function BudgetsPage() {
   const totalCorrective = (budgets ?? []).reduce((sum, b) => sum + Number(b.corrective_amount), 0)
   const totalActual = (budgets ?? []).reduce((sum, b) => sum + Number(b.actual_total ?? 0), 0)
 
+  function openCreate() {
+    setEditingBudget(null)
+    setDrawerOpen(true)
+  }
+
+  function openEdit(budget: Budget) {
+    setEditingBudget(budget)
+    setDrawerOpen(true)
+  }
+
   if (!activeBranchId) {
     return <p className="text-muted-foreground">Pilih plant terlebih dahulu.</p>
   }
@@ -72,7 +118,14 @@ export function BudgetsPage() {
       <PageHeader
         title="Budget"
         description="Anggaran tahunan penggantian part per kategori, untuk plant ini."
-        action={canManage && <BudgetFormDialog branchId={activeBranchId} trigger={<Button>Tambah Budget</Button>} />}
+        action={
+          canManage && (
+            <Button onClick={openCreate}>
+              <Plus className="size-3.5" />
+              Tambah Budget
+            </Button>
+          )
+        }
       />
 
       <div className="flex items-end gap-3">
@@ -116,17 +169,22 @@ export function BudgetsPage() {
         </div>
       ) : budgets?.length === 0 ? (
         <EmptyState
-          icon={PiggyBank}
+          icon={Wallet}
           title={`Belum ada budget untuk tahun ${year}`}
-          description="Tambahkan budget per kategori part — bisa dihitung otomatis dari data life time part, lalu ditambah anggaran corrective sesuai kebutuhan."
+          description="Tambahkan budget per kategori part — isi estimasi umur pakai tiap part, hasilnya dihitung dan ditampilkan per Line."
           action={
-            canManage && <BudgetFormDialog branchId={activeBranchId} trigger={<Button size="sm">Tambah Budget</Button>} />
+            canManage && (
+              <Button size="sm" onClick={openCreate}>
+                Tambah Budget
+              </Button>
+            )
           }
         />
       ) : (
         <Table>
           <TableHeader>
             <TableRow>
+              <TableHead className="w-8" />
               <TableHead>Kategori</TableHead>
               <TableHead className="text-right">Terencana (PM/Life Cycle)</TableHead>
               <TableHead className="text-right">Corrective</TableHead>
@@ -138,71 +196,92 @@ export function BudgetsPage() {
           </TableHeader>
           <TableBody>
             {budgets?.map((budget) => (
-              <TableRow key={budget.id}>
-                <TableCell className="font-medium">{budget.category_label}</TableCell>
-                <TableCell className="text-right tabular-nums">
-                  {currencyFormatter.format(Number(budget.planned_amount))}
-                </TableCell>
-                <TableCell className="text-right tabular-nums">
-                  {currencyFormatter.format(Number(budget.corrective_amount))}
-                </TableCell>
-                <TableCell className="text-right font-semibold tabular-nums">
-                  {currencyFormatter.format(Number(budget.total_amount))}
-                </TableCell>
-                <TableCell className="text-right">
-                  <div className="flex flex-col items-end gap-1">
-                    <span className="tabular-nums">{currencyFormatter.format(Number(budget.actual_total ?? 0))}</span>
-                    <span className="text-xs text-muted-foreground tabular-nums">
-                      {currencyFormatter.format(Number(budget.actual_planned ?? 0))} /{' '}
-                      {currencyFormatter.format(Number(budget.actual_unplanned ?? 0))}
-                    </span>
-                    {percentUsedBadge(Number(budget.actual_total ?? 0), Number(budget.total_amount))}
-                  </div>
-                </TableCell>
-                <TableCell className="text-muted-foreground">{budget.created_by_name ?? '-'}</TableCell>
-                <TableCell className="flex justify-end gap-1">
-                  {canManage && (
-                    <>
-                      <BudgetFormDialog
-                        branchId={activeBranchId}
-                        budget={budget}
-                        trigger={
-                          <Button variant="ghost" size="icon-sm" aria-label="Ubah budget" title="Ubah budget">
-                            <Pencil />
-                          </Button>
-                        }
-                      />
-                      <AlertDialog>
-                        <AlertDialogTrigger
-                          render={
-                            <Button variant="ghost" size="icon-sm" aria-label="Hapus budget" title="Hapus budget" />
-                          }
+              <Fragment key={budget.id}>
+                <TableRow>
+                  <TableCell>
+                    <Button
+                      variant="ghost"
+                      size="icon-sm"
+                      aria-label="Lihat rincian per Line"
+                      onClick={() => setExpandedId((prev) => (prev === budget.id ? null : budget.id))}
+                    >
+                      {expandedId === budget.id ? <ChevronDown /> : <ChevronRight />}
+                    </Button>
+                  </TableCell>
+                  <TableCell className="font-medium">{budget.category_label}</TableCell>
+                  <TableCell className="text-right tabular-nums">
+                    {currencyFormatter.format(Number(budget.planned_amount))}
+                  </TableCell>
+                  <TableCell className="text-right tabular-nums">
+                    {currencyFormatter.format(Number(budget.corrective_amount))}
+                  </TableCell>
+                  <TableCell className="text-right font-semibold tabular-nums">
+                    {currencyFormatter.format(Number(budget.total_amount))}
+                  </TableCell>
+                  <TableCell className="text-right">
+                    <div className="flex flex-col items-end gap-1">
+                      <span className="tabular-nums">{currencyFormatter.format(Number(budget.actual_total ?? 0))}</span>
+                      <span className="text-xs text-muted-foreground tabular-nums">
+                        {currencyFormatter.format(Number(budget.actual_planned ?? 0))} /{' '}
+                        {currencyFormatter.format(Number(budget.actual_unplanned ?? 0))}
+                      </span>
+                      {percentUsedBadge(Number(budget.actual_total ?? 0), Number(budget.total_amount))}
+                    </div>
+                  </TableCell>
+                  <TableCell className="text-muted-foreground">{budget.created_by_name ?? '-'}</TableCell>
+                  <TableCell className="flex justify-end gap-1">
+                    {canManage && (
+                      <>
+                        <Button
+                          variant="ghost"
+                          size="icon-sm"
+                          aria-label="Ubah budget"
+                          title="Ubah budget"
+                          onClick={() => openEdit(budget)}
                         >
-                          <Trash2 />
-                        </AlertDialogTrigger>
-                        <AlertDialogContent>
-                          <AlertDialogHeader>
-                            <AlertDialogTitle>Hapus budget {budget.category_label}?</AlertDialogTitle>
-                            <AlertDialogDescription>
-                              Budget tahun {budget.year} untuk kategori ini akan dihapus permanen.
-                            </AlertDialogDescription>
-                          </AlertDialogHeader>
-                          <AlertDialogFooter>
-                            <AlertDialogCancel>Batal</AlertDialogCancel>
-                            <AlertDialogAction onClick={() => deleteMutation.mutate(budget.id)}>
-                              Hapus
-                            </AlertDialogAction>
-                          </AlertDialogFooter>
-                        </AlertDialogContent>
-                      </AlertDialog>
-                    </>
-                  )}
-                </TableCell>
-              </TableRow>
+                          <Pencil />
+                        </Button>
+                        <AlertDialog>
+                          <AlertDialogTrigger
+                            render={
+                              <Button variant="ghost" size="icon-sm" aria-label="Hapus budget" title="Hapus budget" />
+                            }
+                          >
+                            <Trash2 />
+                          </AlertDialogTrigger>
+                          <AlertDialogContent>
+                            <AlertDialogHeader>
+                              <AlertDialogTitle>Hapus budget {budget.category_label}?</AlertDialogTitle>
+                              <AlertDialogDescription>
+                                Budget tahun {budget.year} untuk kategori ini akan dihapus permanen.
+                              </AlertDialogDescription>
+                            </AlertDialogHeader>
+                            <AlertDialogFooter>
+                              <AlertDialogCancel>Batal</AlertDialogCancel>
+                              <AlertDialogAction onClick={() => deleteMutation.mutate(budget.id)}>
+                                Hapus
+                              </AlertDialogAction>
+                            </AlertDialogFooter>
+                          </AlertDialogContent>
+                        </AlertDialog>
+                      </>
+                    )}
+                  </TableCell>
+                </TableRow>
+                {expandedId === budget.id && (
+                  <TableRow>
+                    <TableCell colSpan={8} className="p-0">
+                      <BudgetLineBreakdown budget={budget} />
+                    </TableCell>
+                  </TableRow>
+                )}
+              </Fragment>
             ))}
           </TableBody>
         </Table>
       )}
+
+      <BudgetDrawer open={drawerOpen} onOpenChange={setDrawerOpen} branchId={activeBranchId} editingBudget={editingBudget} />
     </div>
   )
 }
