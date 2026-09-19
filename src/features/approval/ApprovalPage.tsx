@@ -1,14 +1,20 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { Inbox, ShieldAlert } from 'lucide-react'
+import { useMemo } from 'react'
 import { toast } from 'sonner'
 import { approveReplacementRequest, fetchReplacementRequests } from '@/features/breakdown/api'
 import { RejectRequestDialog } from '@/features/breakdown/RejectRequestDialog'
 import { fetchPartInstallations } from '@/features/part-installations/api'
 import { InstallationSlotPicker } from '@/features/part-installations/InstallationSlotPicker'
-import { PartUnitActionRequestsTable } from '@/features/part-unit-actions/PartUnitActionRequestsTable'
+import {
+  approvePartUnitActionRequest,
+  fetchPartUnitActionRequests,
+} from '@/features/part-unit-actions/api'
+import { RejectPartUnitActionDialog } from '@/features/part-unit-actions/RejectPartUnitActionDialog'
 import { useBranchStore } from '@/stores/branch-store'
 import { useCanApprove, useHasRole } from '@/stores/use-has-role'
 import type { ReplacementRequestStatus, ReplacementRequest } from '@/types/breakdown'
+import type { PartUnitActionRequest } from '@/types/part-unit-actions'
 import { EmptyState } from '@/components/EmptyState'
 import { PageHeader } from '@/components/PageHeader'
 import {
@@ -22,15 +28,60 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from '@/components/ui/alert-dialog'
+import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 
-const replacementStatusLabels: Record<ReplacementRequestStatus, string> = {
+const statusLabels: Record<ReplacementRequestStatus, string> = {
   pending: 'Menunggu',
   approved: 'Disetujui',
   rejected: 'Ditolak',
+}
+
+type UnifiedRow =
+  | { origin: 'breakdown'; id: number; data: ReplacementRequest }
+  | { origin: 'repair'; id: number; data: PartUnitActionRequest }
+
+function originBadge(row: UnifiedRow) {
+  if (row.origin === 'breakdown') {
+    return <Badge variant="destructive">Breakdown</Badge>
+  }
+  if (row.data.action === 'reinstall') {
+    return <Badge variant="warning">Part Hasil Repair</Badge>
+  }
+  return <Badge variant="secondary">Lepas Manual (Arsip)</Badge>
+}
+
+function rowFields(row: UnifiedRow) {
+  if (row.origin === 'breakdown') {
+    const r = row.data
+    return {
+      created_at: r.created_at,
+      part_name: r.part_name,
+      item_master_no: r.item_master_no,
+      location: `${r.equipment_name} · ${r.machine_name} · ${r.line_name}`,
+      requested_by_name: r.requested_by_name,
+      detail: r.reason,
+      quantity: r.quantity_used,
+      reviewed_by_name: r.reviewed_by_name,
+      review_notes: r.review_notes,
+    }
+  }
+
+  const r = row.data
+  return {
+    created_at: r.created_at,
+    part_name: r.part_name ?? `Unit ${r.unit_code ?? '?'}`,
+    item_master_no: r.item_master_no ?? '-',
+    location: [r.equipment_name, r.machine_name, r.line_name].filter(Boolean).join(' · ') || '-',
+    requested_by_name: r.requested_by_name,
+    detail: r.notes,
+    quantity: 1,
+    reviewed_by_name: r.reviewed_by_name,
+    review_notes: r.review_notes,
+  }
 }
 
 /**
@@ -91,94 +142,24 @@ function ApproveReplacementAction({
   )
 }
 
-function ReplacementRequestsTable({ branchId, status }: { branchId: number; status: ReplacementRequestStatus }) {
-  const queryClient = useQueryClient()
-  const canApprove = useCanApprove()
-
-  const { data: requests, isLoading } = useQuery({
-    queryKey: ['replacement-requests', branchId, status],
-    queryFn: () => fetchReplacementRequests(branchId, status),
-  })
-
-  const approveMutation = useMutation({
-    mutationFn: ({ id, oldInstallationId }: { id: number; oldInstallationId?: number | null }) =>
-      approveReplacementRequest(id, undefined, oldInstallationId),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['replacement-requests', branchId] })
-      toast.success('Penggantian disetujui — part lama dilepas, stok otomatis berkurang.')
-    },
-    onError: (error: unknown) => {
-      const message =
-        (error as { response?: { data?: { message?: string } } })?.response?.data?.message ??
-        'Gagal menyetujui permintaan.'
-      toast.error(message)
-      // If this failed because someone else already reviewed it, refresh so
-      // the stale "pending" row doesn't invite another retry.
-      queryClient.invalidateQueries({ queryKey: ['replacement-requests', branchId] })
-    },
-  })
-
-  if (isLoading) return <Skeleton className="h-40 w-full" />
-  if (requests?.length === 0) {
-    return (
-      <EmptyState
-        icon={Inbox}
-        title={`Tidak ada permintaan ${replacementStatusLabels[status].toLowerCase()}`}
-      />
-    )
-  }
-
+function ApproveRepairAction({ request, onApprove, isPending }: { request: PartUnitActionRequest; onApprove: () => void; isPending: boolean }) {
   return (
-    <Table>
-      <TableHeader>
-        <TableRow>
-          <TableHead>Part</TableHead>
-          <TableHead>Lokasi</TableHead>
-          <TableHead>Diajukan oleh</TableHead>
-          <TableHead>Alasan</TableHead>
-          <TableHead className="text-right">Jumlah</TableHead>
-          {status !== 'pending' && <TableHead>Ditinjau oleh</TableHead>}
-          {status === 'pending' && canApprove && <TableHead className="text-right">Aksi</TableHead>}
-        </TableRow>
-      </TableHeader>
-      <TableBody>
-        {requests?.map((req) => (
-          <TableRow key={req.id}>
-            <TableCell>
-              <div className="font-medium">{req.part_name}</div>
-              <div className="font-mono text-xs text-muted-foreground">{req.item_master_no}</div>
-            </TableCell>
-            <TableCell className="text-muted-foreground">
-              {req.equipment_name}
-              <div className="text-xs">
-                {req.machine_name} · {req.line_name}
-              </div>
-            </TableCell>
-            <TableCell>{req.requested_by_name}</TableCell>
-            <TableCell className="max-w-[200px] truncate text-muted-foreground" title={req.reason ?? ''}>
-              {req.reason ?? '-'}
-            </TableCell>
-            <TableCell className="text-right">{req.quantity_used}</TableCell>
-            {status !== 'pending' && (
-              <TableCell className="text-muted-foreground">
-                {req.reviewed_by_name ?? '-'}
-                {req.review_notes && <div className="text-xs italic">"{req.review_notes}"</div>}
-              </TableCell>
-            )}
-            {status === 'pending' && canApprove && (
-              <TableCell className="flex items-start justify-end gap-2">
-                <ApproveReplacementAction
-                  request={req}
-                  isPending={approveMutation.isPending}
-                  onApprove={(oldInstallationId) => approveMutation.mutate({ id: req.id, oldInstallationId })}
-                />
-                <RejectRequestDialog requestId={req.id} branchId={branchId} />
-              </TableCell>
-            )}
-          </TableRow>
-        ))}
-      </TableBody>
-    </Table>
+    <AlertDialog>
+      <AlertDialogTrigger render={<Button size="sm" disabled={isPending} />}>Setujui</AlertDialogTrigger>
+      <AlertDialogContent>
+        <AlertDialogHeader>
+          <AlertDialogTitle>Setujui pemasangan unit ini?</AlertDialogTitle>
+          <AlertDialogDescription>
+            Unit <strong>{request.unit_code}</strong> ({request.part_name}) akan dipasang ke{' '}
+            <strong>{request.equipment_name}</strong> begitu disetujui.
+          </AlertDialogDescription>
+        </AlertDialogHeader>
+        <AlertDialogFooter>
+          <AlertDialogCancel>Batal</AlertDialogCancel>
+          <AlertDialogAction onClick={onApprove}>Setujui</AlertDialogAction>
+        </AlertDialogFooter>
+      </AlertDialogContent>
+    </AlertDialog>
   )
 }
 
@@ -188,10 +169,21 @@ function ReplacementRequestsTable({ branchId, status }: { branchId: number; stat
  * Superadmin) actually gets the Setujui/Tolak controls. Admin Spare Part
  * never sees this at all (hidden from nav, and blocked here too in case of
  * a direct link).
+ *
+ * Unified into one table (2026-09-19): Breakdown replacement and QR-unit
+ * "Pasang" requests used to sit in separate tabs, which made it easy to
+ * miss one board while checking the other. Both are the same kind of
+ * decision — approve an installation — so they now share one table, one
+ * status switch, and an "Asal" column marking where each request actually
+ * came from (Breakdown vs a repaired unit's QR). A bare "Lepas" (remove
+ * with no replacement in the same action) is no longer something anyone
+ * can submit — see StorePartUnitActionRequest — so "Lepas Manual (Arsip)"
+ * only ever shows up for the handful of pre-existing historical rows.
  */
 export function ApprovalPage() {
   const activeBranchId = useBranchStore((state) => state.activeBranchId)
   const canSeeApprovalBoard = useHasRole(['engineer', 'supervisor', 'superadmin'])
+  const canApprove = useCanApprove()
 
   if (!canSeeApprovalBoard) {
     return (
@@ -205,56 +197,178 @@ export function ApprovalPage() {
 
   return (
     <div className="flex flex-col gap-4">
-      <PageHeader title="Approval" />
+      <PageHeader
+        title="Approval"
+        description="Semua permintaan yang butuh persetujuan — breakdown maupun pemasangan unit hasil repair — dalam satu tempat."
+      />
 
       {!activeBranchId ? (
         <p className="text-muted-foreground">Pilih plant terlebih dahulu.</p>
       ) : (
-        <Tabs defaultValue="replacement">
+        <Tabs defaultValue="pending">
           <TabsList>
-            <TabsTrigger value="replacement">Penggantian (Breakdown)</TabsTrigger>
-            <TabsTrigger value="unit-actions">Pasang/Lepas Unit</TabsTrigger>
+            <TabsTrigger value="pending">Menunggu</TabsTrigger>
+            <TabsTrigger value="approved">Disetujui</TabsTrigger>
+            <TabsTrigger value="rejected">Ditolak</TabsTrigger>
           </TabsList>
-
-          <TabsContent value="replacement" className="mt-4">
-            <Tabs defaultValue="pending">
-              <TabsList>
-                <TabsTrigger value="pending">Menunggu</TabsTrigger>
-                <TabsTrigger value="approved">Disetujui</TabsTrigger>
-                <TabsTrigger value="rejected">Ditolak</TabsTrigger>
-              </TabsList>
-              <TabsContent value="pending" className="mt-4">
-                <ReplacementRequestsTable branchId={activeBranchId} status="pending" />
-              </TabsContent>
-              <TabsContent value="approved" className="mt-4">
-                <ReplacementRequestsTable branchId={activeBranchId} status="approved" />
-              </TabsContent>
-              <TabsContent value="rejected" className="mt-4">
-                <ReplacementRequestsTable branchId={activeBranchId} status="rejected" />
-              </TabsContent>
-            </Tabs>
+          <TabsContent value="pending" className="mt-4">
+            <ApprovalTable branchId={activeBranchId} status="pending" canApprove={canApprove} />
           </TabsContent>
-
-          <TabsContent value="unit-actions" className="mt-4">
-            <Tabs defaultValue="pending">
-              <TabsList>
-                <TabsTrigger value="pending">Menunggu</TabsTrigger>
-                <TabsTrigger value="approved">Disetujui</TabsTrigger>
-                <TabsTrigger value="rejected">Ditolak</TabsTrigger>
-              </TabsList>
-              <TabsContent value="pending" className="mt-4">
-                <PartUnitActionRequestsTable branchId={activeBranchId} status="pending" />
-              </TabsContent>
-              <TabsContent value="approved" className="mt-4">
-                <PartUnitActionRequestsTable branchId={activeBranchId} status="approved" />
-              </TabsContent>
-              <TabsContent value="rejected" className="mt-4">
-                <PartUnitActionRequestsTable branchId={activeBranchId} status="rejected" />
-              </TabsContent>
-            </Tabs>
+          <TabsContent value="approved" className="mt-4">
+            <ApprovalTable branchId={activeBranchId} status="approved" canApprove={canApprove} />
+          </TabsContent>
+          <TabsContent value="rejected" className="mt-4">
+            <ApprovalTable branchId={activeBranchId} status="rejected" canApprove={canApprove} />
           </TabsContent>
         </Tabs>
       )}
     </div>
+  )
+}
+
+function ApprovalTable({
+  branchId,
+  status,
+  canApprove,
+}: {
+  branchId: number
+  status: ReplacementRequestStatus
+  canApprove: boolean
+}) {
+  const queryClient = useQueryClient()
+
+  const { data: replacementRequests, isLoading: replacementLoading } = useQuery({
+    queryKey: ['replacement-requests', branchId, status],
+    queryFn: () => fetchReplacementRequests(branchId, status),
+  })
+
+  const { data: unitActionRequests, isLoading: unitActionLoading } = useQuery({
+    queryKey: ['part-unit-action-requests', branchId, status],
+    queryFn: () => fetchPartUnitActionRequests(branchId, status),
+  })
+
+  const approveReplacementMutation = useMutation({
+    mutationFn: ({ id, oldInstallationId }: { id: number; oldInstallationId?: number | null }) =>
+      approveReplacementRequest(id, undefined, oldInstallationId),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['replacement-requests', branchId] })
+      toast.success('Penggantian disetujui — part lama dilepas, stok otomatis berkurang.')
+    },
+    onError: (error: unknown) => {
+      const message =
+        (error as { response?: { data?: { message?: string } } })?.response?.data?.message ??
+        'Gagal menyetujui permintaan.'
+      toast.error(message)
+      queryClient.invalidateQueries({ queryKey: ['replacement-requests', branchId] })
+    },
+  })
+
+  const approveRepairMutation = useMutation({
+    mutationFn: (id: number) => approvePartUnitActionRequest(id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['part-unit-action-requests', branchId] })
+      toast.success('Disetujui — unit resmi terpasang.')
+    },
+    onError: (error: unknown) => {
+      const message =
+        (error as { response?: { data?: { message?: string } } })?.response?.data?.message ??
+        'Gagal menyetujui permintaan.'
+      toast.error(message)
+      queryClient.invalidateQueries({ queryKey: ['part-unit-action-requests', branchId] })
+    },
+  })
+
+  const rows: UnifiedRow[] = useMemo(() => {
+    const breakdownRows: UnifiedRow[] = (replacementRequests ?? []).map((r) => ({
+      origin: 'breakdown',
+      id: r.id,
+      data: r,
+    }))
+    const repairRows: UnifiedRow[] = (unitActionRequests ?? []).map((r) => ({
+      origin: 'repair',
+      id: r.id,
+      data: r,
+    }))
+    return [...breakdownRows, ...repairRows].sort(
+      (a, b) => new Date(rowFields(b).created_at).getTime() - new Date(rowFields(a).created_at).getTime(),
+    )
+  }, [replacementRequests, unitActionRequests])
+
+  if (replacementLoading || unitActionLoading) return <Skeleton className="h-40 w-full" />
+
+  if (rows.length === 0) {
+    return <EmptyState icon={Inbox} title={`Tidak ada permintaan ${statusLabels[status].toLowerCase()}`} />
+  }
+
+  return (
+    <Table>
+      <TableHeader>
+        <TableRow>
+          <TableHead>Tanggal</TableHead>
+          <TableHead>Part</TableHead>
+          <TableHead>Equipment / Lokasi</TableHead>
+          <TableHead>Asal</TableHead>
+          <TableHead>Diajukan oleh</TableHead>
+          <TableHead>Keterangan</TableHead>
+          <TableHead className="text-right">Jumlah</TableHead>
+          {status !== 'pending' && <TableHead>Ditinjau oleh</TableHead>}
+          {status === 'pending' && canApprove && <TableHead className="text-right">Aksi</TableHead>}
+        </TableRow>
+      </TableHeader>
+      <TableBody>
+        {rows.map((row) => {
+          const f = rowFields(row)
+          return (
+            <TableRow key={`${row.origin}-${row.id}`}>
+              <TableCell className="text-muted-foreground">
+                {new Date(f.created_at).toLocaleString('id-ID', { dateStyle: 'medium', timeStyle: 'short' })}
+              </TableCell>
+              <TableCell>
+                <div className="font-medium">{f.part_name}</div>
+                <div className="font-mono text-xs text-muted-foreground">{f.item_master_no}</div>
+              </TableCell>
+              <TableCell className="text-muted-foreground">{f.location}</TableCell>
+              <TableCell>{originBadge(row)}</TableCell>
+              <TableCell>{f.requested_by_name}</TableCell>
+              <TableCell className="max-w-[200px] truncate text-muted-foreground" title={f.detail ?? ''}>
+                {f.detail ?? '-'}
+              </TableCell>
+              <TableCell className="text-right">{f.quantity}</TableCell>
+              {status !== 'pending' && (
+                <TableCell className="text-muted-foreground">
+                  {f.reviewed_by_name ?? '-'}
+                  {f.review_notes && <div className="text-xs italic">"{f.review_notes}"</div>}
+                </TableCell>
+              )}
+              {status === 'pending' && canApprove && (
+                <TableCell className="flex items-start justify-end gap-2">
+                  {row.origin === 'breakdown' ? (
+                    <>
+                      <ApproveReplacementAction
+                        request={row.data}
+                        isPending={approveReplacementMutation.isPending}
+                        onApprove={(oldInstallationId) =>
+                          approveReplacementMutation.mutate({ id: row.id, oldInstallationId })
+                        }
+                      />
+                      <RejectRequestDialog requestId={row.id} branchId={branchId} />
+                    </>
+                  ) : (
+                    <>
+                      <ApproveRepairAction
+                        request={row.data}
+                        isPending={approveRepairMutation.isPending}
+                        onApprove={() => approveRepairMutation.mutate(row.id)}
+                      />
+                      <RejectPartUnitActionDialog requestId={row.id} branchId={branchId} />
+                    </>
+                  )}
+                </TableCell>
+              )}
+            </TableRow>
+          )
+        })}
+      </TableBody>
+    </Table>
   )
 }

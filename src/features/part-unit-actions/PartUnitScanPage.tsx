@@ -28,12 +28,6 @@ const statusLabels: Record<PartUnitStatus, string> = {
   scrapped: 'Dibuang',
 }
 
-const removeSchema = z.object({
-  requested_by_name: z.string().min(1, 'Nama wajib diisi').max(255),
-  notes: z.string().optional(),
-})
-type RemoveFormValues = z.infer<typeof removeSchema>
-
 const reinstallSchema = z.object({
   requested_by_name: z.string().min(1, 'Nama wajib diisi').max(255),
   branch_id: z.string().min(1, 'Pilih plant'),
@@ -75,47 +69,6 @@ function UnitBadgeInfo({
       <p className="font-medium">{partName}</p>
       <p className="font-mono text-xs text-muted-foreground">{itemMasterNo}</p>
     </div>
-  )
-}
-
-function RemoveForm({ unitId }: { unitId: number }) {
-  const [submitted, setSubmitted] = useState(false)
-  const {
-    register,
-    handleSubmit,
-    formState: { errors },
-  } = useForm<RemoveFormValues>({ resolver: zodResolver(removeSchema) })
-
-  const mutation = useMutation({
-    mutationFn: (values: RemoveFormValues) =>
-      submitPartUnitActionRequest(unitId, {
-        action: 'remove',
-        requested_by_name: values.requested_by_name,
-        notes: values.notes,
-      }),
-    onSuccess: () => setSubmitted(true),
-  })
-
-  if (submitted) return <SuccessCard />
-
-  return (
-    <form className="flex flex-col gap-4" onSubmit={handleSubmit((values) => mutation.mutate(values))}>
-      <div className="flex flex-col gap-2">
-        <Label htmlFor="requested_by_name">Nama Anda</Label>
-        <Input id="requested_by_name" placeholder="Nama teknisi lapangan" {...register('requested_by_name')} />
-        {errors.requested_by_name && (
-          <p className="text-sm text-destructive">{errors.requested_by_name.message}</p>
-        )}
-      </div>
-      <div className="flex flex-col gap-2">
-        <Label htmlFor="notes">Catatan (opsional)</Label>
-        <Textarea id="notes" placeholder="Misal: kondisi kerusakan yang ditemukan" {...register('notes')} />
-      </div>
-      <Button type="submit" disabled={mutation.isPending}>
-        {mutation.isPending ? 'Mengirim...' : 'Lapor: Unit Ini Dilepas'}
-      </Button>
-      {mutation.isError && <p className="text-sm text-destructive">Gagal mengirim. Coba lagi.</p>}
-    </form>
   )
 }
 
@@ -303,7 +256,7 @@ export function PartUnitScanPage() {
     <div className="flex min-h-svh items-center justify-center bg-muted/40 p-4">
       <Card className="w-full max-w-md">
         <CardHeader>
-          <CardTitle>Unit {unit?.unit_code ?? ''} — Lepas/Pasang Part</CardTitle>
+          <CardTitle>Unit {unit?.unit_code ?? ''} — Pasang Part</CardTitle>
         </CardHeader>
         <CardContent className="flex flex-col gap-4">
           {isLoading ? (
@@ -315,14 +268,14 @@ export function PartUnitScanPage() {
               <UnitBadgeInfo partName={unit.part_name} itemMasterNo={unit.item_master_no} />
 
               {unit.status === 'in_service' && (
-                <>
-                  <p className="text-sm text-muted-foreground">
-                    Unit ini sedang terpasang di <strong>{unit.current_equipment?.name}</strong> (
-                    {unit.current_equipment?.machine_name} · {unit.current_equipment?.line_name}).
-                    Kirim laporan di bawah kalau unit ini baru saja dilepas.
-                  </p>
-                  <RemoveForm unitId={unit.id} />
-                </>
+                <p className="text-sm text-muted-foreground">
+                  Unit ini sedang terpasang di <strong>{unit.current_equipment?.name}</strong> (
+                  {unit.current_equipment?.machine_name} · {unit.current_equipment?.line_name}). Melepas
+                  part lewat scan ini saja tidak bisa lagi — lepas part harus selalu disertai
+                  penggantinya sekaligus. Kalau part ini rusak, ajukan lewat alur{' '}
+                  <strong>Breakdown</strong> (scan QR part di equipment). Kalau ini bagian dari
+                  perawatan terjadwal, lepas lewat checklist WO PM seperti biasa.
+                </p>
               )}
 
               {unit.status === 'available' && (
