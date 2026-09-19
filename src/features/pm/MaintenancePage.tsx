@@ -1,5 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { CalendarDays, ChevronLeft, ChevronRight, List, NotebookPen, Plus, Wrench } from 'lucide-react'
+import { CalendarDays, ChevronLeft, ChevronRight, List, Plus, Wrench } from 'lucide-react'
 import { useMemo, useState } from 'react'
 import { useSearchParams } from 'react-router'
 import { toast } from 'sonner'
@@ -11,7 +11,6 @@ import { TaskDetailSheet } from '@/features/pm/TaskDetailSheet'
 import { WoListView } from '@/features/pm/WoListView'
 import { RepairBoard } from '@/features/part-repairs/RepairBoard'
 import { ScheduleTaskLibraryDialog } from '@/features/task-libraries/ScheduleTaskLibraryDialog'
-import { TaskLibraryBrowser } from '@/features/task-libraries/TaskLibraryBrowser'
 import { fetchTaskLibrariesForBranch } from '@/features/task-libraries/api'
 import { fetchPmTasksForBranch, rescheduleTask } from '@/features/tasks/api'
 import { useBranchStore } from '@/stores/branch-store'
@@ -27,15 +26,14 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 const WEEKDAYS = ['Sen', 'Sel', 'Rab', 'Kam', 'Jum', 'Sab', 'Min']
 const VISIBLE_TASKS_PER_DAY = 3
 
-type MaintenanceView = 'library' | 'calendar' | 'list' | 'repair'
+type MaintenanceView = 'calendar' | 'list' | 'repair'
 
 export function MaintenancePage() {
   const activeBranchId = useBranchStore((state) => state.activeBranchId)
   const queryClient = useQueryClient()
   const [searchParams, setSearchParams] = useSearchParams()
   const tabParam = searchParams.get('tab')
-  const view: MaintenanceView =
-    tabParam === 'library' || tabParam === 'list' || tabParam === 'repair' ? tabParam : 'calendar'
+  const view: MaintenanceView = tabParam === 'list' || tabParam === 'repair' ? tabParam : 'calendar'
   function setView(next: MaintenanceView) {
     setSearchParams({ tab: next })
   }
@@ -172,14 +170,6 @@ export function MaintenancePage() {
         <h1 className="text-base font-semibold">Maintenance</h1>
         <div className="flex gap-1 rounded-md border p-1">
           <Button
-            variant={view === 'library' ? 'default' : 'ghost'}
-            size="sm"
-            onClick={() => setView('library')}
-          >
-            <NotebookPen className="size-3.5" />
-            Library
-          </Button>
-          <Button
             variant={view === 'calendar' ? 'default' : 'ghost'}
             size="sm"
             onClick={() => setView('calendar')}
@@ -197,8 +187,6 @@ export function MaintenancePage() {
           </Button>
         </div>
       </div>
-
-      {view === 'library' && <TaskLibraryBrowser />}
 
       {view === 'list' && <WoListView tasks={tasks} isLoading={tasksLoading} onSelect={setDetailTask} />}
 

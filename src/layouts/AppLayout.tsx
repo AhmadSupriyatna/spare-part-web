@@ -14,13 +14,14 @@ import {
   MapPin,
   NotebookPen,
   Package,
-  PiggyBank,
   QrCode,
   Ruler,
   Settings,
+  ShieldCheck,
   Tag,
   Truck,
   UserRoundCog,
+  Wallet,
   Warehouse,
   Wrench,
 } from 'lucide-react'
@@ -68,10 +69,14 @@ const navSections: NavSection[] = [
       { to: '/alerts', label: 'Peringatan', icon: AlertTriangle },
       { to: '/suppliers', label: 'Supplier', icon: Truck },
       { to: '/locations', label: 'Lokasi', icon: MapPin },
+    ],
+  },
+  {
+    items: [
       {
         to: '/budgets',
         label: 'Budget',
-        icon: PiggyBank,
+        icon: Wallet,
         roles: ['superadmin', 'supervisor', 'admin_spare_part'],
       },
     ],
@@ -96,10 +101,22 @@ const navSections: NavSection[] = [
     ],
   },
   {
+    items: [
+      {
+        to: '/approval',
+        label: 'Approval',
+        icon: ShieldCheck,
+        roles: ['superadmin', 'supervisor', 'engineer'],
+      },
+    ],
+  },
+  {
+    items: [{ to: '/task-libraries', label: 'Task Library', icon: NotebookPen }],
+  },
+  {
     label: 'Maintenance',
     icon: Wrench,
     items: [
-      { to: '/pm/calendar?tab=library', label: 'Library', icon: NotebookPen, end: true },
       { to: '/pm/calendar?tab=calendar', label: 'Kalender', icon: CalendarDays, end: true },
       { to: '/pm/calendar?tab=list', label: 'WO', icon: List, end: true },
       { to: '/pm/calendar?tab=repair', label: 'Repair Part', icon: Hammer, end: true },

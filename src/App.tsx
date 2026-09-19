@@ -1,6 +1,7 @@
 import { BrowserRouter, Navigate, Route, Routes } from 'react-router'
 import { ActivityLogPage } from '@/features/activity-log/ActivityLogPage'
 import { AlertsPage } from '@/features/alerts/AlertsPage'
+import { ApprovalPage } from '@/features/approval/ApprovalPage'
 import { LoginPage } from '@/features/auth/LoginPage'
 import { BranchesPage } from '@/features/branches/BranchesPage'
 import { BreakdownScanPage } from '@/features/breakdown/BreakdownScanPage'
@@ -23,6 +24,7 @@ import { PrintWoChecklistPage } from '@/features/pm/PrintWoChecklistPage'
 import { CompanySettingsPage } from '@/features/settings/CompanySettingsPage'
 import { SupplierDetailPage } from '@/features/suppliers/SupplierDetailPage'
 import { SuppliersPage } from '@/features/suppliers/SuppliersPage'
+import { TaskLibraryPage } from '@/features/task-libraries/TaskLibraryPage'
 import { UnitsPage } from '@/features/units/UnitsPage'
 import { UsersPage } from '@/features/users/UsersPage'
 import { WorkspacePage } from '@/features/workspace/WorkspacePage'
@@ -58,6 +60,8 @@ function App() {
             <Route path="lines" element={<LineHierarchyPage />} />
             <Route path="equipment/:id" element={<EquipmentDetailPage />} />
             <Route path="workspace" element={<WorkspacePage />} />
+            <Route path="approval" element={<ApprovalPage />} />
+            <Route path="task-libraries" element={<TaskLibraryPage />} />
             <Route path="breakdown/print-qr" element={<PrintQrCodesPage />} />
             <Route path="settings/company" element={<CompanySettingsPage />} />
             <Route path="settings/units" element={<UnitsPage />} />

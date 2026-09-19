@@ -155,7 +155,7 @@ export function DashboardPage() {
               title="Breakdown Menunggu"
               value={pendingReplacements?.length ?? 0}
               icon={ShieldCheck}
-              href="/workspace?tab=approval"
+              href="/approval"
               tone={pendingReplacements && pendingReplacements.length > 0 ? 'warning' : 'default'}
               loading={replacementsLoading}
             />

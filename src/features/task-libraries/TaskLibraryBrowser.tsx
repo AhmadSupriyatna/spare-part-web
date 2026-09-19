@@ -15,8 +15,10 @@ import { Skeleton } from '@/components/ui/skeleton'
 
 /**
  * Line -> Machine -> Equipment browser for managing Task Library recipes —
- * used to be its own page (`/task-libraries`), now embedded as the
- * "Library" view inside the Maintenance page's toggle (Library/Kalender/WO).
+ * rendered by the standalone TaskLibraryPage (`/task-libraries`). Briefly
+ * lived embedded as a tab inside MaintenancePage's toggle; split back out
+ * into its own nav item since Library recipes are edited far less often
+ * than the Kalender/WO/Repair Part views are checked day-to-day.
  */
 export function TaskLibraryBrowser() {
   const activeBranchId = useBranchStore((state) => state.activeBranchId)
