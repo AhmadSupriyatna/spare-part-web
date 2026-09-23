@@ -3,7 +3,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useState } from 'react'
 import { useForm } from 'react-hook-form'
 import { toast } from 'sonner'
-import { receiveStock } from '@/features/part-stocks/api'
+import { createPartStock, receiveStock } from '@/features/part-stocks/api'
 import { receiveStockSchema, type ReceiveStockFormValues } from '@/features/part-stocks/schema'
 import { fetchSuppliers } from '@/features/suppliers/api'
 import { Button } from '@/components/ui/button'
@@ -23,18 +23,30 @@ import { Textarea } from '@/components/ui/textarea'
 const currencyFormatter = new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR' })
 
 interface ReceiveStockDialogProps {
-  partStockId: number
   branchId: number
-  currentQuantity: number
-  currentUnitCost: string
+  /** An existing part_stocks row — tops it up via POST /part-stocks/{id}/receive. */
+  partStockId?: number
+  /** A part with no part_stocks row for this branch yet — creates one via POST /branches/{branch}/part-stocks. */
+  partId?: number
+  currentQuantity?: number
+  currentUnitCost?: string
   trigger?: React.ReactNode
 }
 
+/**
+ * Handles two cases behind one form: topping up a part that already has a
+ * part_stocks row here (`partStockId`, the established flow — Kelola Stok's
+ * per-row action, Part detail page) or receiving a part into this branch's
+ * stock for the very first time (`partId`, used by the standalone Stock In
+ * page, whose part list is the whole catalog rather than just parts already
+ * stocked here). Exactly one of the two must be given.
+ */
 export function ReceiveStockDialog({
-  partStockId,
   branchId,
-  currentQuantity,
-  currentUnitCost,
+  partStockId,
+  partId,
+  currentQuantity = 0,
+  currentUnitCost = '0',
   trigger,
 }: ReceiveStockDialogProps) {
   const [open, setOpen] = useState(false)
@@ -67,16 +79,22 @@ export function ReceiveStockDialog({
     : null
 
   const mutation = useMutation({
-    mutationFn: (values: ReceiveStockFormValues) =>
-      receiveStock(partStockId, {
+    mutationFn: (values: ReceiveStockFormValues) => {
+      const payload = {
         quantity: Number(values.quantity),
         total_price: Number(values.total_price),
         supplier_id: values.supplier_id ? Number(values.supplier_id) : undefined,
         notes: values.notes,
-      }),
+      }
+      return partStockId
+        ? receiveStock(partStockId, payload)
+        : createPartStock(branchId, { ...payload, part_id: partId! })
+    },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['part-stock', partStockId] })
-      queryClient.invalidateQueries({ queryKey: ['part-stock-ledger', partStockId] })
+      if (partStockId) {
+        queryClient.invalidateQueries({ queryKey: ['part-stock', partStockId] })
+        queryClient.invalidateQueries({ queryKey: ['part-stock-ledger', partStockId] })
+      }
       queryClient.invalidateQueries({ queryKey: ['part-stocks', branchId] })
       toast.success('Barang berhasil diterima.')
       reset()

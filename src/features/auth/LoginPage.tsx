@@ -2,7 +2,8 @@ import { zodResolver } from '@hookform/resolvers/zod'
 import { useMutation } from '@tanstack/react-query'
 import { Wrench } from 'lucide-react'
 import { useForm } from 'react-hook-form'
-import { useNavigate } from 'react-router'
+import { useLocation, useNavigate } from 'react-router'
+import type { Location } from 'react-router'
 import { toast } from 'sonner'
 import { login } from '@/features/auth/api'
 import { loginSchema, type LoginFormValues } from '@/features/auth/schema'
@@ -15,6 +16,8 @@ import { Label } from '@/components/ui/label'
 
 export function LoginPage() {
   const navigate = useNavigate()
+  const location = useLocation()
+  const from = (location.state as { from?: Location } | null)?.from
   const setSession = useAuthStore((state) => state.setSession)
 
   const {
@@ -30,7 +33,7 @@ export function LoginPage() {
       login({ ...values, device_name: `web-${navigator.userAgent.slice(0, 40)}` }),
     onSuccess: (data) => {
       setSession(data.token, data.user)
-      navigate('/', { replace: true })
+      navigate(from ? `${from.pathname}${from.search}` : '/', { replace: true })
     },
     onError: () => {
       toast.error('Email atau password salah.')

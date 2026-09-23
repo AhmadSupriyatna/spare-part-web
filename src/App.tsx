@@ -12,12 +12,14 @@ import { DashboardPage } from '@/features/dashboard/DashboardPage'
 import { DatabaseBackupPage } from '@/features/database-backup/DatabaseBackupPage'
 import { EquipmentDetailPage } from '@/features/equipment/EquipmentDetailPage'
 import { LineHierarchyPage } from '@/features/lines/LineHierarchyPage'
+import { LineRuntimeScanPage } from '@/features/lines/LineRuntimeScanPage'
 import { LocationDetailPage } from '@/features/locations/LocationDetailPage'
 import { LocationsPage } from '@/features/locations/LocationsPage'
 import { PartDetailPage } from '@/features/parts/PartDetailPage'
 import { PartsPage } from '@/features/parts/PartsPage'
 import { PartStockDetailPage } from '@/features/part-stocks/PartStockDetailPage'
 import { PartStocksPage } from '@/features/part-stocks/PartStocksPage'
+import { StockInPage } from '@/features/part-stocks/StockInPage'
 import { PartUnitScanPage } from '@/features/part-unit-actions/PartUnitScanPage'
 import { PartUnitDetailPage } from '@/features/part-units/PartUnitDetailPage'
 import { MaintenancePage } from '@/features/pm/MaintenancePage'
@@ -45,12 +47,18 @@ function App() {
         <Route path="/part-units/:id/scan" element={<PartUnitScanPage />} />
 
         <Route element={<ProtectedRoute />}>
+          {/* Requires login (any role) but deliberately outside AppLayout — a
+              QR scan landing page is meant to be a quick in-and-out phone
+              action, not a full app-shell page. */}
+          <Route path="lines/:id/log-runtime" element={<LineRuntimeScanPage />} />
+
           <Route element={<AppLayout />}>
             <Route index element={<DashboardPage />} />
             <Route path="parts" element={<PartsPage />} />
             <Route path="parts/:id" element={<PartDetailPage />} />
             <Route path="stock" element={<PartStocksPage />} />
             <Route path="stock/:id" element={<PartStockDetailPage />} />
+            <Route path="stock-in" element={<StockInPage />} />
             <Route path="alerts" element={<AlertsPage />} />
             <Route path="branches" element={<BranchesPage />} />
             <Route path="suppliers" element={<SuppliersPage />} />

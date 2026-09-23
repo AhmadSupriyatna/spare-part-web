@@ -67,6 +67,16 @@ export async function receiveStock(id: number, payload: ReceiveStockPayload): Pr
   return data.data
 }
 
+export interface CreatePartStockPayload extends ReceiveStockPayload {
+  part_id: number
+}
+
+/** Receives a part into a branch's stock for the first time — creates the part_stocks row if it doesn't exist yet (or tops it up if it does). */
+export async function createPartStock(branchId: number, payload: CreatePartStockPayload): Promise<PartStock> {
+  const { data } = await apiClient.post<{ data: PartStock }>(`/branches/${branchId}/part-stocks`, payload)
+  return data.data
+}
+
 export async function adjustStock(id: number, payload: AdjustStockPayload): Promise<PartStock> {
   const { data } = await apiClient.post<{ data: PartStock }>(`/part-stocks/${id}/adjust`, payload)
   return data.data

@@ -1,16 +1,14 @@
 import { useQuery } from '@tanstack/react-query'
-import { Boxes, ChevronLeft, ChevronRight, MapPin, SlidersHorizontal } from 'lucide-react'
+import { Boxes, MapPin, SlidersHorizontal } from 'lucide-react'
 import { useState } from 'react'
 import { Link } from 'react-router'
 import { AdjustStockDialog } from '@/features/part-stocks/AdjustStockDialog'
 import { fetchPartStocksForBranch } from '@/features/part-stocks/api'
 import { SetPartLocationDialog } from '@/features/part-stocks/SetPartLocationDialog'
-import { StockInDrawer } from '@/features/part-stocks/StockInDrawer'
 import { StockLedgerTab } from '@/features/part-stocks/StockLedgerTab'
 import { fetchParts } from '@/features/parts/api'
 import { useBranchStore } from '@/stores/branch-store'
 import { useCanManage } from '@/stores/use-has-role'
-import { cn } from '@/lib/utils'
 import { EmptyState } from '@/components/EmptyState'
 import { PageHeader } from '@/components/PageHeader'
 import { Badge } from '@/components/ui/badge'
@@ -150,43 +148,6 @@ function PartStocksTable({ activeBranchId }: { activeBranchId: number }) {
   )
 }
 
-function StockInSection({ activeBranchId }: { activeBranchId: number }) {
-  const [drawerCollapsed, setDrawerCollapsed] = useState(false)
-
-  const { data: stocks } = useQuery({
-    queryKey: ['part-stocks', activeBranchId],
-    queryFn: () => fetchPartStocksForBranch(activeBranchId),
-  })
-
-  return (
-    <div className="flex flex-col items-start gap-0 lg:flex-row">
-      <div className={cn('min-w-0 flex-1', !drawerCollapsed && 'lg:flex-[7] lg:pr-3')}>
-        <PartStocksTable activeBranchId={activeBranchId} />
-      </div>
-
-      <div
-        className={cn(
-          'relative flex w-full shrink-0 lg:sticky lg:top-4 lg:h-[calc(100vh-8rem)]',
-          drawerCollapsed ? 'lg:w-6' : 'lg:flex-[3]',
-        )}
-      >
-        <button
-          type="button"
-          onClick={() => setDrawerCollapsed((prev) => !prev)}
-          aria-label={drawerCollapsed ? 'Buka panel stock in' : 'Tutup panel stock in'}
-          title={drawerCollapsed ? 'Buka panel stock in' : 'Tutup panel stock in'}
-          className="absolute top-1/2 left-0 z-10 hidden size-6 -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-full border bg-card text-muted-foreground shadow-sm hover:bg-muted lg:flex"
-        >
-          {drawerCollapsed ? <ChevronLeft className="size-3.5" /> : <ChevronRight className="size-3.5" />}
-        </button>
-        <div className={cn('w-full lg:h-full', drawerCollapsed && 'lg:hidden')}>
-          <StockInDrawer hidden={false} branchId={activeBranchId} stocks={stocks ?? []} />
-        </div>
-      </div>
-    </div>
-  )
-}
-
 export function PartStocksPage() {
   const activeBranchId = useBranchStore((state) => state.activeBranchId)
 
@@ -204,7 +165,7 @@ export function PartStocksPage() {
           <TabsTrigger value="ledger">Ledger Keluar-Masuk</TabsTrigger>
         </TabsList>
         <TabsContent value="stok" className="mt-4">
-          <StockInSection activeBranchId={activeBranchId} />
+          <PartStocksTable activeBranchId={activeBranchId} />
         </TabsContent>
         <TabsContent value="ledger" className="mt-4">
           <StockLedgerTab branchId={activeBranchId} />

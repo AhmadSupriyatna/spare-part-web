@@ -15,6 +15,7 @@ import {
   MapPin,
   NotebookPen,
   Package,
+  PackagePlus,
   QrCode,
   Ruler,
   Settings,
@@ -67,6 +68,7 @@ const navSections: NavSection[] = [
     icon: Warehouse,
     items: [
       { to: '/stock', label: 'Stok', icon: Boxes },
+      { to: '/stock-in', label: 'Stock In', icon: PackagePlus },
       { to: '/alerts', label: 'Peringatan', icon: AlertTriangle },
       { to: '/suppliers', label: 'Supplier', icon: Truck },
       { to: '/locations', label: 'Lokasi', icon: MapPin },
