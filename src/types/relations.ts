@@ -82,6 +82,7 @@ export interface PartRepair {
   disposition: PartRepairDisposition
   is_overdue: boolean
   repaired_at: string | null
+  repair_cost: string | null
   notes: string | null
   reinstalled_installation_id: number | null
   created_at: string

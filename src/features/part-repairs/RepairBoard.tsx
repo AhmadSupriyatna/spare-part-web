@@ -3,6 +3,7 @@ import { useState } from 'react'
 import { toast } from 'sonner'
 import { deletePartRepair, fetchPartRepairs, updatePartRepair } from '@/features/part-repairs/api'
 import { RepairCard } from '@/features/part-repairs/RepairCard'
+import { RepairCompleteDialog } from '@/features/part-repairs/RepairCompleteDialog'
 import { RepairDecisionDialog } from '@/features/part-repairs/RepairDecisionDialog'
 import { RepairEditDialog } from '@/features/part-repairs/RepairEditDialog'
 import { RepairScrapList } from '@/features/part-repairs/RepairScrapList'
@@ -45,6 +46,7 @@ export function RepairBoard({ branchId }: RepairBoardProps) {
   const [draggingRepair, setDraggingRepair] = useState<PartRepair | null>(null)
   const [dragOverColumn, setDragOverColumn] = useState<PartRepairDisposition | null>(null)
   const [decisionFor, setDecisionFor] = useState<PartRepair | null>(null)
+  const [completeFor, setCompleteFor] = useState<PartRepair | null>(null)
   const [editFor, setEditFor] = useState<PartRepair | null>(null)
 
   const { data: repairs, isLoading } = useQuery({
@@ -57,13 +59,21 @@ export function RepairBoard({ branchId }: RepairBoardProps) {
       id,
       disposition,
       estimatedCompletionDate,
+      repairCost,
       notes,
     }: {
       id: number
       disposition: PartRepairDisposition
       estimatedCompletionDate?: string | null
+      repairCost?: number | null
       notes?: string | null
-    }) => updatePartRepair(id, { disposition, estimated_completion_date: estimatedCompletionDate, notes }),
+    }) =>
+      updatePartRepair(id, {
+        disposition,
+        estimated_completion_date: estimatedCompletionDate,
+        repair_cost: repairCost,
+        notes,
+      }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey })
       toast.success('Status perbaikan diperbarui.')
@@ -99,7 +109,7 @@ export function RepairBoard({ branchId }: RepairBoardProps) {
     if (repair.disposition === 'pending' && column === 'in_repair') {
       setDecisionFor(repair)
     } else if (repair.disposition === 'in_repair' && column === 'repaired') {
-      mutation.mutate({ id: repair.id, disposition: 'repaired' })
+      setCompleteFor(repair)
     }
   }
 
@@ -152,7 +162,7 @@ export function RepairBoard({ branchId }: RepairBoardProps) {
                       onDragStart={() => setDraggingRepair(repair)}
                       onDragEnd={() => setDraggingRepair(null)}
                       onRepair={() => setDecisionFor(repair)}
-                      onReady={() => mutation.mutate({ id: repair.id, disposition: 'repaired' })}
+                      onReady={() => setCompleteFor(repair)}
                       onScrap={() => mutation.mutate({ id: repair.id, disposition: 'scrapped' })}
                       onEdit={() => setEditFor(repair)}
                       onDelete={() => deleteMutation.mutate(repair.id)}
@@ -185,6 +195,19 @@ export function RepairBoard({ branchId }: RepairBoardProps) {
         }}
       />
 
+      <RepairCompleteDialog
+        repair={completeFor}
+        isSubmitting={mutation.isPending}
+        onCancel={() => setCompleteFor(null)}
+        onConfirm={(repairCost) => {
+          if (!completeFor) return
+          mutation.mutate(
+            { id: completeFor.id, disposition: 'repaired', repairCost },
+            { onSuccess: () => setCompleteFor(null) },
+          )
+        }}
+      />
+
       <RepairEditDialog
         repair={editFor}
         isSubmitting={mutation.isPending}
@@ -196,6 +219,7 @@ export function RepairBoard({ branchId }: RepairBoardProps) {
               id: editFor.id,
               disposition: data.disposition,
               estimatedCompletionDate: data.estimated_completion_date,
+              repairCost: data.repair_cost,
               notes: data.notes,
             },
             { onSuccess: () => setEditFor(null) },

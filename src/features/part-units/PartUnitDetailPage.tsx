@@ -26,6 +26,8 @@ const statusVariants: Record<PartUnitStatus, 'success' | 'warning' | 'secondary'
   scrapped: 'destructive',
 }
 
+const currencyFormatter = new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR' })
+
 const dispositionLabels: Record<PartRepairDisposition, string> = {
   pending: 'Menunggu Keputusan',
   in_repair: 'Sedang Diperbaiki',
@@ -183,6 +185,7 @@ export function PartUnitDetailPage() {
                 <TableHead>Tanggal Dilepas</TableHead>
                 <TableHead>Status</TableHead>
                 <TableHead>Tanggal Selesai</TableHead>
+                <TableHead className="text-right">Biaya Repair</TableHead>
                 <TableHead>Catatan</TableHead>
               </TableRow>
             </TableHeader>
@@ -195,6 +198,9 @@ export function PartUnitDetailPage() {
                   <TableCell>{dispositionLabels[repair.disposition]}</TableCell>
                   <TableCell className="text-muted-foreground">
                     {repair.repaired_at ? new Date(repair.repaired_at).toLocaleDateString('id-ID') : '-'}
+                  </TableCell>
+                  <TableCell className="text-right text-muted-foreground">
+                    {repair.repair_cost != null ? currencyFormatter.format(Number(repair.repair_cost)) : '-'}
                   </TableCell>
                   <TableCell className="max-w-xs truncate text-muted-foreground" title={repair.notes ?? ''}>
                     {repair.notes ?? '-'}

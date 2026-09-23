@@ -17,6 +17,8 @@ import {
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 
+const currencyFormatter = new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR' })
+
 interface RepairCardProps {
   repair: PartRepair
   canManage: boolean
@@ -123,6 +125,7 @@ export function RepairCard({
         {repair.disposition === 'in_repair' && repair.estimated_completion_date && (
           <> · Estimasi selesai {new Date(repair.estimated_completion_date).toLocaleDateString('id-ID')}</>
         )}
+        {repair.repair_cost != null && <> · Biaya repair {currencyFormatter.format(Number(repair.repair_cost))}</>}
       </p>
 
       {repair.is_overdue && (

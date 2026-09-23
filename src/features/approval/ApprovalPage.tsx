@@ -1,10 +1,11 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { Inbox, ShieldAlert } from 'lucide-react'
-import { useMemo } from 'react'
+import { useMemo, useState } from 'react'
 import { toast } from 'sonner'
 import { approveReplacementRequest, fetchReplacementRequests } from '@/features/breakdown/api'
 import { RejectRequestDialog } from '@/features/breakdown/RejectRequestDialog'
 import { fetchPartInstallations } from '@/features/part-installations/api'
+import { InstallationMultiSelectPicker } from '@/features/part-installations/InstallationMultiSelectPicker'
 import { InstallationSlotPicker } from '@/features/part-installations/InstallationSlotPicker'
 import {
   approvePartUnitActionRequest,
@@ -85,11 +86,13 @@ function rowFields(row: UnifiedRow) {
 }
 
 /**
- * Plain "Setujui" when the equipment has at most one active installation of
- * this part — auto-resolved server-side, no need to ask. Once there's more
- * than one, tapping straight through the Setujui button would be ambiguous
- * (PartLifecycleService::resolveActiveInstallation() would 422), so this
- * shows the A/B/C picker instead and approves the moment one is tapped.
+ * quantity_used = 1 and at most one active installation of this part —
+ * auto-resolved server-side, no need to ask. quantity_used = 1 but more
+ * than one active installation shows the single-pick A/B/C list (tapping
+ * one both selects and approves in the same motion, like before).
+ * quantity_used > 1 always requires an explicit multi-select of exactly
+ * quantity_used units — never auto-resolved, since there's no single
+ * correct guess for which N of several active units broke.
  */
 function ApproveReplacementAction({
   request,
@@ -97,9 +100,11 @@ function ApproveReplacementAction({
   isPending,
 }: {
   request: ReplacementRequest
-  onApprove: (oldInstallationId?: number | null) => void
+  onApprove: (oldInstallationIds: number[]) => void
   isPending: boolean
 }) {
+  const [selectedIds, setSelectedIds] = useState<number[]>([])
+
   const { data: installations } = useQuery({
     queryKey: ['part-installations', request.equipment_id],
     queryFn: () => fetchPartInstallations(request.equipment_id),
@@ -109,6 +114,21 @@ function ApproveReplacementAction({
     (installation) => installation.part_id === request.part_id && installation.is_active,
   )
 
+  if (request.quantity_used > 1) {
+    return (
+      <InstallationMultiSelectPicker
+        installations={activeSamePart}
+        requiredCount={request.quantity_used}
+        selectedIds={selectedIds}
+        disabled={isPending}
+        onToggle={(id) =>
+          setSelectedIds((prev) => (prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]))
+        }
+        onConfirm={() => onApprove(selectedIds)}
+      />
+    )
+  }
+
   if (activeSamePart.length > 1) {
     return (
       <div className="flex flex-col items-end gap-1">
@@ -116,7 +136,7 @@ function ApproveReplacementAction({
         <InstallationSlotPicker
           installations={activeSamePart}
           disabled={isPending}
-          onSelect={(installation) => onApprove(installation.id)}
+          onSelect={(installation) => onApprove([installation.id])}
         />
       </div>
     )
@@ -135,7 +155,7 @@ function ApproveReplacementAction({
         </AlertDialogHeader>
         <AlertDialogFooter>
           <AlertDialogCancel>Batal</AlertDialogCancel>
-          <AlertDialogAction onClick={() => onApprove(null)}>Setujui</AlertDialogAction>
+          <AlertDialogAction onClick={() => onApprove([])}>Setujui</AlertDialogAction>
         </AlertDialogFooter>
       </AlertDialogContent>
     </AlertDialog>
@@ -248,8 +268,8 @@ function ApprovalTable({
   })
 
   const approveReplacementMutation = useMutation({
-    mutationFn: ({ id, oldInstallationId }: { id: number; oldInstallationId?: number | null }) =>
-      approveReplacementRequest(id, undefined, oldInstallationId),
+    mutationFn: ({ id, oldInstallationIds }: { id: number; oldInstallationIds: number[] }) =>
+      approveReplacementRequest(id, undefined, oldInstallationIds),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['replacement-requests', branchId] })
       toast.success('Penggantian disetujui — part lama dilepas, stok otomatis berkurang.')
@@ -347,8 +367,8 @@ function ApprovalTable({
                       <ApproveReplacementAction
                         request={row.data}
                         isPending={approveReplacementMutation.isPending}
-                        onApprove={(oldInstallationId) =>
-                          approveReplacementMutation.mutate({ id: row.id, oldInstallationId })
+                        onApprove={(oldInstallationIds) =>
+                          approveReplacementMutation.mutate({ id: row.id, oldInstallationIds })
                         }
                       />
                       <RejectRequestDialog requestId={row.id} branchId={branchId} />

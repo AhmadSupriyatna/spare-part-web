@@ -11,6 +11,7 @@ export async function fetchPartRepairs(branchId: number, disposition?: PartRepai
 export interface UpdatePartRepairPayload {
   disposition: PartRepairDisposition
   estimated_completion_date?: string | null
+  repair_cost?: number | null
   notes?: string | null
 }
 

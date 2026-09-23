@@ -9,6 +9,7 @@ import {
   fetchPublicPart,
   submitReplacementRequest,
 } from '@/features/breakdown/api'
+import { cn } from '@/lib/utils'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
@@ -28,6 +29,17 @@ const formSchema = z.object({
 })
 
 type FormValues = z.infer<typeof formSchema>
+
+function errorData(error: unknown) {
+  return (error as { response?: { data?: { message?: string; errors?: Record<string, string[]> } } })
+    ?.response?.data
+}
+
+function extractErrorMessage(error: unknown, fallback: string): string {
+  const data = errorData(error)
+  const firstFieldError = data?.errors ? Object.values(data.errors)[0]?.[0] : undefined
+  return firstFieldError ?? data?.message ?? fallback
+}
 
 export function BreakdownScanPage() {
   const { partId, branchId } = useParams<{ partId: string; branchId: string }>()
@@ -50,11 +62,23 @@ export function BreakdownScanPage() {
     register,
     control,
     handleSubmit,
+    watch,
+    setError,
     formState: { errors },
   } = useForm<FormValues>({
     resolver: zodResolver(formSchema),
     defaultValues: { quantity_used: '1' },
   })
+
+  const selectedEquipmentId = watch('equipment_id')
+  const selectedEquipment = equipmentList?.find((e) => String(e.id) === selectedEquipmentId)
+  const maxQuantity = selectedEquipment?.active_installation_count
+
+  // Display-only — purely informative for the operator. The backend decides
+  // the real event_type independently from the part's replacement_strategy
+  // at submit time (see PublicBreakdownController::store()); nothing here is
+  // ever sent to the server.
+  const isFailureBased = part?.replacement_strategy === 'failure_based'
 
   const mutation = useMutation({
     mutationFn: (values: FormValues) =>
@@ -66,7 +90,23 @@ export function BreakdownScanPage() {
         reason: values.reason,
       }),
     onSuccess: () => setSubmitted(true),
+    onError: (error: unknown) => {
+      const quantityError = errorData(error)?.errors?.quantity_used?.[0]
+      if (quantityError) {
+        setError('quantity_used', { message: quantityError })
+      }
+    },
   })
+
+  function onSubmit(values: FormValues) {
+    if (maxQuantity != null && Number(values.quantity_used) > maxQuantity) {
+      setError('quantity_used', {
+        message: `Quantity tidak boleh melebihi jumlah part yang terpasang pada equipment ini. Tersedia: ${maxQuantity} unit.`,
+      })
+      return
+    }
+    mutation.mutate(values)
+  }
 
   if (submitted) {
     return (
@@ -91,33 +131,48 @@ export function BreakdownScanPage() {
     <div className="flex min-h-svh items-center justify-center bg-muted/40 p-4">
       <Card className="w-full max-w-md">
         <CardHeader>
-          <CardTitle>Penggantian Part (Breakdown)</CardTitle>
+          <CardTitle>Laporan Penggantian Part</CardTitle>
         </CardHeader>
         <CardContent className="flex flex-col gap-4">
           {partLoading ? (
             <Skeleton className="h-16 w-full" />
           ) : part ? (
-            <div className="flex items-center gap-3 rounded-md border p-3">
-              {part.image_url ? (
-                <img src={part.image_url} alt={part.name} className="size-14 rounded object-cover" />
-              ) : (
-                <div className="flex size-14 items-center justify-center rounded bg-muted text-xs text-muted-foreground">
-                  Tanpa foto
+            <>
+              <div className="flex items-center gap-3 rounded-md border p-3">
+                {part.image_url ? (
+                  <img src={part.image_url} alt={part.name} className="size-14 rounded object-cover" />
+                ) : (
+                  <div className="flex size-14 items-center justify-center rounded bg-muted text-xs text-muted-foreground">
+                    Tanpa foto
+                  </div>
+                )}
+                <div>
+                  <p className="font-medium">{part.name}</p>
+                  <p className="font-mono text-xs text-muted-foreground">{part.item_master_no}</p>
                 </div>
-              )}
-              <div>
-                <p className="font-medium">{part.name}</p>
-                <p className="font-mono text-xs text-muted-foreground">{part.item_master_no}</p>
               </div>
-            </div>
+
+              <div
+                className={cn(
+                  'rounded-md border p-3 text-sm',
+                  isFailureBased ? 'border-warning/40 bg-warning/10' : 'border-primary/30 bg-primary/5',
+                )}
+              >
+                <p className="font-medium">
+                  Jenis kejadian: <strong>{isFailureBased ? 'Failure' : 'Breakdown'}</strong>
+                </p>
+                <p className="text-xs text-muted-foreground">
+                  {isFailureBased
+                    ? 'Part menggunakan strategi Failure Based.'
+                    : 'Penggantian ini dicatat sebagai penggantian tidak terencana sebelum maintenance.'}
+                </p>
+              </div>
+            </>
           ) : (
             <p className="text-sm text-destructive">Part tidak ditemukan.</p>
           )}
 
-          <form
-            className="flex flex-col gap-4"
-            onSubmit={handleSubmit((values) => mutation.mutate(values))}
-          >
+          <form className="flex flex-col gap-4" onSubmit={handleSubmit(onSubmit)}>
             <div className="flex flex-col gap-2">
               <Label>Line / Mesin / Equipment</Label>
               <Controller
@@ -142,7 +197,8 @@ export function BreakdownScanPage() {
               />
               {!equipmentLoading && equipmentList?.length === 0 && (
                 <p className="text-sm text-muted-foreground">
-                  Tidak ada equipment yang terdaftar memakai part ini di plant tersebut.
+                  Tidak ada part aktif yang bisa dipilih untuk breakdown — part ini tidak sedang
+                  terpasang di equipment manapun pada plant tersebut.
                 </p>
               )}
               {errors.equipment_id && (
@@ -160,7 +216,18 @@ export function BreakdownScanPage() {
 
             <div className="flex flex-col gap-2">
               <Label htmlFor="quantity_used">Jumlah</Label>
-              <Input id="quantity_used" type="number" min={1} {...register('quantity_used')} />
+              <Input
+                id="quantity_used"
+                type="number"
+                min={1}
+                max={maxQuantity}
+                {...register('quantity_used')}
+              />
+              {selectedEquipment && (
+                <p className="text-xs text-muted-foreground">
+                  Tersedia {maxQuantity} unit part aktif di equipment ini.
+                </p>
+              )}
               {errors.quantity_used && (
                 <p className="text-sm text-destructive">{errors.quantity_used.message}</p>
               )}
@@ -171,11 +238,13 @@ export function BreakdownScanPage() {
               <Textarea id="reason" placeholder="Misal: patah, aus, bocor" {...register('reason')} />
             </div>
 
-            <Button type="submit" disabled={mutation.isPending}>
+            <Button type="submit" disabled={mutation.isPending || equipmentList?.length === 0}>
               {mutation.isPending ? 'Mengirim...' : 'Kirim Permintaan'}
             </Button>
-            {mutation.isError && (
-              <p className="text-sm text-destructive">Gagal mengirim. Coba lagi.</p>
+            {mutation.isError && !errorData(mutation.error)?.errors?.quantity_used && (
+              <p className="text-sm text-destructive">
+                {extractErrorMessage(mutation.error, 'Gagal mengirim. Coba lagi.')}
+              </p>
             )}
           </form>
         </CardContent>

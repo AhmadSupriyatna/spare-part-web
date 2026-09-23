@@ -28,6 +28,7 @@ interface RepairEditDialogProps {
   onConfirm: (data: {
     disposition: PartRepairDisposition
     estimated_completion_date: string | null
+    repair_cost: number | null
     notes: string | null
   }) => void
 }
@@ -43,12 +44,14 @@ interface RepairEditDialogProps {
 export function RepairEditDialog({ repair, isSubmitting, onCancel, onConfirm }: RepairEditDialogProps) {
   const [disposition, setDisposition] = useState<PartRepairDisposition>('pending')
   const [date, setDate] = useState('')
+  const [cost, setCost] = useState('')
   const [notes, setNotes] = useState('')
 
   useEffect(() => {
     if (!repair) return
     setDisposition(repair.disposition)
     setDate(repair.estimated_completion_date ?? '')
+    setCost(repair.repair_cost ?? '')
     setNotes(repair.notes ?? '')
   }, [repair])
 
@@ -81,6 +84,17 @@ export function RepairEditDialog({ repair, isSubmitting, onCancel, onConfirm }: 
           <Input id="edit-repair-eta" type="date" value={date} onChange={(e) => setDate(e.target.value)} />
         </div>
         <div className="flex flex-col gap-2">
+          <Label htmlFor="edit-repair-cost">Biaya Repair</Label>
+          <Input
+            id="edit-repair-cost"
+            type="number"
+            min={0}
+            step="0.01"
+            value={cost}
+            onChange={(e) => setCost(e.target.value)}
+          />
+        </div>
+        <div className="flex flex-col gap-2">
           <Label htmlFor="edit-repair-notes">Catatan</Label>
           <Textarea id="edit-repair-notes" value={notes} onChange={(e) => setNotes(e.target.value)} />
         </div>
@@ -90,7 +104,12 @@ export function RepairEditDialog({ repair, isSubmitting, onCancel, onConfirm }: 
           </Button>
           <Button
             onClick={() =>
-              onConfirm({ disposition, estimated_completion_date: date || null, notes: notes || null })
+              onConfirm({
+                disposition,
+                estimated_completion_date: date || null,
+                repair_cost: cost ? Number(cost) : null,
+                notes: notes || null,
+              })
             }
             disabled={isSubmitting}
           >
