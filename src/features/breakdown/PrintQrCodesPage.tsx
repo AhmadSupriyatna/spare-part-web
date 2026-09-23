@@ -9,12 +9,12 @@ export function PrintQrCodesPage() {
       <PageHeader
         className="print:hidden"
         title="Cetak QR Code"
-        description="QR untuk lapor breakdown per part, atau untuk mencatat jam operasi per Line."
+        description="QR Part untuk melaporkan kejadian penggantian — sistem otomatis menentukan apakah event termasuk Failure atau Breakdown berdasarkan Replacement Strategy part — atau QR Line untuk mencatat jam operasi per Line."
       />
 
       <Tabs defaultValue="part">
         <TabsList className="print:hidden">
-          <TabsTrigger value="part">Part (Breakdown)</TabsTrigger>
+          <TabsTrigger value="part">Part</TabsTrigger>
           <TabsTrigger value="line">Line (Jam Operasional)</TabsTrigger>
         </TabsList>
         <TabsContent value="part" className="mt-4">
