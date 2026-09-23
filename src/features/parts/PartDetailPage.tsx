@@ -6,6 +6,7 @@ import { Breadcrumb } from '@/components/Breadcrumb'
 import { fetchInstallationsForPart } from '@/features/part-installations/api'
 import { fetchUnitsForPart } from '@/features/part-units/api'
 import { fetchPart } from '@/features/parts/api'
+import { partReplacementStrategyOptions } from '@/features/parts/schema'
 import { AdjustStockDialog } from '@/features/part-stocks/AdjustStockDialog'
 import { ReceiveStockDialog } from '@/features/part-stocks/ReceiveStockDialog'
 import { SetPartLocationDialog } from '@/features/part-stocks/SetPartLocationDialog'
@@ -31,6 +32,8 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 
 const currencyFormatter = new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR' })
+
+const strategyMeta = Object.fromEntries(partReplacementStrategyOptions.map((o) => [o.value, o]))
 
 export function PartDetailPage() {
   const { id } = useParams<{ id: string }>()
@@ -91,7 +94,16 @@ export function PartDetailPage() {
             {!part.is_active && <Badge variant="secondary">Nonaktif</Badge>}
           </div>
           <p className="font-mono text-sm text-muted-foreground">{part.item_master_no}</p>
-          {part.estimated_lifetime_hours && (
+          <div className="mt-2 flex flex-wrap items-center gap-2">
+            <Badge variant="outline" className="gap-1">
+              {(() => {
+                const Icon = strategyMeta[part.replacement_strategy].icon
+                return <Icon className="size-3" />
+              })()}
+              {strategyMeta[part.replacement_strategy].label}
+            </Badge>
+          </div>
+          {part.replacement_strategy === 'life_based' && part.estimated_lifetime_hours && (
             <p className="mt-1 text-sm text-muted-foreground">
               Perkiraan umur pakai:{' '}
               <span className="font-medium text-foreground">{part.estimated_lifetime_hours} jam</span>{' '}

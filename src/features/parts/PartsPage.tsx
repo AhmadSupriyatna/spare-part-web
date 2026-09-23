@@ -5,6 +5,7 @@ import { Link } from 'react-router'
 import { toast } from 'sonner'
 import { deletePart, fetchParts } from '@/features/parts/api'
 import { PartFormDialog } from '@/features/parts/PartFormDialog'
+import { partReplacementStrategyOptions } from '@/features/parts/schema'
 import { useCanManage } from '@/stores/use-has-role'
 import { EmptyState } from '@/components/EmptyState'
 import { PageHeader } from '@/components/PageHeader'
@@ -19,10 +20,13 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from '@/components/ui/alert-dialog'
+import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
+
+const strategyMeta = Object.fromEntries(partReplacementStrategyOptions.map((o) => [o.value, o]))
 
 export function PartsPage() {
   const [search, setSearch] = useState('')
@@ -87,8 +91,8 @@ export function PartsPage() {
               <TableHead></TableHead>
               <TableHead>Item Master</TableHead>
               <TableHead>Nama</TableHead>
-              <TableHead>Kategori</TableHead>
               <TableHead>Satuan</TableHead>
+              <TableHead>Strategi Penggantian</TableHead>
               <TableHead className="text-right">Aksi</TableHead>
             </TableRow>
           </TableHeader>
@@ -108,8 +112,21 @@ export function PartsPage() {
                 </TableCell>
                 <TableCell className="font-mono text-sm">{part.item_master_no}</TableCell>
                 <TableCell className="font-medium">{part.name}</TableCell>
-                <TableCell className="text-muted-foreground">{part.category ?? '-'}</TableCell>
                 <TableCell className="text-muted-foreground">{part.unit}</TableCell>
+                <TableCell>
+                  <Badge variant="outline" className="gap-1">
+                    {(() => {
+                      const Icon = strategyMeta[part.replacement_strategy].icon
+                      return <Icon className="size-3" />
+                    })()}
+                    {strategyMeta[part.replacement_strategy].label}
+                  </Badge>
+                  {part.replacement_strategy === 'life_based' && part.estimated_lifetime_hours && (
+                    <span className="mt-1 block text-xs text-muted-foreground">
+                      {part.estimated_lifetime_hours} jam
+                    </span>
+                  )}
+                </TableCell>
                 <TableCell className="flex justify-end gap-1">
                   <Button
                     variant="ghost"

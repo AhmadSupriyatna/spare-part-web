@@ -4,6 +4,7 @@ import { useMemo, useState } from 'react'
 import { fetchPartStocksForBranch } from '@/features/part-stocks/api'
 import { ReceiveStockDialog } from '@/features/part-stocks/ReceiveStockDialog'
 import { fetchParts } from '@/features/parts/api'
+import { partReplacementStrategyOptions } from '@/features/parts/schema'
 import { useBranchStore } from '@/stores/branch-store'
 import type { Part } from '@/types/inventory'
 import type { PartStock } from '@/types/inventory'
@@ -12,14 +13,17 @@ import { Badge } from '@/components/ui/badge'
 import { Input } from '@/components/ui/input'
 import { Skeleton } from '@/components/ui/skeleton'
 
-function groupByCategory(parts: Part[]): [string, Part[]][] {
+const strategyMeta = Object.fromEntries(partReplacementStrategyOptions.map((o) => [o.value, o]))
+const strategyOrder: string[] = partReplacementStrategyOptions.map((o) => o.value)
+
+function groupByStrategy(parts: Part[]): [string, Part[]][] {
   const groups = new Map<string, Part[]>()
   for (const part of parts) {
-    const key = part.category || 'Tanpa Kategori'
+    const key = part.replacement_strategy
     if (!groups.has(key)) groups.set(key, [])
     groups.get(key)!.push(part)
   }
-  return Array.from(groups.entries()).sort(([a], [b]) => a.localeCompare(b))
+  return Array.from(groups.entries()).sort(([a], [b]) => strategyOrder.indexOf(a) - strategyOrder.indexOf(b))
 }
 
 /**
@@ -57,7 +61,7 @@ export function StockInPage() {
     const filtered = (parts ?? []).filter(
       (part) => !term || `${part.name} ${part.item_master_no}`.toLowerCase().includes(term),
     )
-    return groupByCategory(filtered)
+    return groupByStrategy(filtered)
   }, [parts, search])
 
   if (!activeBranchId) {
@@ -93,11 +97,13 @@ export function StockInPage() {
         <p className="text-sm text-muted-foreground">Part tidak ditemukan.</p>
       ) : (
         <div className="flex flex-col gap-5">
-          {grouped.map(([category, categoryParts]) => (
-            <div key={category} className="flex flex-col gap-1.5">
-              <p className="text-xs font-medium tracking-wide text-muted-foreground uppercase">{category}</p>
+          {grouped.map(([strategy, strategyParts]) => (
+            <div key={strategy} className="flex flex-col gap-1.5">
+              <p className="text-xs font-medium tracking-wide text-muted-foreground uppercase">
+                {strategyMeta[strategy].label}
+              </p>
               <div className="grid grid-cols-1 gap-1.5 sm:grid-cols-2 lg:grid-cols-3">
-                {categoryParts.map((part) => {
+                {strategyParts.map((part) => {
                   const stock = stockByPartId.get(part.id)
                   return (
                     <ReceiveStockDialog

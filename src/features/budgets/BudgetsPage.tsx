@@ -4,6 +4,7 @@ import { Fragment, useState } from 'react'
 import { toast } from 'sonner'
 import { BudgetDrawer } from '@/features/budgets/BudgetDrawer'
 import { deleteBudget, fetchBudgets, type Budget } from '@/features/budgets/api'
+import { partReplacementStrategyOptions } from '@/features/parts/schema'
 import { useBranchStore } from '@/stores/branch-store'
 import { useCanManage } from '@/stores/use-has-role'
 import { EmptyState } from '@/components/EmptyState'
@@ -27,6 +28,8 @@ import { Skeleton } from '@/components/ui/skeleton'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 
 const currencyFormatter = new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR' })
+
+const strategyMeta = Object.fromEntries(partReplacementStrategyOptions.map((o) => [o.value, o]))
 
 function percentUsedBadge(actualTotal: number, budgetTotal: number) {
   if (budgetTotal <= 0) return null
@@ -117,7 +120,7 @@ export function BudgetsPage() {
     <div className="flex flex-col gap-4">
       <PageHeader
         title="Budget"
-        description="Anggaran tahunan penggantian part per kategori, untuk plant ini."
+        description="Anggaran tahunan penggantian part per strategi penggantian, untuk plant ini."
         action={
           canManage && (
             <Button onClick={openCreate}>
@@ -171,7 +174,7 @@ export function BudgetsPage() {
         <EmptyState
           icon={Wallet}
           title={`Belum ada budget untuk tahun ${year}`}
-          description="Tambahkan budget per kategori part — isi estimasi umur pakai tiap part, hasilnya dihitung dan ditampilkan per Line."
+          description="Tambahkan budget per strategi penggantian part — untuk Life Based, isi estimasi umur pakai tiap part dan hasilnya dihitung per Line."
           action={
             canManage && (
               <Button size="sm" onClick={openCreate}>
@@ -185,7 +188,7 @@ export function BudgetsPage() {
           <TableHeader>
             <TableRow>
               <TableHead className="w-8" />
-              <TableHead>Kategori</TableHead>
+              <TableHead>Strategi Penggantian</TableHead>
               <TableHead className="text-right">Terencana (PM/Life Cycle)</TableHead>
               <TableHead className="text-right">Corrective</TableHead>
               <TableHead className="text-right">Total Budget</TableHead>
@@ -208,7 +211,15 @@ export function BudgetsPage() {
                       {expandedId === budget.id ? <ChevronDown /> : <ChevronRight />}
                     </Button>
                   </TableCell>
-                  <TableCell className="font-medium">{budget.category_label}</TableCell>
+                  <TableCell className="font-medium">
+                    <span className="inline-flex items-center gap-1.5">
+                      {(() => {
+                        const Icon = strategyMeta[budget.replacement_strategy].icon
+                        return <Icon className="size-3.5 text-muted-foreground" />
+                      })()}
+                      {strategyMeta[budget.replacement_strategy].label}
+                    </span>
+                  </TableCell>
                   <TableCell className="text-right tabular-nums">
                     {currencyFormatter.format(Number(budget.planned_amount))}
                   </TableCell>
@@ -251,9 +262,9 @@ export function BudgetsPage() {
                           </AlertDialogTrigger>
                           <AlertDialogContent>
                             <AlertDialogHeader>
-                              <AlertDialogTitle>Hapus budget {budget.category_label}?</AlertDialogTitle>
+                              <AlertDialogTitle>Hapus budget {strategyMeta[budget.replacement_strategy].label}?</AlertDialogTitle>
                               <AlertDialogDescription>
-                                Budget tahun {budget.year} untuk kategori ini akan dihapus permanen.
+                                Budget tahun {budget.year} untuk strategi ini akan dihapus permanen.
                               </AlertDialogDescription>
                             </AlertDialogHeader>
                             <AlertDialogFooter>

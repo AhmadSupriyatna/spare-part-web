@@ -3,15 +3,23 @@ export interface Unit {
   name: string
 }
 
+export type PartReplacementStrategy =
+  | 'life_based'
+  | 'failure_based'
+  | 'condition_based'
+  | 'scheduled'
+  | 'inspection_based'
+  | 'on_demand'
+
 export interface Part {
   id: number
   item_master_no: string
   name: string
   description: string | null
   unit: string
-  category: string | null
   price: string
   estimated_lifetime_hours: number | null
+  replacement_strategy: PartReplacementStrategy
   image_url: string | null
   is_active: boolean
   stocks?: PartStock[]
@@ -24,7 +32,7 @@ export interface PartStock {
   part_id: number
   part_name?: string
   item_master_no?: string
-  category?: string | null
+  replacement_strategy?: PartReplacementStrategy
   branch_id: number
   branch_name?: string
   supplier_id: number | null

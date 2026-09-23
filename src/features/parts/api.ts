@@ -1,13 +1,13 @@
 import { apiClient } from '@/lib/api-client'
-import type { Part } from '@/types/inventory'
+import type { Part, PartReplacementStrategy } from '@/types/inventory'
 
 export interface PartPayload {
   item_master_no: string
   name: string
   description?: string | null
   unit: string
-  category?: string | null
   estimated_lifetime_hours?: number | null
+  replacement_strategy: PartReplacementStrategy
   image?: File | null
   is_active?: boolean
 }

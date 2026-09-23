@@ -1,4 +1,5 @@
 import { apiClient } from '@/lib/api-client'
+import type { PartReplacementStrategy } from '@/types/inventory'
 
 export interface BudgetLineBreakdown {
   line_id: number
@@ -23,8 +24,7 @@ export interface BudgetItem {
 export interface Budget {
   id: number
   branch_id: number
-  category: string
-  category_label: string
+  replacement_strategy: PartReplacementStrategy
   year: number
   planned_amount: string
   corrective_amount: string
@@ -41,7 +41,7 @@ export interface Budget {
   updated_at: string
 }
 
-export interface BudgetCategoryPart {
+export interface BudgetStrategyPart {
   part_id: number
   part_name: string
   item_master_no: string
@@ -57,7 +57,7 @@ export interface BudgetItemInput {
 }
 
 export interface BudgetPayload {
-  category?: string
+  replacement_strategy?: PartReplacementStrategy
   year?: number
   items?: BudgetItemInput[]
   corrective_amount?: number
@@ -71,10 +71,13 @@ export async function fetchBudgets(branchId: number, year?: number): Promise<Bud
   return data.data
 }
 
-/** Parts in this category (branch-wide) that currently have an active installation. */
-export async function fetchBudgetPartsForCategory(branchId: number, category: string): Promise<BudgetCategoryPart[]> {
-  const { data } = await apiClient.get<{ data: BudgetCategoryPart[] }>(`/branches/${branchId}/budgets/parts`, {
-    params: { category },
+/** Parts under this replacement strategy (branch-wide) that currently have an active installation. */
+export async function fetchBudgetPartsForStrategy(
+  branchId: number,
+  strategy: PartReplacementStrategy,
+): Promise<BudgetStrategyPart[]> {
+  const { data } = await apiClient.get<{ data: BudgetStrategyPart[] }>(`/branches/${branchId}/budgets/parts`, {
+    params: { strategy },
   })
   return data.data
 }

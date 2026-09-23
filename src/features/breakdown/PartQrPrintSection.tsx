@@ -3,6 +3,7 @@ import { PrinterIcon } from 'lucide-react'
 import { QRCodeSVG } from 'qrcode.react'
 import { useMemo, useState } from 'react'
 import { fetchParts } from '@/features/parts/api'
+import { partReplacementStrategyOptions } from '@/features/parts/schema'
 import { fetchCompanySetting } from '@/features/settings/api'
 import { useAuthStore } from '@/stores/auth-store'
 import { useBranchStore } from '@/stores/branch-store'
@@ -25,6 +26,8 @@ interface PrintEntry {
   part: Part
   copy: number
 }
+
+const strategyMeta = Object.fromEntries(partReplacementStrategyOptions.map((o) => [o.value, o]))
 
 /**
  * QR-per-part-per-branch for the public breakdown-report scan flow
@@ -166,7 +169,7 @@ export function PartQrPrintSection() {
                 </TableHead>
                 <TableHead>Nama Part</TableHead>
                 <TableHead>Item Master</TableHead>
-                <TableHead>Kategori</TableHead>
+                <TableHead>Strategi Penggantian</TableHead>
                 <TableHead className="w-10" />
               </TableRow>
             </TableHeader>
@@ -184,7 +187,7 @@ export function PartQrPrintSection() {
                   <TableCell className="font-mono text-xs text-muted-foreground">
                     {part.item_master_no}
                   </TableCell>
-                  <TableCell className="text-muted-foreground">{part.category ?? '-'}</TableCell>
+                  <TableCell className="text-muted-foreground">{strategyMeta[part.replacement_strategy].label}</TableCell>
                   <TableCell>
                     <Button
                       size="icon-sm"

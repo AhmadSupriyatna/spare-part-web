@@ -2,19 +2,23 @@ import { useQuery } from '@tanstack/react-query'
 import { GripVertical, Search } from 'lucide-react'
 import { useEffect, useMemo, useState } from 'react'
 import { fetchPartStocksForBranch } from '@/features/part-stocks/api'
+import { partReplacementStrategyOptions } from '@/features/parts/schema'
 import type { PartStock } from '@/types/inventory'
 import { cn } from '@/lib/utils'
 import { Badge } from '@/components/ui/badge'
 import { Input } from '@/components/ui/input'
 
-function groupByCategory(stocks: PartStock[]): [string, PartStock[]][] {
+const strategyMeta = Object.fromEntries(partReplacementStrategyOptions.map((o) => [o.value, o]))
+const strategyOrder: string[] = partReplacementStrategyOptions.map((o) => o.value)
+
+function groupByStrategy(stocks: PartStock[]): [string, PartStock[]][] {
   const groups = new Map<string, PartStock[]>()
   for (const stock of stocks) {
-    const key = stock.category ?? 'Tanpa Kategori'
+    const key = stock.replacement_strategy ?? 'on_demand'
     if (!groups.has(key)) groups.set(key, [])
     groups.get(key)!.push(stock)
   }
-  return Array.from(groups.entries()).sort(([a], [b]) => a.localeCompare(b))
+  return Array.from(groups.entries()).sort(([a], [b]) => strategyOrder.indexOf(a) - strategyOrder.indexOf(b))
 }
 
 interface LocationPartDrawerProps {
@@ -28,7 +32,7 @@ interface LocationPartDrawerProps {
 
 /**
  * Right-side panel for placing a part into a bin — same drag-source shape
- * as PartPickerSheet (part-installations), grouped by category, search on
+ * as PartPickerSheet (part-installations), grouped by replacement strategy, search on
  * top. Native HTML5 drag-and-drop has no touch equivalent, so a part card
  * is also tappable: tapping "arms" it (highlighted), then tapping any bin
  * in the map assigns it — mirrors PartPickerSheet's click-to-select
@@ -59,7 +63,7 @@ export function LocationPartDrawer({
     const filtered = (stocks ?? []).filter(
       (stock) => !term || `${stock.part_name} ${stock.item_master_no}`.toLowerCase().includes(term),
     )
-    return groupByCategory(filtered)
+    return groupByStrategy(filtered)
   }, [stocks, search])
 
   useEffect(() => {
@@ -89,11 +93,13 @@ export function LocationPartDrawer({
         ) : grouped.length === 0 ? (
           <p className="text-sm text-muted-foreground">Part tidak ditemukan.</p>
         ) : (
-          grouped.map(([category, categoryStocks]) => (
-            <div key={category} className="flex flex-col gap-1.5">
-              <p className="text-xs font-medium tracking-wide text-muted-foreground uppercase">{category}</p>
+          grouped.map(([strategy, strategyStocks]) => (
+            <div key={strategy} className="flex flex-col gap-1.5">
+              <p className="text-xs font-medium tracking-wide text-muted-foreground uppercase">
+                {strategyMeta[strategy].label}
+              </p>
               <div className="flex flex-col gap-1.5">
-                {categoryStocks.map((stock) => (
+                {strategyStocks.map((stock) => (
                   <div
                     key={stock.id}
                     draggable

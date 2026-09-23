@@ -7,7 +7,6 @@ import { BranchesPage } from '@/features/branches/BranchesPage'
 import { BreakdownScanPage } from '@/features/breakdown/BreakdownScanPage'
 import { PrintQrCodesPage } from '@/features/breakdown/PrintQrCodesPage'
 import { BudgetsPage } from '@/features/budgets/BudgetsPage'
-import { CategoriesPage } from '@/features/categories/CategoriesPage'
 import { DashboardPage } from '@/features/dashboard/DashboardPage'
 import { DatabaseBackupPage } from '@/features/database-backup/DatabaseBackupPage'
 import { EquipmentDetailPage } from '@/features/equipment/EquipmentDetailPage'
@@ -74,7 +73,6 @@ function App() {
             <Route path="breakdown/print-qr" element={<PrintQrCodesPage />} />
             <Route path="settings/company" element={<CompanySettingsPage />} />
             <Route path="settings/units" element={<UnitsPage />} />
-            <Route path="settings/categories" element={<CategoriesPage />} />
             <Route path="settings/users" element={<UsersPage />} />
             <Route path="settings/activity-log" element={<ActivityLogPage />} />
             <Route path="settings/backup" element={<DatabaseBackupPage />} />

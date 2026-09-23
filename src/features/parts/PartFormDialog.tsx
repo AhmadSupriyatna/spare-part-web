@@ -3,18 +3,16 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useEffect, useRef, useState } from 'react'
 import { Controller, useForm } from 'react-hook-form'
 import { toast } from 'sonner'
-import { fetchCategories } from '@/features/categories/api'
 import { createPart, updatePart } from '@/features/parts/api'
-import { partSchema, type PartFormValues } from '@/features/parts/schema'
+import { partReplacementStrategyOptions, partSchema, type PartFormValues } from '@/features/parts/schema'
 import { fetchUnits } from '@/features/units/api'
+import { cn } from '@/lib/utils'
 import type { Part } from '@/types/inventory'
 import { FormSheet } from '@/components/FormSheet'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
-
-const NO_CATEGORY = '__tanpa_kategori__'
 
 interface PartFormDialogProps {
   part?: Part
@@ -33,16 +31,13 @@ export function PartFormDialog({ part, trigger }: PartFormDialogProps) {
     queryKey: ['units'],
     queryFn: fetchUnits,
   })
-  const { data: categories } = useQuery({
-    queryKey: ['categories'],
-    queryFn: fetchCategories,
-  })
 
   const {
     register,
     control,
     handleSubmit,
     reset,
+    watch,
     formState: { errors, isDirty },
   } = useForm<PartFormValues>({
     resolver: zodResolver(partSchema),
@@ -51,10 +46,12 @@ export function PartFormDialog({ part, trigger }: PartFormDialogProps) {
       name: part?.name ?? '',
       description: part?.description ?? '',
       unit: part?.unit ?? 'pcs',
-      category: part?.category ?? '',
       estimated_lifetime_hours: part?.estimated_lifetime_hours ? String(part.estimated_lifetime_hours) : '',
+      replacement_strategy: part?.replacement_strategy ?? 'on_demand',
     },
   })
+
+  const replacementStrategy = watch('replacement_strategy')
 
   useEffect(() => {
     if (open) {
@@ -63,8 +60,8 @@ export function PartFormDialog({ part, trigger }: PartFormDialogProps) {
         name: part?.name ?? '',
         description: part?.description ?? '',
         unit: part?.unit ?? 'pcs',
-        category: part?.category ?? '',
         estimated_lifetime_hours: part?.estimated_lifetime_hours ? String(part.estimated_lifetime_hours) : '',
+        replacement_strategy: part?.replacement_strategy ?? 'on_demand',
       })
       setImageFile(null)
       setImagePreview(part?.image_url ?? null)
@@ -119,76 +116,95 @@ export function PartFormDialog({ part, trigger }: PartFormDialogProps) {
         <Input id="name" {...register('name')} />
         {errors.name && <p className="text-sm text-destructive">{errors.name.message}</p>}
       </div>
-      <div className="grid grid-cols-2 gap-4">
-        <div className="flex flex-col gap-2">
-          <Label htmlFor="unit">Satuan</Label>
-          <Controller
-            control={control}
-            name="unit"
-            render={({ field }) => (
-              <Select value={field.value} onValueChange={field.onChange}>
-                <SelectTrigger id="unit">
-                  <SelectValue placeholder="Pilih satuan" />
-                </SelectTrigger>
-                <SelectContent>
-                  {units?.map((unit) => (
-                    <SelectItem key={unit.id} value={unit.name}>
-                      {unit.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            )}
-          />
-          {errors.unit && <p className="text-sm text-destructive">{errors.unit.message}</p>}
-        </div>
-        <div className="flex flex-col gap-2">
-          <Label htmlFor="category">Kategori</Label>
-          <Controller
-            control={control}
-            name="category"
-            render={({ field }) => (
-              <Select
-                value={field.value || NO_CATEGORY}
-                onValueChange={(value) => field.onChange(value === NO_CATEGORY ? '' : value)}
-              >
-                <SelectTrigger id="category">
-                  <SelectValue placeholder="Pilih kategori" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value={NO_CATEGORY}>Tanpa Kategori</SelectItem>
-                  {categories?.map((category) => (
-                    <SelectItem key={category.id} value={category.name}>
-                      {category.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            )}
-          />
-        </div>
+      <div className="flex flex-col gap-2">
+        <Label htmlFor="unit">Satuan</Label>
+        <Controller
+          control={control}
+          name="unit"
+          render={({ field }) => (
+            <Select value={field.value} onValueChange={field.onChange}>
+              <SelectTrigger id="unit">
+                <SelectValue placeholder="Pilih satuan" />
+              </SelectTrigger>
+              <SelectContent>
+                {units?.map((unit) => (
+                  <SelectItem key={unit.id} value={unit.name}>
+                    {unit.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          )}
+        />
+        {errors.unit && <p className="text-sm text-destructive">{errors.unit.message}</p>}
       </div>
       <div className="flex flex-col gap-2">
         <Label htmlFor="description">Deskripsi</Label>
         <Input id="description" {...register('description')} />
       </div>
       <div className="flex flex-col gap-2">
-        <Label htmlFor="estimated_lifetime_hours">Perkiraan Umur Pakai (jam operasional)</Label>
-        <Input
-          id="estimated_lifetime_hours"
-          type="number"
-          min={1}
-          placeholder="Misal: 2000"
-          {...register('estimated_lifetime_hours')}
-        />
-        <p className="text-xs text-muted-foreground">
-          Dipakai untuk menghitung sisa umur pakai part saat terpasang di equipment. Kosongkan kalau belum
-          tahu perkiraannya.
+        <Label>Strategi Penggantian</Label>
+        <p className="-mt-1 text-xs text-muted-foreground">
+          Menentukan kapan part ini dianggap perlu diganti — dasar dari penjadwalan otomatis untuk Life
+          Based, dan hanya sebagai informasi untuk strategi lainnya.
         </p>
-        {errors.estimated_lifetime_hours && (
-          <p className="text-sm text-destructive">{errors.estimated_lifetime_hours.message}</p>
-        )}
+        <Controller
+          control={control}
+          name="replacement_strategy"
+          render={({ field }) => (
+            <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+              {partReplacementStrategyOptions.map((option) => {
+                const Icon = option.icon
+                const selected = field.value === option.value
+                return (
+                  <button
+                    key={option.value}
+                    type="button"
+                    onClick={() => field.onChange(option.value)}
+                    className={cn(
+                      'flex items-start gap-2.5 rounded-md border p-2.5 text-left transition-colors select-none hover:border-primary/50 hover:bg-muted',
+                      selected && 'border-primary bg-primary/5',
+                    )}
+                  >
+                    <Icon className={cn('mt-0.5 size-4 shrink-0', selected ? 'text-primary' : 'text-muted-foreground')} />
+                    <div className="min-w-0">
+                      <p className="text-sm font-medium">{option.label}</p>
+                      <p className="text-xs text-muted-foreground">{option.description}</p>
+                    </div>
+                  </button>
+                )
+              })}
+            </div>
+          )}
+        />
       </div>
+      {replacementStrategy === 'life_based' ? (
+        <div className="flex flex-col gap-2">
+          <Label htmlFor="estimated_lifetime_hours">Perkiraan Umur Pakai (jam operasional)</Label>
+          <Input
+            id="estimated_lifetime_hours"
+            type="number"
+            min={1}
+            placeholder="Misal: 2000"
+            {...register('estimated_lifetime_hours')}
+          />
+          <p className="text-xs text-muted-foreground">
+            Dipakai untuk menghitung sisa umur pakai part saat terpasang di equipment, dan menjadi dasar
+            penjadwalan otomatis penggantian. Kosongkan kalau belum tahu perkiraannya.
+          </p>
+          {errors.estimated_lifetime_hours && (
+            <p className="text-sm text-destructive">{errors.estimated_lifetime_hours.message}</p>
+          )}
+        </div>
+      ) : (
+        part?.estimated_lifetime_hours && (
+          <p className="text-xs text-muted-foreground">
+            Part ini pernah punya data perkiraan umur pakai ({part.estimated_lifetime_hours} jam) dari saat
+            strateginya masih Life Based. Data itu tetap tersimpan, tapi tidak lagi dipakai untuk
+            penjadwalan otomatis selama strateginya bukan Life Based.
+          </p>
+        )
+      )}
       <div className="flex flex-col gap-2">
         <Label>Foto Part</Label>
         <div className="flex items-center gap-3">

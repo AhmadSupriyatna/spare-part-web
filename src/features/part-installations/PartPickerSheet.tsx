@@ -8,6 +8,7 @@ import { z } from 'zod'
 import { installPart } from '@/features/part-installations/api'
 import { fetchUnitsForPart } from '@/features/part-units/api'
 import { fetchParts } from '@/features/parts/api'
+import { partReplacementStrategyOptions } from '@/features/parts/schema'
 import type { Part } from '@/types/inventory'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -38,20 +39,23 @@ interface PartPickerSheetProps {
   onDragEndPart: () => void
 }
 
-function groupByCategory(parts: Part[]): [string, Part[]][] {
+const strategyMeta = Object.fromEntries(partReplacementStrategyOptions.map((o) => [o.value, o]))
+const strategyOrder: string[] = partReplacementStrategyOptions.map((o) => o.value)
+
+function groupByStrategy(parts: Part[]): [string, Part[]][] {
   const groups = new Map<string, Part[]>()
   for (const part of parts) {
-    const key = part.category ?? 'Tanpa Kategori'
+    const key = part.replacement_strategy
     if (!groups.has(key)) groups.set(key, [])
     groups.get(key)!.push(part)
   }
-  return Array.from(groups.entries()).sort(([a], [b]) => a.localeCompare(b))
+  return Array.from(groups.entries()).sort(([a], [b]) => strategyOrder.indexOf(a) - strategyOrder.indexOf(b))
 }
 
 /**
  * Right-side drawer for installing a part — one panel, two steps, so
  * picking a part never pops a second dialog on top of it (that felt
- * jarring). Step 1: parts grouped by category, draggable (and clickable,
+ * jarring). Step 1: parts grouped by replacement strategy, draggable (and clickable,
  * since native HTML5 drag-and-drop has no touch equivalent and this runs
  * on shop-floor tablets too) — dragging one onto the floating drop zone
  * in LineHierarchyPage, or clicking it here, moves to step 2. Step 2 asks
@@ -78,7 +82,7 @@ export function PartPickerSheet({
     const filtered = (parts ?? []).filter(
       (part) => !term || `${part.name} ${part.item_master_no}`.toLowerCase().includes(term),
     )
-    return groupByCategory(filtered)
+    return groupByStrategy(filtered)
   }, [parts, search])
 
   useEffect(() => {
@@ -228,11 +232,13 @@ export function PartPickerSheet({
               ) : grouped.length === 0 ? (
                 <p className="text-sm text-muted-foreground">Part tidak ditemukan.</p>
               ) : (
-                grouped.map(([category, categoryParts]) => (
-                  <div key={category} className="flex flex-col gap-1.5">
-                    <p className="text-xs font-medium tracking-wide text-muted-foreground uppercase">{category}</p>
+                grouped.map(([strategy, strategyParts]) => (
+                  <div key={strategy} className="flex flex-col gap-1.5">
+                    <p className="text-xs font-medium tracking-wide text-muted-foreground uppercase">
+                      {strategyMeta[strategy].label}
+                    </p>
                     <div className="flex flex-col gap-1.5">
-                      {categoryParts.map((part) => (
+                      {strategyParts.map((part) => (
                         <div
                           key={part.id}
                           draggable

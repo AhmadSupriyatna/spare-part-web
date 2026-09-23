@@ -2,9 +2,10 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useEffect, useState } from 'react'
 import { toast } from 'sonner'
 import type { Budget } from '@/features/budgets/api'
-import { createBudget, fetchBudgetPartsForCategory, updateBudget } from '@/features/budgets/api'
-import { fetchCategories } from '@/features/categories/api'
+import { createBudget, fetchBudgetPartsForStrategy, updateBudget } from '@/features/budgets/api'
+import { partReplacementStrategyOptions } from '@/features/parts/schema'
 import { fetchCompanySetting } from '@/features/settings/api'
+import type { PartReplacementStrategy } from '@/types/inventory'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -13,7 +14,6 @@ import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from '
 import { Skeleton } from '@/components/ui/skeleton'
 import { Textarea } from '@/components/ui/textarea'
 
-const NONE_CATEGORY = '__tanpa_kategori__'
 const WEEKS_PER_YEAR = 52
 
 const currencyFormatter = new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR' })
@@ -32,25 +32,29 @@ function reportError(error: unknown, fallback: string) {
 
 /**
  * On-demand slide-in panel (only mounted/visible while `open`, unlike the
- * always-open Location/Supplier drawers) for creating or editing a
- * category budget. Per part: "estimasi life time (%)" is a safety margin
- * on the part's rated lifetime hours (100% = the full rated life is
- * assumed reached before replacement; 90% = a conservative assumption
- * that it only reaches 90% of that, which means MORE frequent replacement,
- * not less) and "estimasi kenaikan harga (%)" inflates the unit cost for
- * the budget year — both combine with the branch's average weekly
- * operating hours (Pengaturan > Profil Perusahaan, same setting PM
- * Schedule uses) to estimate pcs/year needed. The preview here is
- * computed client-side from the same formula the server uses so the
- * numbers match, but the persisted total is always recomputed
- * server-side from the percentages alone — a stale/tampered cost can't
- * sneak in through this form.
+ * always-open Location/Supplier drawers) for creating or editing a budget
+ * scoped to one Replacement Strategy. Only Life Based has an automatic
+ * lifetime forecast (see BudgetForecastService::ratesFor on the backend) —
+ * every other strategy skips the per-part rows entirely and relies on the
+ * "Tambahan Anggaran Corrective" manual amount, so this never fabricates a
+ * lifecycle number for a part that isn't actually Life Based. Per part:
+ * "estimasi life time (%)" is a safety margin on the part's rated lifetime
+ * hours (100% = the full rated life is assumed reached before replacement;
+ * 90% = a conservative assumption that it only reaches 90% of that, which
+ * means MORE frequent replacement, not less) and "estimasi kenaikan harga
+ * (%)" inflates the unit cost for the budget year — both combine with the
+ * branch's average weekly operating hours (Pengaturan > Profil Perusahaan,
+ * same setting PM Schedule uses) to estimate pcs/year needed. The preview
+ * here is computed client-side from the same formula the server uses so the
+ * numbers match, but the persisted total is always recomputed server-side
+ * from the percentages alone — a stale/tampered cost can't sneak in through
+ * this form.
  */
 export function BudgetDrawer({ open, onOpenChange, branchId, editingBudget }: BudgetDrawerProps) {
   const isEdit = !!editingBudget
   const queryClient = useQueryClient()
 
-  const [category, setCategory] = useState(NONE_CATEGORY)
+  const [strategy, setStrategy] = useState<PartReplacementStrategy>('life_based')
   const [year, setYear] = useState(String(new Date().getFullYear() + 1))
   const [lifetimePercentByPart, setLifetimePercentByPart] = useState<Record<number, string>>({})
   const [priceIncreaseByPart, setPriceIncreaseByPart] = useState<Record<number, string>>({})
@@ -61,7 +65,7 @@ export function BudgetDrawer({ open, onOpenChange, branchId, editingBudget }: Bu
     if (!open) return
 
     if (editingBudget) {
-      setCategory(editingBudget.category || NONE_CATEGORY)
+      setStrategy(editingBudget.replacement_strategy)
       setYear(String(editingBudget.year))
       setCorrectiveAmount(editingBudget.corrective_amount)
       setNotes(editingBudget.notes ?? '')
@@ -74,7 +78,7 @@ export function BudgetDrawer({ open, onOpenChange, branchId, editingBudget }: Bu
       setLifetimePercentByPart(lifetime)
       setPriceIncreaseByPart(increase)
     } else {
-      setCategory(NONE_CATEGORY)
+      setStrategy('life_based')
       setYear(String(new Date().getFullYear() + 1))
       setLifetimePercentByPart({})
       setPriceIncreaseByPart({})
@@ -83,24 +87,18 @@ export function BudgetDrawer({ open, onOpenChange, branchId, editingBudget }: Bu
     }
   }, [open, editingBudget])
 
-  const { data: categories } = useQuery({
-    queryKey: ['categories'],
-    queryFn: fetchCategories,
-    enabled: open,
-  })
-
   const { data: companySetting } = useQuery({
     queryKey: ['settings', 'company'],
     queryFn: fetchCompanySetting,
     enabled: open,
   })
 
-  const effectiveCategory = category === NONE_CATEGORY ? '' : category
+  const isLifeBased = strategy === 'life_based'
 
   const { data: parts, isLoading: partsLoading } = useQuery({
-    queryKey: ['budget-parts', branchId, effectiveCategory],
-    queryFn: () => fetchBudgetPartsForCategory(branchId, effectiveCategory),
-    enabled: open && !!category,
+    queryKey: ['budget-parts', branchId, strategy],
+    queryFn: () => fetchBudgetPartsForStrategy(branchId, strategy),
+    enabled: open && isLifeBased,
   })
 
   function setLifetimePercent(partId: number, value: string) {
@@ -124,17 +122,19 @@ export function BudgetDrawer({ open, onOpenChange, branchId, editingBudget }: Bu
     const cost = pcsPerYear * part.active_installations * adjustedUnitCost
     return { ...part, lifetimePercent, priceIncreasePercent, hasLifetimeData, pcsPerYear, cost }
   })
-  const plannedTotal = rows.reduce((sum, r) => sum + r.cost, 0)
+  const plannedTotal = isLifeBased ? rows.reduce((sum, r) => sum + r.cost, 0) : 0
   const estimableRows = rows.filter((r) => r.hasLifetimeData)
   const missingLifetimeRows = rows.filter((r) => !r.hasLifetimeData)
 
   const mutation = useMutation({
     mutationFn: () => {
-      const items = estimableRows.map((r) => ({
-        part_id: r.part_id,
-        estimated_lifetime_percent: r.lifetimePercent,
-        price_increase_percent: r.priceIncreasePercent,
-      }))
+      const items = isLifeBased
+        ? estimableRows.map((r) => ({
+            part_id: r.part_id,
+            estimated_lifetime_percent: r.lifetimePercent,
+            price_increase_percent: r.priceIncreasePercent,
+          }))
+        : []
       const payload = {
         corrective_amount: Number(correctiveAmount) || 0,
         notes: notes || null,
@@ -142,7 +142,7 @@ export function BudgetDrawer({ open, onOpenChange, branchId, editingBudget }: Bu
       }
       return isEdit
         ? updateBudget(editingBudget!.id, payload)
-        : createBudget(branchId, { ...payload, category: effectiveCategory, year: Number(year) })
+        : createBudget(branchId, { ...payload, replacement_strategy: strategy, year: Number(year) })
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['budgets', branchId] })
@@ -150,10 +150,10 @@ export function BudgetDrawer({ open, onOpenChange, branchId, editingBudget }: Bu
       onOpenChange(false)
     },
     onError: (error: unknown) =>
-      reportError(error, 'Gagal menyimpan budget. Kategori & tahun ini mungkin sudah punya budget.'),
+      reportError(error, 'Gagal menyimpan budget. Strategi & tahun ini mungkin sudah punya budget.'),
   })
 
-  const canSave = !mutation.isPending && estimableRows.length > 0 && (isEdit || !!year)
+  const canSave = !mutation.isPending && (isEdit || !!year) && (isLifeBased ? estimableRows.length > 0 : true)
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange} modal={false}>
@@ -161,24 +161,27 @@ export function BudgetDrawer({ open, onOpenChange, branchId, editingBudget }: Bu
         <SheetHeader>
           <SheetTitle>{isEdit ? 'Ubah Budget' : 'Tambah Budget'}</SheetTitle>
           <SheetDescription>
-            Per kategori part — hasil dihitung dari estimasi umur pakai & jam operasi mingguan, lalu
-            ditampilkan per Line.
+            Per strategi penggantian — untuk Life Based, hasil dihitung dari estimasi umur pakai & jam
+            operasi mingguan, lalu ditampilkan per Line. Strategi lain memakai anggaran manual.
           </SheetDescription>
         </SheetHeader>
 
         <div className="flex flex-col gap-4 overflow-y-auto pb-4">
           <div className="grid grid-cols-2 gap-3">
             <div className="flex flex-col gap-2">
-              <Label>Kategori Part</Label>
-              <Select value={category} onValueChange={(v) => setCategory(v ?? NONE_CATEGORY)} disabled={isEdit}>
+              <Label>Strategi Penggantian</Label>
+              <Select
+                value={strategy}
+                onValueChange={(v) => setStrategy((v as PartReplacementStrategy) ?? 'life_based')}
+                disabled={isEdit}
+              >
                 <SelectTrigger>
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value={NONE_CATEGORY}>Tanpa Kategori</SelectItem>
-                  {categories?.map((c) => (
-                    <SelectItem key={c.id} value={c.name}>
-                      {c.name}
+                  {partReplacementStrategyOptions.map((option) => (
+                    <SelectItem key={option.value} value={option.value}>
+                      {option.label}
                     </SelectItem>
                   ))}
                 </SelectContent>
@@ -196,79 +199,90 @@ export function BudgetDrawer({ open, onOpenChange, branchId, editingBudget }: Bu
             </div>
           </div>
 
-          <p className="text-xs text-muted-foreground">
-            Jam operasi mingguan dipakai: <strong>{avgWeeklyHours} jam</strong> (ubah di Pengaturan &gt; Profil
-            Perusahaan).
-          </p>
+          {isLifeBased ? (
+            <>
+              <p className="text-xs text-muted-foreground">
+                Jam operasi mingguan dipakai: <strong>{avgWeeklyHours} jam</strong> (ubah di Pengaturan &gt;
+                Profil Perusahaan).
+              </p>
 
-          {partsLoading ? (
-            <Skeleton className="h-32 w-full" />
-          ) : parts?.length === 0 ? (
-            <p className="text-sm text-muted-foreground">Tidak ada part aktif di kategori ini.</p>
-          ) : (
-            <div className="flex flex-col gap-2">
-              {rows.map((row) => (
-                <div key={row.part_id} className="flex flex-col gap-2 rounded-md border p-2">
-                  <div className="min-w-0">
-                    <p className="truncate text-sm font-medium">{row.part_name}</p>
-                    <p className="font-mono text-xs text-muted-foreground">
-                      {row.item_master_no} · {currencyFormatter.format(Number(row.unit_cost))}/unit ·{' '}
-                      {row.active_installations} unit terpasang
-                    </p>
-                  </div>
-
-                  {!row.hasLifetimeData ? (
-                    <p className="text-xs text-warning">
-                      Belum ada data estimasi umur pakai (jam) untuk part ini — tidak diikutkan dalam
-                      perhitungan.
-                    </p>
-                  ) : (
-                    <>
-                      <div className="grid grid-cols-2 gap-2">
-                        <div className="flex flex-col gap-1">
-                          <Label className="text-xs">Estimasi Life Time (%)</Label>
-                          <Input
-                            type="number"
-                            min={1}
-                            step="1"
-                            className="h-8"
-                            value={lifetimePercentByPart[row.part_id] ?? '100'}
-                            onChange={(e) => setLifetimePercent(row.part_id, e.target.value)}
-                          />
-                        </div>
-                        <div className="flex flex-col gap-1">
-                          <Label className="text-xs">Estimasi Kenaikan Harga (%)</Label>
-                          <Input
-                            type="number"
-                            min={0}
-                            step="1"
-                            className="h-8"
-                            value={priceIncreaseByPart[row.part_id] ?? '0'}
-                            onChange={(e) => setPriceIncrease(row.part_id, e.target.value)}
-                          />
-                        </div>
+              {partsLoading ? (
+                <Skeleton className="h-32 w-full" />
+              ) : parts?.length === 0 ? (
+                <p className="text-sm text-muted-foreground">
+                  Tidak ada part aktif dengan strategi Life Based saat ini.
+                </p>
+              ) : (
+                <div className="flex flex-col gap-2">
+                  {rows.map((row) => (
+                    <div key={row.part_id} className="flex flex-col gap-2 rounded-md border p-2">
+                      <div className="min-w-0">
+                        <p className="truncate text-sm font-medium">{row.part_name}</p>
+                        <p className="font-mono text-xs text-muted-foreground">
+                          {row.item_master_no} · {currencyFormatter.format(Number(row.unit_cost))}/unit ·{' '}
+                          {row.active_installations} unit terpasang
+                        </p>
                       </div>
-                      <p className="text-right text-xs tabular-nums text-muted-foreground">
-                        ≈ {row.pcsPerYear.toFixed(2)} pcs/tahun · {currencyFormatter.format(row.cost)}/tahun
-                      </p>
-                    </>
-                  )}
+
+                      {!row.hasLifetimeData ? (
+                        <p className="text-xs text-warning">
+                          Belum ada data estimasi umur pakai (jam) untuk part ini — tidak diikutkan dalam
+                          perhitungan.
+                        </p>
+                      ) : (
+                        <>
+                          <div className="grid grid-cols-2 gap-2">
+                            <div className="flex flex-col gap-1">
+                              <Label className="text-xs">Estimasi Life Time (%)</Label>
+                              <Input
+                                type="number"
+                                min={1}
+                                step="1"
+                                className="h-8"
+                                value={lifetimePercentByPart[row.part_id] ?? '100'}
+                                onChange={(e) => setLifetimePercent(row.part_id, e.target.value)}
+                              />
+                            </div>
+                            <div className="flex flex-col gap-1">
+                              <Label className="text-xs">Estimasi Kenaikan Harga (%)</Label>
+                              <Input
+                                type="number"
+                                min={0}
+                                step="1"
+                                className="h-8"
+                                value={priceIncreaseByPart[row.part_id] ?? '0'}
+                                onChange={(e) => setPriceIncrease(row.part_id, e.target.value)}
+                              />
+                            </div>
+                          </div>
+                          <p className="text-right text-xs tabular-nums text-muted-foreground">
+                            ≈ {row.pcsPerYear.toFixed(2)} pcs/tahun · {currencyFormatter.format(row.cost)}/tahun
+                          </p>
+                        </>
+                      )}
+                    </div>
+                  ))}
                 </div>
-              ))}
-            </div>
-          )}
+              )}
 
-          {missingLifetimeRows.length > 0 && (
-            <p className="text-xs text-muted-foreground">
-              {missingLifetimeRows.length} part belum bisa diestimasi — lengkapi data umur pakai part-nya
-              dulu di halaman Part.
+              {missingLifetimeRows.length > 0 && (
+                <p className="text-xs text-muted-foreground">
+                  {missingLifetimeRows.length} part belum bisa diestimasi — lengkapi data umur pakai part-nya
+                  dulu di halaman Part.
+                </p>
+              )}
+
+              {estimableRows.length > 0 && (
+                <div className="rounded-md border bg-muted/30 p-3 text-sm">
+                  Total estimasi: <strong>{currencyFormatter.format(plannedTotal)}</strong> / tahun
+                </div>
+              )}
+            </>
+          ) : (
+            <p className="rounded-md border bg-muted/30 p-3 text-xs text-muted-foreground">
+              Forecast otomatis tidak tersedia untuk strategi ini — hanya Life Based yang punya perhitungan
+              umur pakai otomatis. Isi Tambahan Anggaran Corrective di bawah sesuai kebutuhan.
             </p>
-          )}
-
-          {estimableRows.length > 0 && (
-            <div className="rounded-md border bg-muted/30 p-3 text-sm">
-              Total estimasi: <strong>{currencyFormatter.format(plannedTotal)}</strong> / tahun
-            </div>
           )}
 
           <div className="flex flex-col gap-2">
