@@ -82,7 +82,7 @@ export function BreakdownScanPage() {
 
   const mutation = useMutation({
     mutationFn: (values: FormValues) =>
-      submitReplacementRequest({
+      submitReplacementRequest(branch, {
         part_id: id,
         equipment_id: Number(values.equipment_id),
         requested_by_name: values.requested_by_name,

@@ -61,11 +61,19 @@ export interface SubmitReplacementPayload {
   reason?: string
 }
 
+/**
+ * branchId is the plant encoded in the scanned QR's own URL — sent as a
+ * route param (not a body field) so the backend can bind it and cross-check
+ * that equipment_id actually belongs to that exact branch (see
+ * StoreReplacementRequestRequest::withValidator()), the same branch-scoped
+ * pattern fetchEquipmentForPartInBranch() already uses.
+ */
 export async function submitReplacementRequest(
+  branchId: number,
   payload: SubmitReplacementPayload,
 ): Promise<{ id: number }> {
   const { data } = await apiClient.post<{ data: { id: number } }>(
-    '/public/replacement-requests',
+    `/public/branches/${branchId}/replacement-requests`,
     payload,
   )
   return data.data

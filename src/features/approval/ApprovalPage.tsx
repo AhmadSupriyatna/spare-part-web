@@ -47,7 +47,11 @@ type UnifiedRow =
 
 function originBadge(row: UnifiedRow) {
   if (row.origin === 'breakdown') {
-    return <Badge variant="destructive">Breakdown</Badge>
+    return row.data.event_type === 'failure' ? (
+      <Badge variant="warning">Failure</Badge>
+    ) : (
+      <Badge variant="destructive">Breakdown</Badge>
+    )
   }
   if (row.data.action === 'reinstall') {
     return <Badge variant="warning">Part Hasil Repair</Badge>
