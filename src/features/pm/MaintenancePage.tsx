@@ -1,8 +1,10 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { CalendarDays, ChevronLeft, ChevronRight, List, Plus, Wrench } from 'lucide-react'
+import { CalendarDays, ChevronLeft, ChevronRight, History, List, Plus, Wrench } from 'lucide-react'
 import { useMemo, useState } from 'react'
 import { useSearchParams } from 'react-router'
 import { toast } from 'sonner'
+import { FindingActionView } from '@/features/findings/FindingActionView'
+import { MaintenanceHistoryView } from '@/features/maintenance-history/MaintenanceHistoryView'
 import { fetchNationalHolidays, fetchTaskRescheduleHistory } from '@/features/pm/api'
 import { PartLifetimePanel } from '@/features/pm/PartLifetimePanel'
 import { RescheduleReasonDialog } from '@/features/pm/RescheduleReasonDialog'
@@ -26,14 +28,17 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 const WEEKDAYS = ['Sen', 'Sel', 'Rab', 'Kam', 'Jum', 'Sab', 'Min']
 const VISIBLE_TASKS_PER_DAY = 3
 
-type MaintenanceView = 'calendar' | 'list' | 'repair'
+type MaintenanceView = 'calendar' | 'list' | 'repair' | 'history' | 'findings'
 
 export function MaintenancePage() {
   const activeBranchId = useBranchStore((state) => state.activeBranchId)
   const queryClient = useQueryClient()
   const [searchParams, setSearchParams] = useSearchParams()
   const tabParam = searchParams.get('tab')
-  const view: MaintenanceView = tabParam === 'list' || tabParam === 'repair' ? tabParam : 'calendar'
+  const view: MaintenanceView =
+    tabParam === 'list' || tabParam === 'repair' || tabParam === 'history' || tabParam === 'findings'
+      ? tabParam
+      : 'calendar'
   function setView(next: MaintenanceView) {
     setSearchParams({ tab: next })
   }
@@ -185,12 +190,25 @@ export function MaintenancePage() {
             <Wrench className="size-3.5" />
             Repair Part
           </Button>
+          <Button variant={view === 'history' ? 'default' : 'ghost'} size="sm" onClick={() => setView('history')}>
+            <History className="size-3.5" />
+            Maintenance History
+          </Button>
+          {/* Finding & Action (Phase 2) is intentionally not a primary tab —
+              Maintenance is replacement-only per the Phase 3 product
+              decision. The feature stays fully wired (route/type/component
+              below, API/backend untouched) as a dormant capability, reachable
+              via ?tab=findings, without being surfaced in normal navigation. */}
         </div>
       </div>
 
       {view === 'list' && <WoListView tasks={tasks} isLoading={tasksLoading} onSelect={setDetailTask} />}
 
       {view === 'repair' && <RepairBoard branchId={activeBranchId} />}
+
+      {view === 'history' && <MaintenanceHistoryView branchId={activeBranchId} />}
+
+      {view === 'findings' && <FindingActionView branchId={activeBranchId} />}
 
       {view === 'calendar' && (
         <div className="grid grid-cols-1 gap-4 lg:grid-cols-[70fr_30fr]">

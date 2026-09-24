@@ -2,7 +2,7 @@ import type { PartReplacementStrategy } from '@/types/inventory'
 
 export type ReplacementRequestStatus = 'pending' | 'approved' | 'rejected'
 
-export type ReplacementRequestEventType = 'failure' | 'breakdown'
+export type ReplacementRequestEventType = 'failure' | 'breakdown' | 'maintenance'
 
 export interface ReplacementRequestItem {
   id: number

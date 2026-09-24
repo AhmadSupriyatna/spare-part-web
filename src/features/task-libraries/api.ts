@@ -4,6 +4,7 @@ import type { Task } from '@/types/tasks'
 
 export interface TaskLibraryPartInput {
   part_id: number
+  quantity_required?: number
 }
 
 export interface TaskLibraryPayload {
@@ -20,6 +21,7 @@ export interface TaskLibraryPayload {
 
 export interface TaskLibraryPartPayload {
   part_id: number
+  quantity_required?: number
   notes?: string | null
 }
 

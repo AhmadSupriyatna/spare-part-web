@@ -134,6 +134,7 @@ export function TaskLibraryList({ equipmentId, title = 'Task Library (PM)' }: { 
                             {part.part_name}{' '}
                             <span className="font-mono text-xs text-muted-foreground">({part.item_master_no})</span>
                           </span>
+                          <span className="shrink-0 text-xs text-muted-foreground">× {part.quantity_required}</span>
                         </li>
                       ))}
                     </ul>
