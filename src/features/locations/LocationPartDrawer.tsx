@@ -11,10 +11,16 @@ import { Input } from '@/components/ui/input'
 const strategyMeta = Object.fromEntries(partReplacementStrategyOptions.map((o) => [o.value, o]))
 const strategyOrder: string[] = partReplacementStrategyOptions.map((o) => o.value)
 
+// Not a strategy value — there's no safe business default to fall back to
+// (see schema.ts) — just a UI bucket for the (currently unreachable, since
+// this endpoint always eager-loads `part`) case where replacement_strategy
+// wasn't included in the response at all.
+const UNKNOWN_STRATEGY_KEY = '__unknown'
+
 function groupByStrategy(stocks: PartStock[]): [string, PartStock[]][] {
   const groups = new Map<string, PartStock[]>()
   for (const stock of stocks) {
-    const key = stock.replacement_strategy ?? 'on_demand'
+    const key = stock.replacement_strategy ?? UNKNOWN_STRATEGY_KEY
     if (!groups.has(key)) groups.set(key, [])
     groups.get(key)!.push(stock)
   }
@@ -96,7 +102,7 @@ export function LocationPartDrawer({
           grouped.map(([strategy, strategyStocks]) => (
             <div key={strategy} className="flex flex-col gap-1.5">
               <p className="text-xs font-medium tracking-wide text-muted-foreground uppercase">
-                {strategyMeta[strategy].label}
+                {strategyMeta[strategy]?.label ?? 'Lainnya'}
               </p>
               <div className="flex flex-col gap-1.5">
                 {strategyStocks.map((stock) => (

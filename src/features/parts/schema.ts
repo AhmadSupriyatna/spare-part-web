@@ -1,6 +1,15 @@
-import { CalendarClock, ClipboardCheck, Clock, Gauge, TriangleAlert, Wrench } from 'lucide-react'
+import { CalendarClock, Clock, TriangleAlert } from 'lucide-react'
 import { z } from 'zod'
 
+/**
+ * Deliberately just these 3 (Phase 3B Step 2) — ConditionBased/
+ * InspectionBased/OnDemand were removed: condition/inspection observation
+ * belongs to Task Library maintenance activity, not a Part-level
+ * replacement policy, and "on demand" is a Task-creation trigger, not a
+ * strategy. There is no safe default among these 3, so callers must never
+ * fall back to one silently (see PartFormDialog, LocationPartDrawer,
+ * SupplierPartDrawer).
+ */
 export const partReplacementStrategyOptions = [
   {
     value: 'life_based',
@@ -15,28 +24,10 @@ export const partReplacementStrategyOptions = [
     icon: TriangleAlert,
   },
   {
-    value: 'condition_based',
-    label: 'Condition Based',
-    description: 'Diganti berdasarkan kondisi aktual.',
-    icon: Gauge,
-  },
-  {
     value: 'scheduled',
     label: 'Scheduled',
     description: 'Diganti mengikuti jadwal yang ditentukan.',
     icon: CalendarClock,
-  },
-  {
-    value: 'inspection_based',
-    label: 'Inspection Based',
-    description: 'Diganti berdasarkan hasil inspeksi.',
-    icon: ClipboardCheck,
-  },
-  {
-    value: 'on_demand',
-    label: 'On Demand',
-    description: 'Diganti sesuai kebutuhan.',
-    icon: Wrench,
   },
 ] as const
 
@@ -49,14 +40,7 @@ export const partSchema = z.object({
     .string()
     .optional()
     .refine((v) => !v || (Number.isInteger(Number(v)) && Number(v) >= 1), 'Harus angka lebih dari 0'),
-  replacement_strategy: z.enum([
-    'life_based',
-    'failure_based',
-    'condition_based',
-    'scheduled',
-    'inspection_based',
-    'on_demand',
-  ]),
+  replacement_strategy: z.enum(['life_based', 'failure_based', 'scheduled']),
 })
 
 export type PartFormValues = z.infer<typeof partSchema>

@@ -47,7 +47,10 @@ export function PartFormDialog({ part, trigger }: PartFormDialogProps) {
       description: part?.description ?? '',
       unit: part?.unit ?? 'pcs',
       estimated_lifetime_hours: part?.estimated_lifetime_hours ? String(part.estimated_lifetime_hours) : '',
-      replacement_strategy: part?.replacement_strategy ?? 'on_demand',
+      // No fallback here on purpose — there's no safe default strategy
+      // (see schema.ts), so a new Part starts with nothing selected and
+      // must be explicitly chosen before the form can submit.
+      replacement_strategy: part?.replacement_strategy,
     },
   })
 
@@ -61,7 +64,7 @@ export function PartFormDialog({ part, trigger }: PartFormDialogProps) {
         description: part?.description ?? '',
         unit: part?.unit ?? 'pcs',
         estimated_lifetime_hours: part?.estimated_lifetime_hours ? String(part.estimated_lifetime_hours) : '',
-        replacement_strategy: part?.replacement_strategy ?? 'on_demand',
+        replacement_strategy: part?.replacement_strategy,
       })
       setImageFile(null)
       setImagePreview(part?.image_url ?? null)
@@ -177,6 +180,9 @@ export function PartFormDialog({ part, trigger }: PartFormDialogProps) {
             </div>
           )}
         />
+        {errors.replacement_strategy && (
+          <p className="text-sm text-destructive">Pilih salah satu strategi penggantian.</p>
+        )}
       </div>
       {replacementStrategy === 'life_based' ? (
         <div className="flex flex-col gap-2">

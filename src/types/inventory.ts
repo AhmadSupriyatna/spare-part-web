@@ -3,13 +3,7 @@ export interface Unit {
   name: string
 }
 
-export type PartReplacementStrategy =
-  | 'life_based'
-  | 'failure_based'
-  | 'condition_based'
-  | 'scheduled'
-  | 'inspection_based'
-  | 'on_demand'
+export type PartReplacementStrategy = 'life_based' | 'failure_based' | 'scheduled'
 
 export interface Part {
   id: number
