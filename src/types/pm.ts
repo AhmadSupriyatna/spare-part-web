@@ -1,5 +1,13 @@
 export type TaskLibraryScheduleType = 'calendar' | 'runtime'
 
+/**
+ * What kind of planned maintenance activity a recipe represents — separate
+ * from TaskLibraryScheduleType (how/when). null means a legacy recipe that
+ * existed before this field and hasn't been classified yet (see the
+ * backend migration for why it isn't guessed).
+ */
+export type TaskLibraryMaintenanceCategory = 'life_time' | 'scheduled_maintenance' | 'inspection'
+
 export interface TaskLibraryPart {
   id: number
   task_library_id: number
@@ -20,6 +28,7 @@ export interface TaskLibrary {
   line_name?: string
   title: string
   description: string | null
+  maintenance_category: TaskLibraryMaintenanceCategory | null
   schedule_type: TaskLibraryScheduleType | null
   interval_days: number | null
   interval_hours: number | null

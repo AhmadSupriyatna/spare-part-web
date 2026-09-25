@@ -3,6 +3,7 @@ import { Pencil, Trash2 } from 'lucide-react'
 import { toast } from 'sonner'
 import { TaskLibraryFormDialog } from '@/features/task-libraries/TaskLibraryFormDialog'
 import { deleteTaskLibrary, fetchTaskLibrariesForEquipment } from '@/features/task-libraries/api'
+import { taskLibraryMaintenanceCategoryOptions } from '@/features/task-libraries/maintenanceCategory'
 import { useCanManageEngineering } from '@/stores/use-has-role'
 import {
   AlertDialog,
@@ -15,8 +16,11 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from '@/components/ui/alert-dialog'
+import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Skeleton } from '@/components/ui/skeleton'
+
+const categoryMeta = Object.fromEntries(taskLibraryMaintenanceCategoryOptions.map((o) => [o.value, o]))
 
 function intervalLabel(scheduleType: string | null, intervalDays: number | null, intervalHours: number | null): string | null {
   if (scheduleType === 'calendar' && intervalDays) {
@@ -71,8 +75,13 @@ export function TaskLibraryList({ equipmentId, title = 'Task Library (PM)' }: { 
               <div key={library.id} className="rounded-md border p-3">
                 <div className="flex items-start justify-between gap-2">
                   <div className="min-w-0">
-                    <div className="flex items-center gap-2">
+                    <div className="flex flex-wrap items-center gap-2">
                       <span className="font-mono text-xs text-muted-foreground">{library.code}</span>
+                      {library.maintenance_category ? (
+                        <Badge variant="outline">{categoryMeta[library.maintenance_category].label}</Badge>
+                      ) : (
+                        <Badge variant="warning">Belum dikategorikan</Badge>
+                      )}
                       {interval && <span className="text-xs text-muted-foreground">· {interval}</span>}
                       {library.estimated_duration_minutes && (
                         <span className="text-xs text-muted-foreground">· ~{library.estimated_duration_minutes} menit</span>

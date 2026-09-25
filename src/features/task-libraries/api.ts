@@ -1,5 +1,5 @@
 import { apiClient } from '@/lib/api-client'
-import type { TaskLibrary, TaskLibraryPart, TaskLibraryScheduleType } from '@/types/pm'
+import type { TaskLibrary, TaskLibraryMaintenanceCategory, TaskLibraryPart, TaskLibraryScheduleType } from '@/types/pm'
 import type { Task } from '@/types/tasks'
 
 export interface TaskLibraryPartInput {
@@ -10,6 +10,7 @@ export interface TaskLibraryPartInput {
 export interface TaskLibraryPayload {
   title: string
   description?: string | null
+  maintenance_category?: TaskLibraryMaintenanceCategory
   schedule_type?: TaskLibraryScheduleType | null
   interval_days?: number | null
   interval_hours?: number | null

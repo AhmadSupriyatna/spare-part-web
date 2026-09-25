@@ -6,6 +6,7 @@ import { Controller, useForm } from 'react-hook-form'
 import { toast } from 'sonner'
 import { z } from 'zod'
 import { fetchPartInstallations } from '@/features/part-installations/api'
+import { taskLibraryMaintenanceCategoryOptions } from '@/features/task-libraries/maintenanceCategory'
 import {
   addTaskLibraryPart,
   createTaskLibrary,
@@ -23,11 +24,16 @@ import { Textarea } from '@/components/ui/textarea'
 
 const scheduleTypeSchema = z.enum(['none', 'calendar', 'runtime'])
 const calendarIntervalSchema = z.enum(['weekly', 'monthly'])
+const maintenanceCategorySchema = z.enum(['life_time', 'scheduled_maintenance', 'inspection'])
 
 const taskLibrarySchema = z
   .object({
     title: z.string().min(1, 'Nama kegiatan wajib diisi').max(255),
     description: z.string().optional(),
+    // No default here on purpose — mirrors Part's replacement_strategy:
+    // there's no safe default among the 3 categories, so a new recipe
+    // starts unselected and must be chosen explicitly.
+    maintenance_category: maintenanceCategorySchema,
     schedule_type: scheduleTypeSchema,
     calendar_interval: calendarIntervalSchema.optional(),
     interval_hours: z.string().optional(),
@@ -133,6 +139,7 @@ export function TaskLibraryFormDialog({ equipmentId, library, trigger }: TaskLib
     defaultValues: {
       title: library?.title ?? '',
       description: library?.description ?? '',
+      maintenance_category: library?.maintenance_category ?? undefined,
       schedule_type: library?.schedule_type ?? 'none',
       calendar_interval: calendarIntervalFromDays(library?.interval_days ?? null),
       interval_hours: library?.interval_hours ? String(library.interval_hours) : '',
@@ -145,6 +152,7 @@ export function TaskLibraryFormDialog({ equipmentId, library, trigger }: TaskLib
       reset({
         title: library?.title ?? '',
         description: library?.description ?? '',
+        maintenance_category: library?.maintenance_category ?? undefined,
         schedule_type: library?.schedule_type ?? 'none',
         calendar_interval: calendarIntervalFromDays(library?.interval_days ?? null),
         interval_hours: library?.interval_hours ? String(library.interval_hours) : '',
@@ -155,12 +163,15 @@ export function TaskLibraryFormDialog({ equipmentId, library, trigger }: TaskLib
   }, [open, library, reset])
 
   const scheduleType = watch('schedule_type')
+  const maintenanceCategory = watch('maintenance_category')
+  const selectedCategoryOption = taskLibraryMaintenanceCategoryOptions.find((o) => o.value === maintenanceCategory)
 
   const mutation = useMutation({
     mutationFn: (values: TaskLibraryFormValues) => {
       const payload = {
         title: values.title,
         description: values.description || null,
+        maintenance_category: values.maintenance_category,
         schedule_type: values.schedule_type === 'none' ? null : values.schedule_type,
         interval_days:
           values.schedule_type === 'calendar' ? (values.calendar_interval === 'weekly' ? 7 : 30) : null,
@@ -248,6 +259,48 @@ export function TaskLibraryFormDialog({ equipmentId, library, trigger }: TaskLib
         <Label htmlFor="title">Kegiatan</Label>
         <Input id="title" placeholder="Ganti Oli & Filter" {...register('title')} />
         {errors.title && <p className="text-sm text-destructive">{errors.title.message}</p>}
+      </div>
+
+      <div className="flex flex-col gap-2">
+        <Label>Kategori Maintenance</Label>
+        <p className="-mt-1 text-xs text-muted-foreground">
+          Jenis kegiatan PM ini — terpisah dari interval di bawah, dan tidak menentukan jadwalnya secara paksa.
+        </p>
+        <Controller
+          control={control}
+          name="maintenance_category"
+          render={({ field }) => (
+            <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
+              {taskLibraryMaintenanceCategoryOptions.map((option) => {
+                const Icon = option.icon
+                const selected = field.value === option.value
+                return (
+                  <button
+                    key={option.value}
+                    type="button"
+                    onClick={() => field.onChange(option.value)}
+                    className={cn(
+                      'flex items-start gap-2.5 rounded-md border p-2.5 text-left transition-colors select-none hover:border-primary/50 hover:bg-muted',
+                      selected && 'border-primary bg-primary/5',
+                    )}
+                  >
+                    <Icon className={cn('mt-0.5 size-4 shrink-0', selected ? 'text-primary' : 'text-muted-foreground')} />
+                    <div className="min-w-0">
+                      <p className="text-sm font-medium">{option.label}</p>
+                      <p className="text-xs text-muted-foreground">{option.description}</p>
+                    </div>
+                  </button>
+                )
+              })}
+            </div>
+          )}
+        />
+        {errors.maintenance_category && (
+          <p className="text-sm text-destructive">Pilih salah satu kategori maintenance.</p>
+        )}
+        {selectedCategoryOption && (
+          <p className="text-xs text-muted-foreground italic">{selectedCategoryOption.scheduleHint}</p>
+        )}
       </div>
 
       <div className="flex flex-col gap-2">
