@@ -1,8 +1,8 @@
 import { apiClient } from '@/lib/api-client'
 import type { Equipment } from '@/types/tasks'
 
+/** No `code` — it's system-generated from `name` server-side (see Equipment::generateCode()), never client-supplied. */
 export interface EquipmentPayload {
-  code: string
   name: string
   category?: string | null
   is_active?: boolean

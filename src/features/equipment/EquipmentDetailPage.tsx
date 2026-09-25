@@ -54,7 +54,7 @@ export function EquipmentDetailPage() {
           ]}
         />
         <h1 className="mt-1 text-2xl font-semibold">{equipment?.name ?? 'Equipment'}</h1>
-        <p className="font-mono text-sm text-muted-foreground">{equipment?.code}</p>
+        <p className="font-mono text-sm text-muted-foreground">{equipment?.hierarchical_code ?? equipment?.code}</p>
       </div>
 
       <div className="flex flex-col gap-3">

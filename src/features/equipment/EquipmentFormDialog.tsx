@@ -11,7 +11,6 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 
 const equipmentSchema = z.object({
-  code: z.string().min(1, 'Kode wajib diisi').max(50),
   name: z.string().min(1, 'Nama wajib diisi').max(255),
   category: z.string().optional(),
 })
@@ -37,7 +36,6 @@ export function EquipmentFormDialog({ machineId, equipment, trigger }: Equipment
   } = useForm<EquipmentFormValues>({
     resolver: zodResolver(equipmentSchema),
     defaultValues: {
-      code: equipment?.code ?? '',
       name: equipment?.name ?? '',
       category: equipment?.category ?? '',
     },
@@ -46,7 +44,6 @@ export function EquipmentFormDialog({ machineId, equipment, trigger }: Equipment
   useEffect(() => {
     if (open) {
       reset({
-        code: equipment?.code ?? '',
         name: equipment?.name ?? '',
         category: equipment?.category ?? '',
       })
@@ -77,8 +74,11 @@ export function EquipmentFormDialog({ machineId, equipment, trigger }: Equipment
     >
       <div className="flex flex-col gap-2">
         <Label htmlFor="code">Kode</Label>
-        <Input id="code" {...register('code')} />
-        {errors.code && <p className="text-sm text-destructive">{errors.code.message}</p>}
+        {isEdit ? (
+          <Input id="code" value={equipment!.code} disabled readOnly className="font-mono text-muted-foreground" />
+        ) : (
+          <p className="text-sm text-muted-foreground italic">Dibuat otomatis dari nama saat disimpan.</p>
+        )}
       </div>
       <div className="flex flex-col gap-2">
         <Label htmlFor="name">Nama</Label>

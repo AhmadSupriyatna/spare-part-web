@@ -37,6 +37,8 @@ export interface Equipment {
   line_id?: number
   line_name?: string
   code: string
+  /** Line.code-Machine.code-Equipment.code — only present when the backend eager-loaded `machine.line` (e.g. the single-equipment "show" endpoint), not on list responses. */
+  hierarchical_code?: string
   name: string
   category: string | null
   is_active: boolean

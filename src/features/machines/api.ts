@@ -1,8 +1,8 @@
 import { apiClient } from '@/lib/api-client'
 import type { Machine } from '@/types/tasks'
 
+/** No `code` — it's system-generated from `name` server-side (see Machine::generateCode()), never client-supplied. */
 export interface MachinePayload {
-  code: string
   name: string
   category?: string | null
   is_active?: boolean
