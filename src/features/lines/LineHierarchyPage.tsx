@@ -36,6 +36,13 @@ export function LineHierarchyPage() {
   const [draggingPart, setDraggingPart] = useState<Part | null>(null)
   const [dropTargetActive, setDropTargetActive] = useState(false)
   const [droppedPart, setDroppedPart] = useState<Part | null>(null)
+  // Lifted out of the "+ Tambah" dropdown's menu items on purpose: the
+  // DropdownMenu unmounts its popup content (and anything nested inside it)
+  // the instant an item is clicked, which was destroying these dialogs' own
+  // internal `open` state before the Sheet ever got to render — see the
+  // dialogs' `open`/`onOpenChange` props.
+  const [addLineOpen, setAddLineOpen] = useState(false)
+  const [addOutsideLineOpen, setAddOutsideLineOpen] = useState(false)
 
   const selectedLineId = searchParams.get('line') ? Number(searchParams.get('line')) : null
   const selectedMachineId = searchParams.get('machine') ? Number(searchParams.get('machine')) : null
@@ -186,27 +193,40 @@ export function LineHierarchyPage() {
               </span>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="start">
-              <LineFormDialog
-                branchId={activeBranchId}
-                trigger={
-                  <DropdownMenuItem>
-                    <Plus /> Tambah Line
-                  </DropdownMenuItem>
-                }
-              />
-              <OutsideLineEquipmentFormDialog
-                branchId={activeBranchId}
-                branchName={activeBranchName}
-                trigger={
-                  <DropdownMenuItem>
-                    <Plus /> Tambah Asset Luar Line
-                  </DropdownMenuItem>
-                }
-              />
+              <DropdownMenuItem onClick={() => setAddLineOpen(true)}>
+                <Plus /> Tambah Line
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => setAddOutsideLineOpen(true)}>
+                <Plus /> Tambah Asset Luar Line
+              </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
         )}
       </div>
+
+      {/*
+        Rendered here (siblings of the dropdown, not nested inside its
+        DropdownMenuContent) so their own `open` state survives the menu
+        closing — see the `addLineOpen`/`addOutsideLineOpen` comment above.
+        `trigger` is inert: opening is driven entirely by `open`/onOpenChange.
+      */}
+      {canManage && (
+        <>
+          <LineFormDialog
+            branchId={activeBranchId}
+            open={addLineOpen}
+            onOpenChange={setAddLineOpen}
+            trigger={<span className="hidden" aria-hidden="true" />}
+          />
+          <OutsideLineEquipmentFormDialog
+            branchId={activeBranchId}
+            branchName={activeBranchName}
+            open={addOutsideLineOpen}
+            onOpenChange={setAddOutsideLineOpen}
+            trigger={<span className="hidden" aria-hidden="true" />}
+          />
+        </>
+      )}
 
       {/* Phase 3B "Asset Outside Line" — small dedicated area, separate from the Line -> Mesin -> Equipment browser above. */}
       {(outsideLineEquipmentLoading || (outsideLineEquipment && outsideLineEquipment.length > 0)) && (

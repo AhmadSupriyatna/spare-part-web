@@ -20,6 +20,15 @@ interface OutsideLineEquipmentFormDialogProps {
   branchId: number
   branchName: string
   trigger: React.ReactNode
+  /**
+   * Controlled open state — needed when the trigger lives inside a
+   * DropdownMenu: the menu unmounts its popup content (and everything
+   * nested in it, including this dialog's own internal `open` state) the
+   * instant an item is clicked, so open state must be lifted to a parent
+   * that outlives the menu. Falls back to internal state otherwise.
+   */
+  open?: boolean
+  onOpenChange?: (open: boolean) => void
 }
 
 /**
@@ -29,8 +38,16 @@ interface OutsideLineEquipmentFormDialogProps {
  * EquipmentFormDialog's create mode: no Line/Machine picker, code is
  * system-generated server-side (see Equipment::generateCodeForBranch()).
  */
-export function OutsideLineEquipmentFormDialog({ branchId, branchName, trigger }: OutsideLineEquipmentFormDialogProps) {
-  const [open, setOpen] = useState(false)
+export function OutsideLineEquipmentFormDialog({
+  branchId,
+  branchName,
+  trigger,
+  open: openProp,
+  onOpenChange: onOpenChangeProp,
+}: OutsideLineEquipmentFormDialogProps) {
+  const [internalOpen, setInternalOpen] = useState(false)
+  const open = openProp ?? internalOpen
+  const setOpen = onOpenChangeProp ?? setInternalOpen
   const queryClient = useQueryClient()
 
   const {

@@ -21,10 +21,22 @@ interface LineFormDialogProps {
   branchId: number
   line?: ProductionLine
   trigger: React.ReactNode
+  /**
+   * Controlled open state — needed when the trigger lives inside a
+   * DropdownMenu: the menu unmounts its popup content (and everything
+   * nested in it, including this dialog's own internal `open` state) the
+   * instant an item is clicked, so open state must be lifted to a parent
+   * that outlives the menu. Falls back to internal state for every other
+   * (non-menu) call site.
+   */
+  open?: boolean
+  onOpenChange?: (open: boolean) => void
 }
 
-export function LineFormDialog({ branchId, line, trigger }: LineFormDialogProps) {
-  const [open, setOpen] = useState(false)
+export function LineFormDialog({ branchId, line, trigger, open: openProp, onOpenChange: onOpenChangeProp }: LineFormDialogProps) {
+  const [internalOpen, setInternalOpen] = useState(false)
+  const open = openProp ?? internalOpen
+  const setOpen = onOpenChangeProp ?? setInternalOpen
   const queryClient = useQueryClient()
   const isEdit = Boolean(line)
 
