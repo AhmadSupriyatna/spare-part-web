@@ -32,12 +32,16 @@ export interface Machine {
 
 export interface Equipment {
   id: number
-  machine_id: number
+  /** null for an outside-line asset — see branch_id instead. */
+  machine_id: number | null
   machine_name?: string
   line_id?: number
   line_name?: string
+  /** Phase 3B "Asset Outside Line" — set only when machine_id is null. */
+  branch_id?: number | null
+  branch_name?: string | null
   code: string
-  /** Line.code-Machine.code-Equipment.code — only present when the backend eager-loaded `machine.line` (e.g. the single-equipment "show" endpoint), not on list responses. */
+  /** {line.code}-{machine.code}-{equipment.code} for production, OL-{code} for an outside-line asset. Only present when the backend eager-loaded `machine`/`branch` (e.g. the single-equipment "show" endpoint) or the asset is outside-line (cheap, no relation needed) — not on a production list response. */
   hierarchical_code?: string
   name: string
   category: string | null

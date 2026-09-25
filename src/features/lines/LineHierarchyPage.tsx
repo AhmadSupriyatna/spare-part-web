@@ -1,5 +1,5 @@
 import { useQuery, useQueryClient } from '@tanstack/react-query'
-import { Pencil, Plus, Trash2 } from 'lucide-react'
+import { ChevronDown, Pencil, Plus, Trash2 } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { Link, useSearchParams } from 'react-router'
 import { AddRuntimeDialog } from '@/features/lines/AddRuntimeDialog'
@@ -7,11 +7,13 @@ import { deleteLine, fetchLines } from '@/features/lines/api'
 import { LineFormDialog } from '@/features/lines/LineFormDialog'
 import { LineRuntimeLogTable } from '@/features/lines/LineRuntimeLogTable'
 import { EquipmentFormDialog } from '@/features/equipment/EquipmentFormDialog'
-import { deleteEquipment, fetchEquipmentList } from '@/features/equipment/api'
+import { OutsideLineEquipmentFormDialog } from '@/features/equipment/OutsideLineEquipmentFormDialog'
+import { deleteEquipment, fetchEquipmentList, fetchOutsideLineEquipment } from '@/features/equipment/api'
 import { deleteMachine, fetchMachines } from '@/features/machines/api'
 import { MachineFormDialog } from '@/features/machines/MachineFormDialog'
 import { InstalledPartsPanel } from '@/features/part-installations/InstalledPartsPanel'
 import { PartPickerSheet } from '@/features/part-installations/PartPickerSheet'
+import { useAuthStore } from '@/stores/auth-store'
 import { useBranchStore } from '@/stores/branch-store'
 import { useCanManage } from '@/stores/use-has-role'
 import type { Part } from '@/types/inventory'
@@ -19,10 +21,13 @@ import { cn } from '@/lib/utils'
 import { DeleteWithPasswordDialog } from '@/components/DeleteWithPasswordDialog'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu'
 import { Skeleton } from '@/components/ui/skeleton'
 
 export function LineHierarchyPage() {
   const activeBranchId = useBranchStore((state) => state.activeBranchId)
+  const activeBranchName =
+    useAuthStore((state) => state.user?.branches.find((branch) => branch.id === activeBranchId)?.name) ?? ''
   const canManage = useCanManage()
   const queryClient = useQueryClient()
   const [searchParams, setSearchParams] = useSearchParams()
@@ -52,6 +57,12 @@ export function LineHierarchyPage() {
     queryKey: ['equipment', selectedMachineId],
     queryFn: () => fetchEquipmentList(selectedMachineId!),
     enabled: !!selectedMachineId,
+  })
+
+  const { data: outsideLineEquipment, isLoading: outsideLineEquipmentLoading } = useQuery({
+    queryKey: ['outside-line-equipment', activeBranchId],
+    queryFn: () => fetchOutsideLineEquipment(activeBranchId!),
+    enabled: !!activeBranchId,
   })
 
   // Default to the first line once loaded, if nothing is selected via the URL yet.
@@ -158,22 +169,93 @@ export function LineHierarchyPage() {
           ))
         )}
         {canManage && !linesLoading && (
-          <LineFormDialog
-            branchId={activeBranchId}
-            trigger={
-              <button
-                type="button"
-                aria-label="Tambah Line"
-                title="Tambah Line"
-                className="flex h-20 w-48 shrink-0 flex-col items-center justify-center gap-1 rounded-xl border-2 border-dashed border-muted-foreground/40 text-muted-foreground transition-colors hover:border-primary hover:bg-primary/5 hover:text-primary"
-              >
-                <Plus className="size-5" />
-                <span className="text-sm font-medium">Tambah Line</span>
-              </button>
-            }
-          />
+          <DropdownMenu>
+            <DropdownMenuTrigger
+              render={
+                <button
+                  type="button"
+                  aria-label="Tambah"
+                  title="Tambah"
+                  className="flex h-20 w-48 shrink-0 flex-col items-center justify-center gap-1 rounded-xl border-2 border-dashed border-muted-foreground/40 text-muted-foreground transition-colors hover:border-primary hover:bg-primary/5 hover:text-primary"
+                />
+              }
+            >
+              <Plus className="size-5" />
+              <span className="flex items-center gap-1 text-sm font-medium">
+                Tambah <ChevronDown className="size-3.5" />
+              </span>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="start">
+              <LineFormDialog
+                branchId={activeBranchId}
+                trigger={
+                  <DropdownMenuItem>
+                    <Plus /> Tambah Line
+                  </DropdownMenuItem>
+                }
+              />
+              <OutsideLineEquipmentFormDialog
+                branchId={activeBranchId}
+                branchName={activeBranchName}
+                trigger={
+                  <DropdownMenuItem>
+                    <Plus /> Tambah Asset Luar Line
+                  </DropdownMenuItem>
+                }
+              />
+            </DropdownMenuContent>
+          </DropdownMenu>
         )}
       </div>
+
+      {/* Phase 3B "Asset Outside Line" — small dedicated area, separate from the Line -> Mesin -> Equipment browser above. */}
+      {(outsideLineEquipmentLoading || (outsideLineEquipment && outsideLineEquipment.length > 0)) && (
+        <div className="flex flex-col rounded-lg border">
+          <div className="flex items-center justify-between gap-2 border-b px-3 py-2">
+            <h2 className="truncate text-sm font-semibold text-muted-foreground">
+              Asset Luar Line — {activeBranchName}
+            </h2>
+          </div>
+          <div className="flex flex-col">
+            {outsideLineEquipmentLoading ? (
+              <div className="flex flex-col gap-2 p-3">
+                {Array.from({ length: 2 }).map((_, i) => (
+                  <Skeleton key={i} className="h-10 w-full" />
+                ))}
+              </div>
+            ) : (
+              outsideLineEquipment?.map((equipment) => (
+                <ColumnRow
+                  key={equipment.id}
+                  isSelected={false}
+                  onClick={() => {}}
+                  title={equipment.name}
+                  subtitle={equipment.category ?? equipment.code}
+                  badge={!equipment.is_active ? <Badge variant="secondary">Nonaktif</Badge> : undefined}
+                  detailHref={`/equipment/${equipment.id}`}
+                  deleteAction={
+                    canManage && (
+                      <DeleteWithPasswordDialog
+                        title={`Hapus Asset "${equipment.name}"?`}
+                        description="Semua work order, tugas, BOM, dan riwayat pemasangan part di asset ini akan ikut terhapus permanen. Tindakan ini tidak bisa dibatalkan."
+                        onConfirm={(password) => deleteEquipment(equipment.id, password)}
+                        onSuccess={() => {
+                          queryClient.invalidateQueries({ queryKey: ['outside-line-equipment', activeBranchId] })
+                        }}
+                        trigger={
+                          <Button variant="ghost" size="icon-xs" aria-label="Hapus Asset" title="Hapus Asset">
+                            <Trash2 />
+                          </Button>
+                        }
+                      />
+                    )
+                  }
+                />
+              ))
+            )}
+          </div>
+        </div>
+      )}
 
       {/* Mesin (30%) | Equipment (30%) | Part terpasang (40%) */}
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-[3fr_3fr_4fr]">

@@ -31,3 +31,25 @@ export async function updateEquipment(id: number, payload: Partial<EquipmentPayl
 export async function deleteEquipment(id: number, password: string): Promise<void> {
   await apiClient.delete(`/equipment/${id}`, { data: { password } })
 }
+
+// --- Phase 3B "Asset Outside Line" ---
+
+/** No `machine_id` (there is none) and no `code` — system-generated from `name`, same policy as production Equipment. */
+export interface OutsideLineEquipmentPayload {
+  name: string
+  category?: string | null
+  is_active?: boolean
+}
+
+export async function fetchOutsideLineEquipment(branchId: number): Promise<Equipment[]> {
+  const { data } = await apiClient.get<{ data: Equipment[] }>(`/branches/${branchId}/equipment`)
+  return data.data
+}
+
+export async function createOutsideLineEquipment(
+  branchId: number,
+  payload: OutsideLineEquipmentPayload,
+): Promise<Equipment> {
+  const { data } = await apiClient.post<{ data: Equipment }>(`/branches/${branchId}/equipment`, payload)
+  return data.data
+}
