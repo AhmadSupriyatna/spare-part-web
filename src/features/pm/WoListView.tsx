@@ -15,6 +15,16 @@ const statusLabels: Record<TaskStatus, string> = {
   cancelled: 'Dibatalkan',
 }
 
+/** Phase 3B Step 4 — only shown for a task still Pending, since IN_WO/NEED_PLANNING stop mattering once work starts or finishes. */
+function planningBadge(task: Task) {
+  if (task.status !== 'pending') return null
+  return task.planning_state === 'in_wo' ? (
+    <Badge variant="outline">Dalam WO</Badge>
+  ) : (
+    <Badge variant="warning">Perlu Rencana</Badge>
+  )
+}
+
 interface WoListViewProps {
   tasks: Task[] | undefined
   isLoading: boolean
@@ -52,6 +62,7 @@ export function WoListView({ tasks, isLoading, onSelect }: WoListViewProps) {
             <TableHead>Tanggal</TableHead>
             <TableHead>Sumber</TableHead>
             <TableHead>Status</TableHead>
+            <TableHead>Perencanaan</TableHead>
             <TableHead className="text-right">Aksi</TableHead>
           </TableRow>
         </TableHeader>
@@ -79,6 +90,7 @@ export function WoListView({ tasks, isLoading, onSelect }: WoListViewProps) {
                     : statusLabels[task.status]}
                 </Badge>
               </TableCell>
+              <TableCell>{planningBadge(task)}</TableCell>
               <TableCell className="text-right">
                 <Button
                   variant="ghost"

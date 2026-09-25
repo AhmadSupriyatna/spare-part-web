@@ -1,5 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { CalendarDays, ChevronLeft, ChevronRight, History, List, Plus, Wrench } from 'lucide-react'
+import { CalendarDays, ChevronLeft, ChevronRight, ClipboardCheck, History, List, Plus, Wrench } from 'lucide-react'
 import { useMemo, useState } from 'react'
 import { useSearchParams } from 'react-router'
 import { toast } from 'sonner'
@@ -7,6 +7,7 @@ import { FindingActionView } from '@/features/findings/FindingActionView'
 import { MaintenanceHistoryView } from '@/features/maintenance-history/MaintenanceHistoryView'
 import { fetchNationalHolidays, fetchTaskRescheduleHistory } from '@/features/pm/api'
 import { PartLifetimePanel } from '@/features/pm/PartLifetimePanel'
+import { PmPlanningView } from '@/features/pm/PmPlanningView'
 import { RescheduleReasonDialog } from '@/features/pm/RescheduleReasonDialog'
 import { taskChipVariant, taskSource } from '@/features/pm/taskColors'
 import { TaskDetailSheet } from '@/features/pm/TaskDetailSheet'
@@ -28,7 +29,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 const WEEKDAYS = ['Sen', 'Sel', 'Rab', 'Kam', 'Jum', 'Sab', 'Min']
 const VISIBLE_TASKS_PER_DAY = 3
 
-type MaintenanceView = 'calendar' | 'list' | 'repair' | 'history' | 'findings'
+type MaintenanceView = 'calendar' | 'list' | 'planning' | 'repair' | 'history' | 'findings'
 
 export function MaintenancePage() {
   const activeBranchId = useBranchStore((state) => state.activeBranchId)
@@ -36,7 +37,11 @@ export function MaintenancePage() {
   const [searchParams, setSearchParams] = useSearchParams()
   const tabParam = searchParams.get('tab')
   const view: MaintenanceView =
-    tabParam === 'list' || tabParam === 'repair' || tabParam === 'history' || tabParam === 'findings'
+    tabParam === 'list' ||
+    tabParam === 'planning' ||
+    tabParam === 'repair' ||
+    tabParam === 'history' ||
+    tabParam === 'findings'
       ? tabParam
       : 'calendar'
   function setView(next: MaintenanceView) {
@@ -186,6 +191,10 @@ export function MaintenancePage() {
             <List className="size-3.5" />
             WO
           </Button>
+          <Button variant={view === 'planning' ? 'default' : 'ghost'} size="sm" onClick={() => setView('planning')}>
+            <ClipboardCheck className="size-3.5" />
+            Perencanaan
+          </Button>
           <Button variant={view === 'repair' ? 'default' : 'ghost'} size="sm" onClick={() => setView('repair')}>
             <Wrench className="size-3.5" />
             Repair Part
@@ -203,6 +212,8 @@ export function MaintenancePage() {
       </div>
 
       {view === 'list' && <WoListView tasks={tasks} isLoading={tasksLoading} onSelect={setDetailTask} />}
+
+      {view === 'planning' && <PmPlanningView branchId={activeBranchId} />}
 
       {view === 'repair' && <RepairBoard branchId={activeBranchId} />}
 

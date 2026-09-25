@@ -65,9 +65,35 @@ export interface WorkOrder {
 
 export type TaskStatus = 'pending' | 'in_progress' | 'completed' | 'cancelled'
 
+/** NEED_PLANNING/IN_WO (Phase 3B Step 4) or the task's own terminal status verbatim — see Task::planningState() on the backend. */
+export type TaskPlanningState = 'need_planning' | 'in_wo' | 'completed' | 'cancelled'
+
+export type MaintenanceWorkOrderStatus = 'planning' | 'ready' | 'in_progress' | 'completed'
+
+/**
+ * Phase 3B Step 4's PM planning layer — one WO groups several Tasks.
+ * Deliberately a different concept from the legacy `WorkOrder` type above
+ * (a pre-Task-Library recurring recipe, unused by any current UI).
+ */
+export interface MaintenanceWorkOrder {
+  id: number
+  branch_id: number
+  line_id: number | null
+  line_name?: string | null
+  planned_date: string | null
+  status: MaintenanceWorkOrderStatus
+  created_by: number | null
+  created_by_name?: string | null
+  task_count?: number
+  tasks?: Task[]
+  created_at: string
+}
+
 export interface Task {
   id: number
   work_order_id: number | null
+  maintenance_work_order_id: number | null
+  planning_state: TaskPlanningState
   task_library_id: number | null
   equipment_id: number
   equipment_name?: string
