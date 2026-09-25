@@ -13,6 +13,13 @@ import { Label } from '@/components/ui/label'
 const lineSchema = z.object({
   code: z.string().min(1, 'Kode wajib diisi').max(50),
   name: z.string().min(1, 'Nama wajib diisi').max(255),
+  avg_weekly_operating_hours: z
+    .string()
+    .optional()
+    .refine(
+      (val) => !val || (Number.isInteger(Number(val)) && Number(val) >= 1 && Number(val) <= 168),
+      'Harus angka bulat 1-168',
+    ),
 })
 
 type LineFormValues = z.infer<typeof lineSchema>
@@ -47,16 +54,32 @@ export function LineFormDialog({ branchId, line, trigger, open: openProp, onOpen
     formState: { errors, isDirty },
   } = useForm<LineFormValues>({
     resolver: zodResolver(lineSchema),
-    defaultValues: { code: line?.code ?? '', name: line?.name ?? '' },
+    defaultValues: {
+      code: line?.code ?? '',
+      name: line?.name ?? '',
+      avg_weekly_operating_hours: line?.avg_weekly_operating_hours ? String(line.avg_weekly_operating_hours) : '',
+    },
   })
 
   useEffect(() => {
-    if (open) reset({ code: line?.code ?? '', name: line?.name ?? '' })
+    if (open) {
+      reset({
+        code: line?.code ?? '',
+        name: line?.name ?? '',
+        avg_weekly_operating_hours: line?.avg_weekly_operating_hours ? String(line.avg_weekly_operating_hours) : '',
+      })
+    }
   }, [open, line, reset])
 
   const mutation = useMutation({
-    mutationFn: (values: LineFormValues) =>
-      isEdit ? updateLine(line!.id, values) : createLine(branchId, values),
+    mutationFn: (values: LineFormValues) => {
+      const payload = {
+        code: values.code,
+        name: values.name,
+        avg_weekly_operating_hours: values.avg_weekly_operating_hours ? Number(values.avg_weekly_operating_hours) : null,
+      }
+      return isEdit ? updateLine(line!.id, payload) : createLine(branchId, payload)
+    },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['lines', branchId] })
       toast.success(isEdit ? 'Line berhasil diperbarui.' : 'Line berhasil ditambahkan.')
@@ -85,6 +108,20 @@ export function LineFormDialog({ branchId, line, trigger, open: openProp, onOpen
         <Label htmlFor="name">Nama</Label>
         <Input id="name" {...register('name')} />
         {errors.name && <p className="text-sm text-destructive">{errors.name.message}</p>}
+      </div>
+      <div className="flex flex-col gap-2">
+        <Label htmlFor="avg_weekly_operating_hours">Rata-rata Jam Operasi/Minggu (opsional)</Label>
+        <Input
+          id="avg_weekly_operating_hours"
+          type="number"
+          min={1}
+          max={168}
+          placeholder="Ikuti default perusahaan jika kosong"
+          {...register('avg_weekly_operating_hours')}
+        />
+        {errors.avg_weekly_operating_hours && (
+          <p className="text-sm text-destructive">{errors.avg_weekly_operating_hours.message}</p>
+        )}
       </div>
     </FormSheet>
   )

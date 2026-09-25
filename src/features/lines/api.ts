@@ -5,6 +5,8 @@ import type { PaginatedResponse } from '@/types/inventory'
 export interface LinePayload {
   code: string
   name: string
+  /** Overrides the company-wide default (Settings) for this line's Life Based due-date/budget projections. null/omitted falls back to that default. */
+  avg_weekly_operating_hours?: number | null
   is_active?: boolean
 }
 

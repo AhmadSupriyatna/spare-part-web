@@ -1,5 +1,5 @@
 import { apiClient } from '@/lib/api-client'
-import type { MaintenanceWorkOrder, Task } from '@/types/tasks'
+import type { Task } from '@/types/tasks'
 
 export interface TaskPayload {
   title: string
@@ -94,29 +94,4 @@ export async function rescheduleTask(id: number, dueDate: string, reason?: strin
 
 export async function deleteTask(id: number): Promise<void> {
   await apiClient.delete(`/tasks/${id}`)
-}
-
-// --- Phase 3B Step 4: PM planning layer (grouping Tasks into a WO) ---
-
-export async function fetchTasksNeedingPlanning(branchId: number): Promise<Task[]> {
-  const { data } = await apiClient.get<{ data: Task[] }>(`/branches/${branchId}/tasks-needing-planning`)
-  return data.data
-}
-
-export async function fetchMaintenanceWorkOrders(branchId: number): Promise<MaintenanceWorkOrder[]> {
-  const { data } = await apiClient.get<{ data: MaintenanceWorkOrder[] }>(`/branches/${branchId}/maintenance-work-orders`)
-  return data.data
-}
-
-export async function createMaintenanceWorkOrder(branchId: number, taskIds: number[]): Promise<MaintenanceWorkOrder> {
-  const { data } = await apiClient.post<{ data: MaintenanceWorkOrder }>(
-    `/branches/${branchId}/maintenance-work-orders`,
-    { task_ids: taskIds },
-  )
-  return data.data
-}
-
-export async function markMaintenanceWorkOrderReady(id: number): Promise<MaintenanceWorkOrder> {
-  const { data } = await apiClient.post<{ data: MaintenanceWorkOrder }>(`/maintenance-work-orders/${id}/mark-ready`)
-  return data.data
 }
