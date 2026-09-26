@@ -7,7 +7,6 @@ import { RepairCompleteDialog } from '@/features/part-repairs/RepairCompleteDial
 import { RepairDecisionDialog } from '@/features/part-repairs/RepairDecisionDialog'
 import { RepairEditDialog } from '@/features/part-repairs/RepairEditDialog'
 import { RepairHistoryList } from '@/features/part-repairs/RepairHistoryList'
-import { RepairScrapList } from '@/features/part-repairs/RepairScrapList'
 import { useCanManage, useIsSuperadmin } from '@/stores/use-has-role'
 import { cn } from '@/lib/utils'
 import type { PartRepair, PartRepairDisposition } from '@/types/relations'
@@ -92,14 +91,7 @@ export function RepairBoard({ branchId }: RepairBoardProps) {
   })
 
   const byColumn = new Map<PartRepairDisposition, PartRepair[]>(COLUMNS.map((c) => [c.key, []]))
-  const scrapped: PartRepair[] = []
-  repairs?.forEach((repair) => {
-    if (repair.disposition === 'scrapped') {
-      scrapped.push(repair)
-      return
-    }
-    byColumn.get(repair.disposition)?.push(repair)
-  })
+  repairs?.forEach((repair) => byColumn.get(repair.disposition)?.push(repair))
 
   function handleDropOnColumn(column: PartRepairDisposition) {
     setDragOverColumn(null)
@@ -176,14 +168,13 @@ export function RepairBoard({ branchId }: RepairBoardProps) {
         })}
       </div>
 
-      <RepairScrapList
-        repairs={scrapped}
+      <RepairHistoryList
+        repairs={repairs}
+        isLoading={isLoading}
         isSuperadmin={isSuperadmin}
         onEdit={setEditFor}
         onDelete={(repair) => deleteMutation.mutate(repair.id)}
       />
-
-      <RepairHistoryList repairs={repairs} isLoading={isLoading} />
 
       <RepairDecisionDialog
         repair={decisionFor}

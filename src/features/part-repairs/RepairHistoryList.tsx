@@ -1,7 +1,18 @@
-import { History, Printer } from 'lucide-react'
+import { History, Pencil, Printer, Trash2 } from 'lucide-react'
 import { useState } from 'react'
 import { useNavigate } from 'react-router'
 import type { PartRepair, PartRepairDisposition } from '@/types/relations'
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from '@/components/ui/alert-dialog'
 import { EmptyState } from '@/components/EmptyState'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -26,17 +37,22 @@ const dispositionVariants: Record<PartRepairDisposition, 'secondary' | 'warning'
 interface RepairHistoryListProps {
   repairs: PartRepair[] | undefined
   isLoading: boolean
+  isSuperadmin: boolean
+  onEdit: (repair: PartRepair) => void
+  onDelete: (repair: PartRepair) => void
 }
 
 /**
  * Riwayat Perbaikan — every part ever pulled off equipment in this branch,
  * regardless of current disposition (the kanban above only shows the
  * still-open ones). Merges what used to be a separate "Maintenance History"
- * tab: answers part, where/when it was removed from, when it was
- * scrapped/repaired, repair cost, current status, and by whom — reuses the
- * same `repairs` RepairBoard already fetched instead of a second request.
+ * tab AND the separate "Dibuang" scrapped list (same underlying PartRepair
+ * data shown twice) into this one table: part, where/when removed, when
+ * scrapped/repaired, repair cost, current status, by whom, and — Superadmin
+ * only — the same Edit/"Batalkan pelepasan" corrections the scrapped list
+ * used to offer.
  */
-export function RepairHistoryList({ repairs, isLoading }: RepairHistoryListProps) {
+export function RepairHistoryList({ repairs, isLoading, isSuperadmin, onEdit, onDelete }: RepairHistoryListProps) {
   const navigate = useNavigate()
   const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set())
 
@@ -98,6 +114,7 @@ export function RepairHistoryList({ repairs, isLoading }: RepairHistoryListProps
               <TableHead>Biaya Perbaikan</TableHead>
               <TableHead>Status</TableHead>
               <TableHead>Oleh</TableHead>
+              {isSuperadmin && <TableHead className="text-right">Aksi</TableHead>}
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -131,6 +148,42 @@ export function RepairHistoryList({ repairs, isLoading }: RepairHistoryListProps
                   <Badge variant={dispositionVariants[repair.disposition]}>{dispositionLabels[repair.disposition]}</Badge>
                 </TableCell>
                 <TableCell className="text-muted-foreground">{repair.removed_by_name ?? '-'}</TableCell>
+                {isSuperadmin && (
+                  <TableCell className="text-right">
+                    <div className="flex justify-end gap-1">
+                      <Button size="icon-sm" variant="ghost" title="Edit" aria-label="Edit" onClick={() => onEdit(repair)}>
+                        <Pencil />
+                      </Button>
+                      <AlertDialog>
+                        <AlertDialogTrigger
+                          render={
+                            <Button
+                              size="icon-sm"
+                              variant="ghost"
+                              title="Batalkan pelepasan"
+                              aria-label="Batalkan pelepasan"
+                            >
+                              <Trash2 />
+                            </Button>
+                          }
+                        />
+                        <AlertDialogContent>
+                          <AlertDialogHeader>
+                            <AlertDialogTitle>Batalkan pelepasan part ini?</AlertDialogTitle>
+                            <AlertDialogDescription>
+                              "{repair.part_name}" (Unit {repair.unit_code}) akan dikembalikan terpasang seperti
+                              semula, dan catatan perbaikan ini dihapus. Pakai ini kalau part-nya salah dibuang.
+                            </AlertDialogDescription>
+                          </AlertDialogHeader>
+                          <AlertDialogFooter>
+                            <AlertDialogCancel>Batal</AlertDialogCancel>
+                            <AlertDialogAction onClick={() => onDelete(repair)}>Batalkan Pelepasan</AlertDialogAction>
+                          </AlertDialogFooter>
+                        </AlertDialogContent>
+                      </AlertDialog>
+                    </div>
+                  </TableCell>
+                )}
               </TableRow>
             ))}
           </TableBody>
