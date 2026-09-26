@@ -41,8 +41,8 @@ import { Input } from '@/components/ui/input'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 
-/** repeat(auto-fill, ...) instead of fixed breakpoint columns, so the grid always fills 100% of the width with as many cards as actually fit (3-5+ on a normal screen) rather than being capped at whatever a breakpoint guessed. */
-const CARD_GRID_CLASS = 'grid grid-cols-[repeat(auto-fill,minmax(240px,1fr))] gap-3'
+/** A fixed 4-up grid (25% per card on desktop) per explicit request, rather than a variable auto-fill count. */
+const CARD_GRID_CLASS = 'grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3'
 
 /** A compact icon instead of a text badge — same 3 states, less horizontal room, can't collide with a long part name next to it. */
 function StatusIcon({ stock }: { stock: PartStock }) {

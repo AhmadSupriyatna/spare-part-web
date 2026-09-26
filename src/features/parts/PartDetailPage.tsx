@@ -54,7 +54,7 @@ function monthLabel(month: string): string {
   return MONTH_LABELS[Number(m) - 1] ?? month
 }
 
-/** Thin bars, one hue (primary), rounded top, baseline-anchored, hover for the exact value instead of a number on every bar. */
+/** Thin bars, one hue (primary), rounded top, baseline-anchored — qty shown directly above each bar per request, not hover-only. */
 function MonthlyUsageChart({ data }: { data: { month: string; quantity: number }[] }) {
   const max = Math.max(1, ...data.map((d) => d.quantity))
   const total = data.reduce((sum, d) => sum + d.quantity, 0)
@@ -64,9 +64,10 @@ function MonthlyUsageChart({ data }: { data: { month: string; quantity: number }
   }
 
   return (
-    <div className="flex h-28 items-end gap-1.5">
+    <div className="flex h-32 items-end gap-1.5">
       {data.map((d) => (
-        <div key={d.month} className="flex flex-1 flex-col items-center gap-1">
+        <div key={d.month} className="flex flex-1 flex-col items-center gap-0.5">
+          <span className="text-[10px] font-medium tabular-nums text-foreground">{d.quantity > 0 ? d.quantity : ''}</span>
           <div className="flex h-20 w-full items-end" title={`${monthLabel(d.month)}: ${d.quantity} unit terpakai`}>
             <div
               className={cn('w-full rounded-t', d.quantity > 0 ? 'bg-primary' : 'bg-muted')}
@@ -333,7 +334,19 @@ export function PartDetailPage() {
           <StatTile
             label="Rata-rata Umur Pakai (jam)"
             value={analytics?.average_lifetime_hours != null ? String(analytics.average_lifetime_hours) : '-'}
-            sub={analytics ? `Dari ${analytics.installations_sampled} pemasangan tercatat` : undefined}
+            sub={(() => {
+              if (!analytics) return undefined
+              const base = `Dari ${analytics.installations_sampled} pemasangan tercatat`
+              if (
+                part.replacement_strategy === 'life_based' &&
+                part.estimated_lifetime_hours &&
+                analytics.average_lifetime_hours != null
+              ) {
+                const pct = Math.round((analytics.average_lifetime_hours / part.estimated_lifetime_hours) * 100)
+                return `${base} · ${pct}% dari estimasi ${part.estimated_lifetime_hours} jam`
+              }
+              return base
+            })()}
           />
           <StatTile
             label="Failure / Breakdown"

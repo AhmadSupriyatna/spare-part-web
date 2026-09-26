@@ -4,6 +4,8 @@ import { useState } from 'react'
 import { fetchStockLedgerReport } from '@/features/part-stocks/api'
 import { fetchLines } from '@/features/lines/api'
 import { fetchParts } from '@/features/parts/api'
+import { fetchCompanySetting } from '@/features/settings/api'
+import { useAuthStore } from '@/stores/auth-store'
 import { cn } from '@/lib/utils'
 import { EmptyState } from '@/components/EmptyState'
 import { Badge } from '@/components/ui/badge'
@@ -45,6 +47,8 @@ export function StockLedgerTab({ branchId }: { branchId: number }) {
 
   const { data: parts } = useQuery({ queryKey: ['parts'], queryFn: fetchParts })
   const { data: lines } = useQuery({ queryKey: ['lines', branchId], queryFn: () => fetchLines(branchId) })
+  const { data: companySetting } = useQuery({ queryKey: ['settings', 'company'], queryFn: fetchCompanySetting })
+  const activeBranch = useAuthStore((state) => state.user?.branches.find((b) => b.id === branchId))
 
   const { data: entries, isLoading } = useQuery({
     queryKey: ['stock-ledger-report', branchId, from, to, partFilter, lineFilter],
@@ -86,6 +90,14 @@ export function StockLedgerTab({ branchId }: { branchId: number }) {
 
   return (
     <div className="flex flex-col gap-4">
+      <style>{`
+        @media print {
+          body * { visibility: hidden; }
+          #ledger-print-report, #ledger-print-report * { visibility: visible; }
+          #ledger-print-report { position: absolute; inset: 0; padding: 16px; }
+        }
+      `}</style>
+
       <div className="flex flex-wrap items-end gap-3 print:hidden">
         <div className="flex flex-col gap-1.5">
           <Label htmlFor="ledger-from">Dari Tanggal</Label>
@@ -149,7 +161,7 @@ export function StockLedgerTab({ branchId }: { branchId: number }) {
       ) : !entries || entries.length === 0 ? (
         <EmptyState icon={ClipboardList} title="Tidak ada transaksi pada rentang ini" />
       ) : (
-        <Table>
+        <Table className="print:hidden">
           <TableHeader>
             <TableRow>
               <TableHead>Tanggal</TableHead>
@@ -202,6 +214,70 @@ export function StockLedgerTab({ branchId }: { branchId: number }) {
             ))}
           </TableBody>
         </Table>
+      )}
+
+      {/* Print-only — a proper report layout (company header, date range, one wide table) instead of just printing the on-screen filters+table as-is. */}
+      {entries && entries.length > 0 && (
+        <div id="ledger-print-report" className="hidden flex-col gap-3 text-sm print:flex">
+          <div className="flex items-center justify-between border-b pb-3">
+            <div className="flex items-center gap-2">
+              {companySetting?.logo_url ? (
+                <img src={companySetting.logo_url} alt="" className="h-10 w-auto object-contain" />
+              ) : (
+                <div className="flex h-10 w-10 items-center justify-center rounded border border-dashed text-[9px] text-muted-foreground">
+                  Logo
+                </div>
+              )}
+              <div>
+                <p className="font-semibold">{companySetting?.name ?? 'Nama Perusahaan'}</p>
+                <p className="text-xs text-muted-foreground">
+                  {activeBranch ? `${activeBranch.code} — ${activeBranch.name}` : ''}
+                </p>
+              </div>
+            </div>
+            <div className="text-right">
+              <p className="font-semibold uppercase tracking-wide">Laporan Ledger Stok</p>
+              <p className="text-xs text-muted-foreground">
+                {new Date(from).toLocaleDateString('id-ID')} — {new Date(to).toLocaleDateString('id-ID')}
+              </p>
+            </div>
+          </div>
+
+          <table className="w-full border-collapse text-left text-xs">
+            <thead>
+              <tr className="border-b">
+                <th className="py-1.5">Tanggal</th>
+                <th className="py-1.5">Part</th>
+                <th className="py-1.5">Line / Equipment</th>
+                <th className="py-1.5">Jalur</th>
+                <th className="py-1.5 text-right">Perubahan</th>
+                <th className="py-1.5 text-right">Saldo</th>
+                <th className="py-1.5">Catatan</th>
+                <th className="py-1.5">Oleh</th>
+              </tr>
+            </thead>
+            <tbody>
+              {entries.map((entry) => (
+                <tr key={entry.id} className="border-b align-top">
+                  <td className="py-1.5">{new Date(entry.occurred_at).toLocaleString('id-ID', { dateStyle: 'medium', timeStyle: 'short' })}</td>
+                  <td className="py-1.5">
+                    {entry.part_name}
+                    <div className="font-mono text-[10px] text-muted-foreground">{entry.item_master_no}</div>
+                  </td>
+                  <td className="py-1.5">
+                    {entry.line_name ?? '-'}
+                    {entry.equipment_name && <div className="text-[10px] text-muted-foreground">{entry.equipment_name}</div>}
+                  </td>
+                  <td className="py-1.5">{entry.channel}</td>
+                  <td className="py-1.5 text-right">{entry.quantity_change > 0 ? `+${entry.quantity_change}` : entry.quantity_change}</td>
+                  <td className="py-1.5 text-right">{entry.balance_after}</td>
+                  <td className="py-1.5">{entry.notes ?? '-'}</td>
+                  <td className="py-1.5">{entry.user_name ?? '-'}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
       )}
     </div>
   )

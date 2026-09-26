@@ -117,15 +117,15 @@ export function PartQrBulkPrintDialog({ parts, stocks, branchId, trigger }: Part
       </Dialog>
 
       {printEntries && (
-        <div id="inventory-qr-print-area" className="hidden flex-col gap-2 print:flex">
+        <div id="inventory-qr-print-area" className="hidden grid-cols-2 gap-3 print:grid">
           {printEntries.map((entry, index) => {
             const stock = stockByPartId.get(entry.part.id)
             return (
               <div
                 key={`${entry.part.id}-${entry.copy}-${index}`}
-                className="flex items-center gap-3 rounded-md border p-2 break-inside-avoid"
+                className="flex items-center gap-2 rounded-md border p-2 break-inside-avoid"
               >
-                <QRCodeSVG value={`${scanBaseUrl}/${entry.part.id}/${branchId}`} size={72} className="shrink-0" />
+                <QRCodeSVG value={`${scanBaseUrl}/${entry.part.id}/${branchId}`} size={64} className="shrink-0" />
                 <div className="min-w-0 flex-1">
                   <div className="mb-1 flex items-center gap-1.5">
                     {companySetting?.logo_url ? (
