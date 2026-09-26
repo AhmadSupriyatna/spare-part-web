@@ -1,5 +1,20 @@
 import { useQuery } from '@tanstack/react-query'
-import { Boxes, History, MapPin, PackagePlus, Pencil, Plus, QrCode, Search, SlidersHorizontal, Truck } from 'lucide-react'
+import {
+  Boxes,
+  CircleAlert,
+  CircleCheck,
+  History,
+  MapPin,
+  PackagePlus,
+  Pencil,
+  Plus,
+  Printer,
+  QrCode,
+  Search,
+  SlidersHorizontal,
+  TriangleAlert,
+  Truck,
+} from 'lucide-react'
 import { useMemo, useState } from 'react'
 import { Link } from 'react-router'
 import { AdjustStockDialog } from '@/features/part-stocks/AdjustStockDialog'
@@ -26,13 +41,30 @@ import { Input } from '@/components/ui/input'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 
-/** repeat(auto-fill, ...) instead of fixed breakpoint columns, so the grid always fills 100% of the width with as many cards as actually fit, rather than being capped at whatever a breakpoint guessed. */
-const CARD_GRID_CLASS = 'grid grid-cols-[repeat(auto-fill,minmax(300px,1fr))] gap-3'
+/** repeat(auto-fill, ...) instead of fixed breakpoint columns, so the grid always fills 100% of the width with as many cards as actually fit (3-5+ on a normal screen) rather than being capped at whatever a breakpoint guessed. */
+const CARD_GRID_CLASS = 'grid grid-cols-[repeat(auto-fill,minmax(240px,1fr))] gap-3'
 
-function statusBadge(stock: PartStock) {
-  if (stock.is_critical) return <Badge variant="destructive">Kritis</Badge>
-  if (stock.is_warning) return <Badge variant="warning">Peringatan</Badge>
-  return <Badge variant="success">Normal</Badge>
+/** A compact icon instead of a text badge — same 3 states, less horizontal room, can't collide with a long part name next to it. */
+function StatusIcon({ stock }: { stock: PartStock }) {
+  if (stock.is_critical) {
+    return (
+      <span title="Kritis" aria-label="Kritis" className="shrink-0 text-destructive">
+        <CircleAlert className="size-5" />
+      </span>
+    )
+  }
+  if (stock.is_warning) {
+    return (
+      <span title="Peringatan" aria-label="Peringatan" className="shrink-0 text-warning">
+        <TriangleAlert className="size-5" />
+      </span>
+    )
+  }
+  return (
+    <span title="Normal" aria-label="Normal" className="shrink-0 text-success">
+      <CircleCheck className="size-5" />
+    </span>
+  )
 }
 
 interface StockCardProps {
@@ -62,22 +94,20 @@ function StockCard({ stock, part, branchId, canManage, selected, onToggleSelect 
         isActive && 'border-primary bg-primary/5',
       )}
     >
-      <div className="flex items-start justify-between gap-2">
-        <div className="flex min-w-0 items-start gap-2">
-          <Checkbox
-            checked={selected}
-            onCheckedChange={onToggleSelect}
-            aria-label={`Pilih ${part?.name ?? stock.part_name}`}
-            className="mt-0.5 shrink-0"
-          />
-          <div className="min-w-0">
-            <Link to={`/parts/${stock.part_id}`} className="truncate font-medium hover:underline">
-              {part?.name ?? stock.part_name}
-            </Link>
-            <p className="font-mono text-xs text-muted-foreground">{part?.item_master_no ?? stock.item_master_no}</p>
-          </div>
+      <div className="flex min-w-0 items-start gap-2">
+        <Checkbox
+          checked={selected}
+          onCheckedChange={onToggleSelect}
+          aria-label={`Pilih ${part?.name ?? stock.part_name}`}
+          className="mt-0.5 shrink-0"
+        />
+        <div className="min-w-0 flex-1">
+          <Link to={`/parts/${stock.part_id}`} className="block truncate font-medium hover:underline">
+            {part?.name ?? stock.part_name}
+          </Link>
+          <p className="truncate font-mono text-xs text-muted-foreground">{part?.item_master_no ?? stock.item_master_no}</p>
         </div>
-        {statusBadge(stock)}
+        <StatusIcon stock={stock} />
       </div>
 
       {part?.description && <p className="line-clamp-2 text-xs text-muted-foreground">{part.description}</p>}
@@ -162,6 +192,18 @@ function StockCard({ stock, part, branchId, canManage, selected, onToggleSelect 
                 </Button>
               }
             />
+            {part && (
+              <PartQrBulkPrintDialog
+                parts={[part]}
+                stocks={[stock]}
+                branchId={branchId}
+                trigger={
+                  <Button variant="ghost" size="icon-sm" aria-label="Cetak QR" title="Cetak QR">
+                    <Printer />
+                  </Button>
+                }
+              />
+            )}
           </div>
         ) : (
           <span />
@@ -266,9 +308,14 @@ function InventoryWorkspace({ activeBranchId }: { activeBranchId: number }) {
     })
   }
 
+  const stockByPartId = useMemo(() => new Map(stocks?.map((stock) => [stock.part_id, stock])), [stocks])
+
   const selectedParts = Array.from(selectedIds)
     .map((id) => partById.get(id))
     .filter((part): part is Part => !!part)
+  const selectedStocks = selectedParts
+    .map((part) => stockByPartId.get(part.id))
+    .filter((stock): stock is PartStock => !!stock)
 
   return (
     <div className="flex flex-col gap-3">
@@ -284,6 +331,7 @@ function InventoryWorkspace({ activeBranchId }: { activeBranchId: number }) {
         </div>
         <PartQrBulkPrintDialog
           parts={selectedParts}
+          stocks={selectedStocks}
           branchId={activeBranchId}
           trigger={
             <Button variant="outline" disabled={selectedParts.length === 0}>

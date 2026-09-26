@@ -109,3 +109,17 @@ export async function fetchPartStockReservations(id: number): Promise<PartReserv
   const { data } = await apiClient.get<{ data: PartReservation[] }>(`/part-stocks/${id}/reservations`)
   return data.data
 }
+
+export interface PartStockAnalytics {
+  monthly_usage: { month: string; quantity: number }[]
+  line_machine_heatmap: { line_name: string; machine_name: string; count: number }[]
+  failure_breakdown_count: number
+  average_lifetime_hours: number | null
+  installations_sampled: number
+}
+
+/** Part Detail's info-card dashboard — bundled instead of 4 separate requests. */
+export async function fetchPartStockAnalytics(id: number): Promise<PartStockAnalytics> {
+  const { data } = await apiClient.get<{ data: PartStockAnalytics }>(`/part-stocks/${id}/analytics`)
+  return data.data
+}

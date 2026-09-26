@@ -1,10 +1,10 @@
+import { useQuery } from '@tanstack/react-query'
 import { Printer } from 'lucide-react'
 import { QRCodeSVG } from 'qrcode.react'
 import { useEffect, useState } from 'react'
 import { fetchCompanySetting } from '@/features/settings/api'
-import { useQuery } from '@tanstack/react-query'
 import { useAuthStore } from '@/stores/auth-store'
-import type { Part } from '@/types/inventory'
+import type { Part, PartStock } from '@/types/inventory'
 import { Button } from '@/components/ui/button'
 import {
   Dialog,
@@ -19,24 +19,28 @@ import { Input } from '@/components/ui/input'
 
 interface PartQrBulkPrintDialogProps {
   parts: Part[]
+  /** Matched to `parts` by part_id — only used to print the location alongside each QR; omit where there's no stock context. */
+  stocks?: PartStock[]
   branchId: number
   trigger: React.ReactNode
 }
 
 /**
- * Inventory Workspace's "Cetak QR Terpilih (N)" — same QR-per-part-per-
- * branch target (`/breakdown/scan/:partId/:branchId`) as
- * PartQrPrintSection, but for a fixed set of already-checkbox-selected
- * parts instead of that page's own search+select UI, so it's a separate,
- * smaller component rather than reusing that one directly.
+ * Inventory Workspace's "Cetak QR Terpilih (N)" (and the per-card single-
+ * part Print button) — same QR-per-part-per-branch target
+ * (`/breakdown/scan/:partId/:branchId`) as PartQrPrintSection, but a
+ * landscape row per label (QR left, Item Master/description/location
+ * right) instead of that page's stacked square card, and for a fixed set
+ * of already-selected parts instead of its own search+select UI.
  */
-export function PartQrBulkPrintDialog({ parts, branchId, trigger }: PartQrBulkPrintDialogProps) {
+export function PartQrBulkPrintDialog({ parts, stocks, branchId, trigger }: PartQrBulkPrintDialogProps) {
   const [quantityDialogOpen, setQuantityDialogOpen] = useState(false)
   const [quantities, setQuantities] = useState<Record<number, string>>({})
   const [printEntries, setPrintEntries] = useState<{ part: Part; copy: number }[] | null>(null)
 
   const branches = useAuthStore((state) => state.user?.branches ?? [])
   const activeBranch = branches.find((b) => b.id === branchId)
+  const stockByPartId = new Map(stocks?.map((stock) => [stock.part_id, stock]))
 
   const { data: companySetting } = useQuery({
     queryKey: ['settings', 'company'],
@@ -75,7 +79,7 @@ export function PartQrBulkPrintDialog({ parts, branchId, trigger }: PartQrBulkPr
         @media print {
           body * { visibility: hidden; }
           #inventory-qr-print-area, #inventory-qr-print-area * { visibility: visible; }
-          #inventory-qr-print-area { position: absolute; inset: 0; padding: 8px; }
+          #inventory-qr-print-area { position: absolute; inset: 0; padding: 12px; }
         }
       `}</style>
 
@@ -113,30 +117,41 @@ export function PartQrBulkPrintDialog({ parts, branchId, trigger }: PartQrBulkPr
       </Dialog>
 
       {printEntries && (
-        <div id="inventory-qr-print-area" className="hidden grid-cols-3 gap-3 print:grid">
-          {printEntries.map((entry, index) => (
-            <div
-              key={`${entry.part.id}-${entry.copy}-${index}`}
-              className="flex flex-col items-center gap-1 rounded-md border p-2 text-center break-inside-avoid"
-            >
-              <div className="flex w-full items-center justify-center gap-1 border-b pb-1">
-                {companySetting?.logo_url ? (
-                  <img src={companySetting.logo_url} alt="" className="h-5 w-auto max-w-6 object-contain" />
-                ) : (
-                  <div className="flex size-5 items-center justify-center rounded border border-dashed text-[6px] text-muted-foreground">
-                    Logo
+        <div id="inventory-qr-print-area" className="hidden flex-col gap-2 print:flex">
+          {printEntries.map((entry, index) => {
+            const stock = stockByPartId.get(entry.part.id)
+            return (
+              <div
+                key={`${entry.part.id}-${entry.copy}-${index}`}
+                className="flex items-center gap-3 rounded-md border p-2 break-inside-avoid"
+              >
+                <QRCodeSVG value={`${scanBaseUrl}/${entry.part.id}/${branchId}`} size={72} className="shrink-0" />
+                <div className="min-w-0 flex-1">
+                  <div className="mb-1 flex items-center gap-1.5">
+                    {companySetting?.logo_url ? (
+                      <img src={companySetting.logo_url} alt="" className="h-4 w-auto max-w-5 object-contain" />
+                    ) : (
+                      <div className="flex size-4 items-center justify-center rounded border border-dashed text-[5px] text-muted-foreground">
+                        Logo
+                      </div>
+                    )}
+                    <p className="text-[9px] leading-none text-muted-foreground">
+                      {companySetting?.name ?? 'Nama Perusahaan'}
+                      {activeBranch ? ` · ${activeBranch.code}` : ''}
+                    </p>
                   </div>
-                )}
-                <p className="text-[9px] leading-none font-semibold">{companySetting?.name ?? 'Nama Perusahaan'}</p>
+                  <p className="truncate text-sm font-semibold">{entry.part.name}</p>
+                  <p className="font-mono text-xs text-muted-foreground">{entry.part.item_master_no}</p>
+                  {entry.part.description && (
+                    <p className="truncate text-xs text-muted-foreground">{entry.part.description}</p>
+                  )}
+                  <p className="text-xs text-muted-foreground">
+                    Lokasi: {stock?.location_code ?? '-'}
+                  </p>
+                </div>
               </div>
-              <p className="text-[8px] leading-none text-muted-foreground">
-                {activeBranch ? `${activeBranch.code} — ${activeBranch.name}` : ''}
-              </p>
-              <QRCodeSVG value={`${scanBaseUrl}/${entry.part.id}/${branchId}`} size={64} />
-              <p className="text-[10px] leading-tight font-medium">{entry.part.name}</p>
-              <p className="font-mono text-[9px] text-muted-foreground">{entry.part.item_master_no}</p>
-            </div>
-          ))}
+            )
+          })}
         </div>
       )}
     </>
