@@ -6,15 +6,7 @@ import { toast } from 'sonner'
 import { z } from 'zod'
 import { updatePartStockSupplier } from '@/features/part-stocks/api'
 import { fetchSuppliers } from '@/features/suppliers/api'
-import { Button } from '@/components/ui/button'
-import {
-  Dialog,
-  DialogContent,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from '@/components/ui/dialog'
+import { FormSheet } from '@/components/FormSheet'
 import { Label } from '@/components/ui/label'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 
@@ -49,7 +41,7 @@ export function SetPartSupplierDialog({ partStockId, branchId, currentSupplierId
   const {
     control,
     handleSubmit,
-    formState: { errors },
+    formState: { errors, isDirty },
   } = useForm<SetSupplierFormValues>({
     resolver: zodResolver(setSupplierSchema),
     defaultValues: { supplier_id: currentSupplierId ? String(currentSupplierId) : '' },
@@ -67,45 +59,41 @@ export function SetPartSupplierDialog({ partStockId, branchId, currentSupplierId
   })
 
   return (
-    <Dialog open={open} onOpenChange={setOpen}>
-      <DialogTrigger render={trigger as React.ReactElement} />
-      <DialogContent>
-        <DialogHeader>
-          <DialogTitle>Pilih Supplier</DialogTitle>
-        </DialogHeader>
-        <form className="flex flex-col gap-4" onSubmit={handleSubmit((values) => mutation.mutate(values))}>
-          <div className="flex flex-col gap-2">
-            <Label>Supplier</Label>
-            <Controller
-              control={control}
-              name="supplier_id"
-              render={({ field }) => (
-                <Select value={field.value} onValueChange={field.onChange}>
-                  <SelectTrigger>
-                    <SelectValue placeholder={suppliersLoading ? 'Memuat supplier...' : 'Pilih supplier'} />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {suppliers?.map((supplier) => (
-                      <SelectItem key={supplier.id} value={String(supplier.id)}>
-                        {supplier.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              )}
-            />
-            {errors.supplier_id && <p className="text-sm text-destructive">{errors.supplier_id.message}</p>}
-            {suppliers?.length === 0 && !suppliersLoading && (
-              <p className="text-xs text-muted-foreground">Belum ada supplier di plant ini. Tambah dulu lewat menu Supplier.</p>
-            )}
-          </div>
-          <DialogFooter>
-            <Button type="submit" disabled={mutation.isPending}>
-              {mutation.isPending ? 'Menyimpan...' : 'Simpan'}
-            </Button>
-          </DialogFooter>
-        </form>
-      </DialogContent>
-    </Dialog>
+    <FormSheet
+      trigger={trigger}
+      title="Pilih Supplier"
+      open={open}
+      onOpenChange={setOpen}
+      isDirty={isDirty}
+      onSubmit={handleSubmit((values) => mutation.mutate(values))}
+      submitLabel="Simpan"
+      isSubmitting={mutation.isPending}
+    >
+      <div className="flex flex-col gap-2">
+        <Label>Supplier</Label>
+        <Controller
+          control={control}
+          name="supplier_id"
+          render={({ field }) => (
+            <Select value={field.value} onValueChange={field.onChange}>
+              <SelectTrigger>
+                <SelectValue placeholder={suppliersLoading ? 'Memuat supplier...' : 'Pilih supplier'} />
+              </SelectTrigger>
+              <SelectContent>
+                {suppliers?.map((supplier) => (
+                  <SelectItem key={supplier.id} value={String(supplier.id)}>
+                    {supplier.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          )}
+        />
+        {errors.supplier_id && <p className="text-sm text-destructive">{errors.supplier_id.message}</p>}
+        {suppliers?.length === 0 && !suppliersLoading && (
+          <p className="text-xs text-muted-foreground">Belum ada supplier di plant ini. Tambah dulu lewat menu Supplier.</p>
+        )}
+      </div>
+    </FormSheet>
   )
 }

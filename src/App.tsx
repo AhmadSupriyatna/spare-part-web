@@ -16,9 +16,8 @@ import { LocationDetailPage } from '@/features/locations/LocationDetailPage'
 import { LocationsPage } from '@/features/locations/LocationsPage'
 import { PartDetailPage } from '@/features/parts/PartDetailPage'
 import { PartsPage } from '@/features/parts/PartsPage'
-import { PartStockDetailPage } from '@/features/part-stocks/PartStockDetailPage'
 import { InventoryWorkspacePage } from '@/features/part-stocks/InventoryWorkspacePage'
-import { StockInPage } from '@/features/part-stocks/StockInPage'
+import { PartStockDetailPage } from '@/features/part-stocks/PartStockDetailPage'
 import { PartUnitScanPage } from '@/features/part-unit-actions/PartUnitScanPage'
 import { PartUnitDetailPage } from '@/features/part-units/PartUnitDetailPage'
 import { PrintRepairHistoryPage } from '@/features/part-repairs/PrintRepairHistoryPage'
@@ -59,7 +58,6 @@ function App() {
             <Route path="parts/:id" element={<PartDetailPage />} />
             <Route path="stock" element={<InventoryWorkspacePage />} />
             <Route path="stock/:id" element={<PartStockDetailPage />} />
-            <Route path="stock-in" element={<StockInPage />} />
             <Route path="alerts" element={<AlertsPage />} />
             <Route path="branches" element={<BranchesPage />} />
             <Route path="suppliers" element={<SuppliersPage />} />

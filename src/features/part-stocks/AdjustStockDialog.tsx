@@ -5,15 +5,8 @@ import { useForm } from 'react-hook-form'
 import { toast } from 'sonner'
 import { adjustStock } from '@/features/part-stocks/api'
 import { adjustStockSchema, type AdjustStockFormValues } from '@/features/part-stocks/schema'
+import { FormSheet } from '@/components/FormSheet'
 import { Button } from '@/components/ui/button'
-import {
-  Dialog,
-  DialogContent,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from '@/components/ui/dialog'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
@@ -32,7 +25,7 @@ export function AdjustStockDialog({ partStockId, branchId, trigger }: AdjustStoc
     register,
     handleSubmit,
     reset,
-    formState: { errors },
+    formState: { errors, isDirty },
   } = useForm<AdjustStockFormValues>({
     resolver: zodResolver(adjustStockSchema),
   })
@@ -60,42 +53,35 @@ export function AdjustStockDialog({ partStockId, branchId, trigger }: AdjustStoc
   })
 
   return (
-    <Dialog open={open} onOpenChange={setOpen}>
-      <DialogTrigger
-        render={(trigger ?? <Button variant="outline">Sesuaikan Stok</Button>) as React.ReactElement}
-      />
-      <DialogContent>
-        <DialogHeader>
-          <DialogTitle>Penyesuaian Stok</DialogTitle>
-        </DialogHeader>
-        <form className="flex flex-col gap-4" onSubmit={handleSubmit((values) => mutation.mutate(values))}>
-          <div className="flex flex-col gap-2">
-            <Label htmlFor="quantity_change">Jumlah Perubahan</Label>
-            <Input
-              id="quantity_change"
-              type="number"
-              placeholder="Contoh: -5 untuk mengurangi 5 unit"
-              {...register('quantity_change')}
-            />
-            <p className="text-xs text-muted-foreground">
-              Isi negatif untuk mengurangi (rusak/hilang), positif untuk menambah.
-            </p>
-            {errors.quantity_change && (
-              <p className="text-sm text-destructive">{errors.quantity_change.message}</p>
-            )}
-          </div>
-          <div className="flex flex-col gap-2">
-            <Label htmlFor="reason">Alasan</Label>
-            <Textarea id="reason" placeholder="Misal: rusak saat stock opname" {...register('reason')} />
-            {errors.reason && <p className="text-sm text-destructive">{errors.reason.message}</p>}
-          </div>
-          <DialogFooter>
-            <Button type="submit" disabled={mutation.isPending}>
-              {mutation.isPending ? 'Menyimpan...' : 'Simpan'}
-            </Button>
-          </DialogFooter>
-        </form>
-      </DialogContent>
-    </Dialog>
+    <FormSheet
+      trigger={trigger ?? <Button variant="outline">Stock Opname</Button>}
+      title="Stock Opname"
+      description="Sesuaikan jumlah stok berdasarkan hasil hitung fisik."
+      open={open}
+      onOpenChange={setOpen}
+      isDirty={isDirty}
+      onSubmit={handleSubmit((values) => mutation.mutate(values))}
+      submitLabel="Simpan"
+      isSubmitting={mutation.isPending}
+    >
+      <div className="flex flex-col gap-2">
+        <Label htmlFor="quantity_change">Jumlah Perubahan</Label>
+        <Input
+          id="quantity_change"
+          type="number"
+          placeholder="Contoh: -5 untuk mengurangi 5 unit"
+          {...register('quantity_change')}
+        />
+        <p className="text-xs text-muted-foreground">
+          Isi negatif untuk mengurangi (rusak/hilang), positif untuk menambah.
+        </p>
+        {errors.quantity_change && <p className="text-sm text-destructive">{errors.quantity_change.message}</p>}
+      </div>
+      <div className="flex flex-col gap-2">
+        <Label htmlFor="reason">Alasan</Label>
+        <Textarea id="reason" placeholder="Misal: rusak saat stock opname" {...register('reason')} />
+        {errors.reason && <p className="text-sm text-destructive">{errors.reason.message}</p>}
+      </div>
+    </FormSheet>
   )
 }

@@ -158,8 +158,8 @@ export function PartDetailPage() {
                   <TableCell>
                     {stock.is_critical ? (
                       <Badge variant="destructive">Kritis</Badge>
-                    ) : stock.is_below_reorder_point ? (
-                      <Badge variant="warning">Rendah</Badge>
+                    ) : stock.is_warning ? (
+                      <Badge variant="warning">Peringatan</Badge>
                     ) : (
                       <Badge variant="outline">Normal</Badge>
                     )}

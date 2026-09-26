@@ -38,10 +38,16 @@ export interface PartStock {
   reorder_quantity: number
   unit_cost: string
   quantity_on_hand: number
-  /** Not yet subtracted from quantity_on_hand — spoken for by a still-open Task (see PartStockController::attachReservedQuantities()). */
+  /** Not yet subtracted from quantity_on_hand — spoken for by a still-open Task (see PartStockController::attachComputedAttributes()). */
   reserved_quantity: number
-  is_below_reorder_point: boolean
+  /** quantity_on_hand - reserved_quantity, never negative. */
+  available_quantity: number
+  /** How many of this branch's equipment currently have this part installed. */
+  active_installation_count: number
+  /** available_quantity < reserved_quantity — can't cover what's already committed to open WOs. */
   is_critical: boolean
+  /** available_quantity < active_installation_count (and not already critical) — couldn't cover every installed unit failing at once. */
+  is_warning: boolean
 }
 
 export interface Supplier {
