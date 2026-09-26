@@ -1,15 +1,15 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { CalendarDays, ChevronLeft, ChevronRight, History, List, Plus, Wrench } from 'lucide-react'
+import { CalendarDays, ChevronLeft, ChevronRight, List, Plus, Wrench } from 'lucide-react'
 import { useMemo, useState } from 'react'
 import { useSearchParams } from 'react-router'
 import { toast } from 'sonner'
 import { FindingActionView } from '@/features/findings/FindingActionView'
 import { MaintenanceHistoryView } from '@/features/maintenance-history/MaintenanceHistoryView'
 import { fetchNationalHolidays, fetchTaskRescheduleHistory } from '@/features/pm/api'
-import { PartLifetimePanel } from '@/features/pm/PartLifetimePanel'
 import { RescheduleReasonDialog } from '@/features/pm/RescheduleReasonDialog'
 import { taskChipVariant, taskSource } from '@/features/pm/taskColors'
 import { TaskDetailSheet } from '@/features/pm/TaskDetailSheet'
+import { UpcomingWoPanel } from '@/features/pm/UpcomingWoPanel'
 import { WoListView } from '@/features/pm/WoListView'
 import { RepairBoard } from '@/features/part-repairs/RepairBoard'
 import { ScheduleTaskLibraryDialog } from '@/features/task-libraries/ScheduleTaskLibraryDialog'
@@ -190,10 +190,14 @@ export function MaintenancePage() {
             <Wrench className="size-3.5" />
             Repair Part
           </Button>
-          <Button variant={view === 'history' ? 'default' : 'ghost'} size="sm" onClick={() => setView('history')}>
-            <History className="size-3.5" />
-            Maintenance History
-          </Button>
+          {/* Maintenance History is no longer its own tab — merged into
+              Repair Part as "Riwayat Perbaikan" (see RepairHistoryList),
+              which answers the same "part apa, dilepas dari mana/kapan,
+              diperbaiki kapan, biaya berapa, status sekarang, oleh siapa"
+              questions this generic timeline used to. The old view stays
+              fully wired (route/type/component below, API/backend
+              untouched) as a dormant capability, reachable via
+              ?tab=history, same treatment as Finding & Action below. */}
           {/* Finding & Action (Phase 2) is intentionally not a primary tab —
               Maintenance is replacement-only per the Phase 3 product
               decision. The feature stays fully wired (route/type/component
@@ -448,7 +452,7 @@ export function MaintenancePage() {
             </div>
           </div>
 
-          <PartLifetimePanel branchId={activeBranchId} />
+          <UpcomingWoPanel tasks={tasks} isLoading={tasksLoading} onSelect={setDetailTask} />
         </div>
       )}
 

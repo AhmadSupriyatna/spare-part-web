@@ -33,6 +33,7 @@ export interface PartInstallation {
   removed_at: string | null
   removed_at_runtime_hours: number | null
   installed_by_name: string | null
+  removed_by_name?: string | null
   notes: string | null
   is_active: boolean
   age_in_days: number
@@ -78,6 +79,7 @@ export interface PartRepair {
   percent_used: number | null
   total_runtime_hours_used: number | null
   removed_at: string
+  removed_by_name?: string | null
   estimated_completion_date: string | null
   disposition: PartRepairDisposition
   is_overdue: boolean

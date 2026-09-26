@@ -69,12 +69,33 @@ export function TaskDetailSheet({ task, onOpenChange }: TaskDetailSheetProps) {
                   <p className="text-xs text-muted-foreground">Ditugaskan ke</p>
                   <p className="font-medium">{task.assignee_name ?? 'Belum dikerjakan'}</p>
                 </div>
+                <div>
+                  <p className="text-xs text-muted-foreground">Ditutup / Selesai</p>
+                  <p className="font-medium">
+                    {task.completed_at
+                      ? new Date(task.completed_at).toLocaleDateString('id-ID', { dateStyle: 'long' })
+                      : '-'}
+                  </p>
+                </div>
               </div>
 
               {task.description && (
                 <div>
                   <p className="text-xs text-muted-foreground">Deskripsi</p>
                   <p className="text-sm">{task.description}</p>
+                </div>
+              )}
+
+              {(!task.part_checks || task.part_checks.length === 0) && task.part_name && (
+                <div>
+                  <p className="text-xs text-muted-foreground">Part</p>
+                  <p className="text-sm font-medium">
+                    {task.part_name}
+                    {task.item_master_no && (
+                      <span className="ml-1 font-mono text-xs text-muted-foreground">({task.item_master_no})</span>
+                    )}
+                  </p>
+                  {task.quantity_used != null && <p className="text-xs text-muted-foreground">Qty: {task.quantity_used}</p>}
                 </div>
               )}
 

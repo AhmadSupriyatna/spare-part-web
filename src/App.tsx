@@ -21,8 +21,10 @@ import { PartStocksPage } from '@/features/part-stocks/PartStocksPage'
 import { StockInPage } from '@/features/part-stocks/StockInPage'
 import { PartUnitScanPage } from '@/features/part-unit-actions/PartUnitScanPage'
 import { PartUnitDetailPage } from '@/features/part-units/PartUnitDetailPage'
+import { PrintRepairHistoryPage } from '@/features/part-repairs/PrintRepairHistoryPage'
 import { MaintenancePage } from '@/features/pm/MaintenancePage'
 import { PrintWoChecklistPage } from '@/features/pm/PrintWoChecklistPage'
+import { PrintWoChecklistsPage } from '@/features/pm/PrintWoChecklistsPage'
 import { CompanySettingsPage } from '@/features/settings/CompanySettingsPage'
 import { SupplierDetailPage } from '@/features/suppliers/SupplierDetailPage'
 import { SuppliersPage } from '@/features/suppliers/SuppliersPage'
@@ -78,7 +80,9 @@ function App() {
             <Route path="settings/backup" element={<DatabaseBackupPage />} />
             <Route path="part-units/:id" element={<PartUnitDetailPage />} />
             <Route path="pm/calendar" element={<MaintenancePage />} />
+            <Route path="pm/tasks/print" element={<PrintWoChecklistsPage />} />
             <Route path="pm/tasks/:id/print" element={<PrintWoChecklistPage />} />
+            <Route path="pm/repairs/print" element={<PrintRepairHistoryPage />} />
           </Route>
         </Route>
         <Route path="*" element={<Navigate to="/" replace />} />

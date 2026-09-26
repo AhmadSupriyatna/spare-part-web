@@ -6,6 +6,7 @@ import { RepairCard } from '@/features/part-repairs/RepairCard'
 import { RepairCompleteDialog } from '@/features/part-repairs/RepairCompleteDialog'
 import { RepairDecisionDialog } from '@/features/part-repairs/RepairDecisionDialog'
 import { RepairEditDialog } from '@/features/part-repairs/RepairEditDialog'
+import { RepairHistoryList } from '@/features/part-repairs/RepairHistoryList'
 import { RepairScrapList } from '@/features/part-repairs/RepairScrapList'
 import { useCanManage, useIsSuperadmin } from '@/stores/use-has-role'
 import { cn } from '@/lib/utils'
@@ -181,6 +182,8 @@ export function RepairBoard({ branchId }: RepairBoardProps) {
         onEdit={setEditFor}
         onDelete={(repair) => deleteMutation.mutate(repair.id)}
       />
+
+      <RepairHistoryList repairs={repairs} isLoading={isLoading} />
 
       <RepairDecisionDialog
         repair={decisionFor}
