@@ -1,5 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { MapPin, PackagePlus, Pencil, SlidersHorizontal, Trash2 } from 'lucide-react'
+import { ArrowLeft, MapPin, PackagePlus, Pencil, SlidersHorizontal, Trash2 } from 'lucide-react'
 import { Link, useParams } from 'react-router'
 import { toast } from 'sonner'
 import { Breadcrumb } from '@/components/Breadcrumb'
@@ -8,6 +8,7 @@ import { fetchUnitsForPart } from '@/features/part-units/api'
 import { fetchPart } from '@/features/parts/api'
 import { partReplacementStrategyOptions } from '@/features/parts/schema'
 import { AdjustStockDialog } from '@/features/part-stocks/AdjustStockDialog'
+import { fetchPartStockLedger, fetchPartStockReservations } from '@/features/part-stocks/api'
 import { ReceiveStockDialog } from '@/features/part-stocks/ReceiveStockDialog'
 import { SetPartLocationDialog } from '@/features/part-stocks/SetPartLocationDialog'
 import { PartSupplierFormDialog } from '@/features/part-suppliers/PartSupplierFormDialog'
@@ -34,6 +35,16 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 const currencyFormatter = new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR' })
 
 const strategyMeta = Object.fromEntries(partReplacementStrategyOptions.map((o) => [o.value, o]))
+
+const ledgerTypeLabels: Record<string, string> = {
+  receiving: 'Penerimaan',
+  issue: 'Pemakaian',
+  adjustment: 'Penyesuaian',
+  return: 'Retur',
+  transfer_in: 'Transfer Masuk',
+  transfer_out: 'Transfer Keluar',
+  correction: 'Koreksi',
+}
 
 export function PartDetailPage() {
   const { id } = useParams<{ id: string }>()
@@ -62,6 +73,20 @@ export function PartDetailPage() {
     queryFn: () => fetchUnitsForPart(partId),
   })
 
+  const activeStock = part?.stocks?.find((stock) => stock.branch_id === activeBranchId)
+
+  const { data: ledger, isLoading: ledgerLoading } = useQuery({
+    queryKey: ['part-stock-ledger', activeStock?.id],
+    queryFn: () => fetchPartStockLedger(activeStock!.id),
+    enabled: !!activeStock,
+  })
+
+  const { data: reservations, isLoading: reservationsLoading } = useQuery({
+    queryKey: ['part-stock-reservations', activeStock?.id],
+    queryFn: () => fetchPartStockReservations(activeStock!.id),
+    enabled: !!activeStock,
+  })
+
   const removeSupplierMutation = useMutation({
     mutationFn: removePartSupplier,
     onSuccess: () => {
@@ -76,6 +101,11 @@ export function PartDetailPage() {
 
   return (
     <div className="flex flex-col gap-6">
+      <Link to="/stock" className="flex w-fit items-center gap-1 text-sm text-muted-foreground hover:text-foreground">
+        <ArrowLeft className="size-4" />
+        Kembali ke Workspace
+      </Link>
+
       <div className="flex gap-4">
         {part.image_url ? (
           <img
@@ -120,6 +150,8 @@ export function PartDetailPage() {
           <TabsTrigger value="suppliers">Supplier</TabsTrigger>
           <TabsTrigger value="lifetime">Riwayat Pemasangan</TabsTrigger>
           <TabsTrigger value="units">Unit Part</TabsTrigger>
+          <TabsTrigger value="stock-ledger">Riwayat Stok</TabsTrigger>
+          <TabsTrigger value="reservations">Reservasi PM</TabsTrigger>
         </TabsList>
 
         <TabsContent value="stock" className="pt-4">
@@ -450,6 +482,94 @@ export function PartDetailPage() {
                       {unit.percent_used != null ? `${100 - unit.percent_used}%` : '-'}
                     </TableCell>
                     <TableCell className="text-right tabular-nums">{unit.install_count}</TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          )}
+        </TabsContent>
+
+        <TabsContent value="stock-ledger" className="pt-4">
+          {!activeStock ? (
+            <p className="text-sm text-muted-foreground">
+              Part ini belum punya stok di plant yang sedang aktif — pilih plant lain, atau lihat tab Stok &amp;
+              Lokasi.
+            </p>
+          ) : ledgerLoading ? (
+            <Skeleton className="h-24 w-full" />
+          ) : !ledger || ledger.data.length === 0 ? (
+            <p className="text-sm text-muted-foreground">Belum ada riwayat perubahan stok di plant ini.</p>
+          ) : (
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Waktu</TableHead>
+                  <TableHead>Jenis</TableHead>
+                  <TableHead className="text-right">Perubahan</TableHead>
+                  <TableHead className="text-right">Saldo</TableHead>
+                  <TableHead>Catatan</TableHead>
+                  <TableHead>Oleh</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {ledger.data.map((entry) => (
+                  <TableRow key={entry.id}>
+                    <TableCell className="text-muted-foreground">
+                      {new Date(entry.occurred_at).toLocaleString('id-ID')}
+                    </TableCell>
+                    <TableCell>{ledgerTypeLabels[entry.type] ?? entry.type}</TableCell>
+                    <TableCell
+                      className={`text-right font-medium tabular-nums ${entry.quantity_change < 0 ? 'text-destructive' : 'text-success'}`}
+                    >
+                      {entry.quantity_change > 0 ? '+' : ''}
+                      {entry.quantity_change}
+                    </TableCell>
+                    <TableCell className="text-right">{entry.balance_after}</TableCell>
+                    <TableCell className="text-muted-foreground">{entry.notes ?? '-'}</TableCell>
+                    <TableCell className="text-muted-foreground">{entry.user?.name ?? 'Sistem'}</TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          )}
+        </TabsContent>
+
+        <TabsContent value="reservations" className="pt-4">
+          {!activeStock ? (
+            <p className="text-sm text-muted-foreground">
+              Part ini belum punya stok di plant yang sedang aktif — pilih plant lain, atau lihat tab Stok &amp;
+              Lokasi.
+            </p>
+          ) : reservationsLoading ? (
+            <Skeleton className="h-24 w-full" />
+          ) : !reservations || reservations.length === 0 ? (
+            <p className="text-sm text-muted-foreground">
+              Tidak ada WO yang akan datang yang mereservasi part ini di plant ini.
+            </p>
+          ) : (
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>WO</TableHead>
+                  <TableHead>Equipment / Line</TableHead>
+                  <TableHead>Jatuh Tempo</TableHead>
+                  <TableHead className="text-right">Qty Direservasi</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {reservations.map((reservation) => (
+                  <TableRow key={reservation.task_id}>
+                    <TableCell className="font-medium">{reservation.title}</TableCell>
+                    <TableCell className="text-muted-foreground">
+                      {reservation.equipment_name}
+                      <div className="text-xs">
+                        {reservation.machine_name} · {reservation.line_name}
+                      </div>
+                    </TableCell>
+                    <TableCell className="text-muted-foreground">
+                      {reservation.due_date ? new Date(reservation.due_date).toLocaleDateString('id-ID') : '-'}
+                    </TableCell>
+                    <TableCell className="text-right tabular-nums">{reservation.quantity}</TableCell>
                   </TableRow>
                 ))}
               </TableBody>

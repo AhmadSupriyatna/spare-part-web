@@ -24,6 +24,8 @@ interface ReceiveStockDialogProps {
   currentQuantity?: number
   currentUnitCost?: string
   trigger?: React.ReactNode
+  open?: boolean
+  onOpenChange?: (open: boolean) => void
 }
 
 /**
@@ -40,8 +42,12 @@ export function ReceiveStockDialog({
   currentQuantity = 0,
   currentUnitCost = '0',
   trigger,
+  open: openProp,
+  onOpenChange: onOpenChangeProp,
 }: ReceiveStockDialogProps) {
-  const [open, setOpen] = useState(false)
+  const [internalOpen, setInternalOpen] = useState(false)
+  const open = openProp ?? internalOpen
+  const setOpen = onOpenChangeProp ?? setInternalOpen
   const queryClient = useQueryClient()
 
   const { data: suppliers } = useQuery({

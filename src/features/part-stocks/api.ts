@@ -94,11 +94,18 @@ export async function updatePartStockLocation(id: number, locationId: number): P
   return data.data
 }
 
-/** Standalone "Pilih Supplier" — unlike receiveStock(), never touches quantity/cost. */
-export async function updatePartStockSupplier(id: number, supplierId: number): Promise<PartStock> {
-  const { data } = await apiClient.put<{ data: PartStock }>(`/part-stocks/${id}/supplier`, {
-    supplier_id: supplierId,
-  })
-  return data.data
+export interface PartReservation {
+  task_id: number
+  title: string
+  due_date: string | null
+  equipment_name: string | null
+  machine_name: string | null
+  line_name: string | null
+  quantity: number
 }
 
+/** Part Detail's "Reservasi PM" — the actual upcoming Tasks behind reserved_quantity. */
+export async function fetchPartStockReservations(id: number): Promise<PartReservation[]> {
+  const { data } = await apiClient.get<{ data: PartReservation[] }>(`/part-stocks/${id}/reservations`)
+  return data.data
+}

@@ -17,10 +17,14 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 interface PartFormDialogProps {
   part?: Part
   trigger: React.ReactNode
+  open?: boolean
+  onOpenChange?: (open: boolean) => void
 }
 
-export function PartFormDialog({ part, trigger }: PartFormDialogProps) {
-  const [open, setOpen] = useState(false)
+export function PartFormDialog({ part, trigger, open: openProp, onOpenChange: onOpenChangeProp }: PartFormDialogProps) {
+  const [internalOpen, setInternalOpen] = useState(false)
+  const open = openProp ?? internalOpen
+  const setOpen = onOpenChangeProp ?? setInternalOpen
   const [imageFile, setImageFile] = useState<File | null>(null)
   const [imagePreview, setImagePreview] = useState<string | null>(part?.image_url ?? null)
   const fileInputRef = useRef<HTMLInputElement>(null)

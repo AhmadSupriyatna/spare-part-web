@@ -1,27 +1,33 @@
 import { useQuery } from '@tanstack/react-query'
-import { Boxes, History, MapPin, PackagePlus, Pencil, Plus, Search, SlidersHorizontal, Truck } from 'lucide-react'
+import { Boxes, History, MapPin, PackagePlus, Pencil, Plus, QrCode, Search, SlidersHorizontal, Truck } from 'lucide-react'
 import { useMemo, useState } from 'react'
 import { Link } from 'react-router'
 import { AdjustStockDialog } from '@/features/part-stocks/AdjustStockDialog'
+import { AssignPartSupplierSheet } from '@/features/part-stocks/AssignPartSupplierSheet'
 import { fetchPartStocksForBranch } from '@/features/part-stocks/api'
+import { LocationReadOnlyList } from '@/features/part-stocks/LocationReadOnlyList'
+import { PartQrBulkPrintDialog } from '@/features/part-stocks/PartQrBulkPrintDialog'
 import { ReceiveStockDialog } from '@/features/part-stocks/ReceiveStockDialog'
 import { SetPartLocationDialog } from '@/features/part-stocks/SetPartLocationDialog'
-import { SetPartSupplierDialog } from '@/features/part-stocks/SetPartSupplierDialog'
 import { StockLedgerTab } from '@/features/part-stocks/StockLedgerTab'
+import { SupplierReadOnlyList } from '@/features/part-stocks/SupplierReadOnlyList'
 import { fetchParts } from '@/features/parts/api'
 import { PartFormDialog } from '@/features/parts/PartFormDialog'
-import { LocationsPage } from '@/features/locations/LocationsPage'
-import { SuppliersPage } from '@/features/suppliers/SuppliersPage'
 import { useBranchStore } from '@/stores/branch-store'
 import { useCanManage } from '@/stores/use-has-role'
 import type { Part, PartStock } from '@/types/inventory'
+import { cn } from '@/lib/utils'
 import { EmptyState } from '@/components/EmptyState'
 import { PageHeader } from '@/components/PageHeader'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
+import { Checkbox } from '@/components/ui/checkbox'
 import { Input } from '@/components/ui/input'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
+
+/** repeat(auto-fill, ...) instead of fixed breakpoint columns, so the grid always fills 100% of the width with as many cards as actually fit, rather than being capped at whatever a breakpoint guessed. */
+const CARD_GRID_CLASS = 'grid grid-cols-[repeat(auto-fill,minmax(300px,1fr))] gap-3'
 
 function statusBadge(stock: PartStock) {
   if (stock.is_critical) return <Badge variant="destructive">Kritis</Badge>
@@ -34,17 +40,42 @@ interface StockCardProps {
   part: Part | undefined
   branchId: number
   canManage: boolean
+  selected: boolean
+  onToggleSelect: () => void
 }
 
-function StockCard({ stock, part, branchId, canManage }: StockCardProps) {
+function StockCard({ stock, part, branchId, canManage, selected, onToggleSelect }: StockCardProps) {
+  // Which action's laci is currently open for THIS card — drives the
+  // highlight border, so it's obvious which card you're actively editing
+  // when several are visible in the grid at once.
+  const [openAction, setOpenAction] = useState<string | null>(null)
+  const isActive = openAction !== null
+
+  function actionOpenChange(key: string) {
+    return (next: boolean) => setOpenAction(next ? key : (prev) => (prev === key ? null : prev))
+  }
+
   return (
-    <div className="flex flex-col gap-2 rounded-lg border p-3">
+    <div
+      className={cn(
+        'flex flex-col gap-2 rounded-lg border p-3 transition-colors',
+        isActive && 'border-primary bg-primary/5',
+      )}
+    >
       <div className="flex items-start justify-between gap-2">
-        <div className="min-w-0">
-          <Link to={`/stock/${stock.id}`} className="truncate font-medium hover:underline">
-            {part?.name ?? stock.part_name}
-          </Link>
-          <p className="font-mono text-xs text-muted-foreground">{part?.item_master_no ?? stock.item_master_no}</p>
+        <div className="flex min-w-0 items-start gap-2">
+          <Checkbox
+            checked={selected}
+            onCheckedChange={onToggleSelect}
+            aria-label={`Pilih ${part?.name ?? stock.part_name}`}
+            className="mt-0.5 shrink-0"
+          />
+          <div className="min-w-0">
+            <Link to={`/parts/${stock.part_id}`} className="truncate font-medium hover:underline">
+              {part?.name ?? stock.part_name}
+            </Link>
+            <p className="font-mono text-xs text-muted-foreground">{part?.item_master_no ?? stock.item_master_no}</p>
+          </div>
         </div>
         {statusBadge(stock)}
       </div>
@@ -76,6 +107,8 @@ function StockCard({ stock, part, branchId, canManage }: StockCardProps) {
               partStockId={stock.id}
               currentQuantity={stock.quantity_on_hand}
               currentUnitCost={stock.unit_cost}
+              open={openAction === 'in'}
+              onOpenChange={actionOpenChange('in')}
               trigger={
                 <Button variant="ghost" size="icon-sm" aria-label="Stock In" title="Stock In">
                   <PackagePlus />
@@ -85,6 +118,8 @@ function StockCard({ stock, part, branchId, canManage }: StockCardProps) {
             <AdjustStockDialog
               partStockId={stock.id}
               branchId={branchId}
+              open={openAction === 'opname'}
+              onOpenChange={actionOpenChange('opname')}
               trigger={
                 <Button variant="ghost" size="icon-sm" aria-label="Stock Opname" title="Stock Opname">
                   <SlidersHorizontal />
@@ -94,6 +129,8 @@ function StockCard({ stock, part, branchId, canManage }: StockCardProps) {
             {part && (
               <PartFormDialog
                 part={part}
+                open={openAction === 'edit'}
+                onOpenChange={actionOpenChange('edit')}
                 trigger={
                   <Button variant="ghost" size="icon-sm" aria-label="Edit Part" title="Edit Part">
                     <Pencil />
@@ -101,10 +138,11 @@ function StockCard({ stock, part, branchId, canManage }: StockCardProps) {
                 }
               />
             )}
-            <SetPartSupplierDialog
-              partStockId={stock.id}
+            <AssignPartSupplierSheet
+              partId={stock.part_id}
               branchId={branchId}
-              currentSupplierId={stock.supplier_id}
+              open={openAction === 'supplier'}
+              onOpenChange={actionOpenChange('supplier')}
               trigger={
                 <Button variant="ghost" size="icon-sm" aria-label="Pilih Supplier" title="Pilih Supplier">
                   <Truck />
@@ -116,6 +154,8 @@ function StockCard({ stock, part, branchId, canManage }: StockCardProps) {
               partStockId={stock.id}
               branchId={branchId}
               currentLocationId={stock.location_id}
+              open={openAction === 'location'}
+              onOpenChange={actionOpenChange('location')}
               trigger={
                 <Button variant="ghost" size="icon-sm" aria-label="Edit Lokasi" title="Edit Lokasi">
                   <MapPin />
@@ -130,9 +170,9 @@ function StockCard({ stock, part, branchId, canManage }: StockCardProps) {
           variant="ghost"
           size="icon-sm"
           nativeButton={false}
-          aria-label="Riwayat"
-          title="Riwayat"
-          render={<Link to={`/stock/${stock.id}`} />}
+          aria-label="Detail Part"
+          title="Detail Part"
+          render={<Link to={`/parts/${stock.part_id}`} />}
         >
           <History />
         </Button>
@@ -180,6 +220,7 @@ function UnstockedPartCard({ part, branchId }: UnstockedPartCardProps) {
 function InventoryWorkspace({ activeBranchId }: { activeBranchId: number }) {
   const canManage = useCanManage()
   const [search, setSearch] = useState('')
+  const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set())
 
   const { data: stocks, isLoading } = useQuery({
     queryKey: ['part-stocks', activeBranchId],
@@ -216,6 +257,19 @@ function InventoryWorkspace({ activeBranchId }: { activeBranchId: number }) {
     })
   }, [parts, stocks, search])
 
+  function toggleSelect(partId: number) {
+    setSelectedIds((prev) => {
+      const next = new Set(prev)
+      if (next.has(partId)) next.delete(partId)
+      else next.add(partId)
+      return next
+    })
+  }
+
+  const selectedParts = Array.from(selectedIds)
+    .map((id) => partById.get(id))
+    .filter((part): part is Part => !!part)
+
   return (
     <div className="flex flex-col gap-3">
       <div className="flex flex-wrap items-center gap-2">
@@ -228,6 +282,16 @@ function InventoryWorkspace({ activeBranchId }: { activeBranchId: number }) {
             className="pl-9"
           />
         </div>
+        <PartQrBulkPrintDialog
+          parts={selectedParts}
+          branchId={activeBranchId}
+          trigger={
+            <Button variant="outline" disabled={selectedParts.length === 0}>
+              <QrCode />
+              Cetak QR Terpilih ({selectedParts.length})
+            </Button>
+          }
+        />
         {canManage && (
           <PartFormDialog
             trigger={
@@ -241,7 +305,7 @@ function InventoryWorkspace({ activeBranchId }: { activeBranchId: number }) {
       </div>
 
       {isLoading ? (
-        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+        <div className={CARD_GRID_CLASS}>
           {Array.from({ length: 8 }).map((_, i) => (
             <Skeleton key={i} className="h-44 w-full" />
           ))}
@@ -250,16 +314,12 @@ function InventoryWorkspace({ activeBranchId }: { activeBranchId: number }) {
         <EmptyState
           icon={Boxes}
           title={search ? 'Tidak ada part yang cocok' : 'Belum ada part di katalog'}
-          description={
-            search
-              ? 'Coba kata kunci lain, atau hapus pencarian.'
-              : 'Tambah part baru dulu lewat tombol di atas.'
-          }
+          description={search ? 'Coba kata kunci lain, atau hapus pencarian.' : 'Tambah part baru dulu lewat tombol di atas.'}
         />
       ) : (
         <>
           {filteredStocks.length > 0 && (
-            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+            <div className={CARD_GRID_CLASS}>
               {filteredStocks.map((stock) => (
                 <StockCard
                   key={stock.id}
@@ -267,6 +327,8 @@ function InventoryWorkspace({ activeBranchId }: { activeBranchId: number }) {
                   part={partById.get(stock.part_id)}
                   branchId={activeBranchId}
                   canManage={canManage}
+                  selected={selectedIds.has(stock.part_id)}
+                  onToggleSelect={() => toggleSelect(stock.part_id)}
                 />
               ))}
             </div>
@@ -277,7 +339,7 @@ function InventoryWorkspace({ activeBranchId }: { activeBranchId: number }) {
               <p className="text-xs font-medium tracking-wide text-muted-foreground uppercase">
                 Belum Ada Stok di Plant Ini
               </p>
-              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+              <div className={CARD_GRID_CLASS}>
                 {unstockedParts.map((part) => (
                   <UnstockedPartCard key={part.id} part={part} branchId={activeBranchId} />
                 ))}
@@ -318,10 +380,10 @@ export function InventoryWorkspacePage() {
           <StockLedgerTab branchId={activeBranchId} />
         </TabsContent>
         <TabsContent value="suppliers" className="mt-4">
-          <SuppliersPage />
+          <SupplierReadOnlyList branchId={activeBranchId} />
         </TabsContent>
         <TabsContent value="locations" className="mt-4">
-          <LocationsPage />
+          <LocationReadOnlyList branchId={activeBranchId} />
         </TabsContent>
       </Tabs>
     </div>

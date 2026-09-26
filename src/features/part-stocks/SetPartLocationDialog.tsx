@@ -1,20 +1,14 @@
-import { zodResolver } from '@hookform/resolvers/zod'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { Check, Search } from 'lucide-react'
 import { useState } from 'react'
-import { Controller, useForm } from 'react-hook-form'
 import { toast } from 'sonner'
-import { z } from 'zod'
 import { fetchLocations } from '@/features/locations/api'
 import { updatePartStockLocation } from '@/features/part-stocks/api'
-import { FormSheet } from '@/components/FormSheet'
-import { Label } from '@/components/ui/label'
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
-
-const setLocationSchema = z.object({
-  location_id: z.string().min(1, 'Pilih lokasi'),
-})
-
-type SetLocationFormValues = z.infer<typeof setLocationSchema>
+import { Badge } from '@/components/ui/badge'
+import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
+import { Sheet, SheetContent, SheetDescription, SheetTitle, SheetTrigger } from '@/components/ui/sheet'
+import { Skeleton } from '@/components/ui/skeleton'
 
 interface SetPartLocationDialogProps {
   partId: number
@@ -23,8 +17,16 @@ interface SetPartLocationDialogProps {
   branchName?: string
   currentLocationId: number | null
   trigger: React.ReactNode
+  open?: boolean
+  onOpenChange?: (open: boolean) => void
 }
 
+/**
+ * "Edit Lokasi" — a list (search + click "Tempatkan") instead of a
+ * dropdown, same interaction shape as AssignPartSupplierSheet, even though
+ * a stock only ever sits in exactly one location at a time (one part_stocks
+ * row = one bin, unlike supplier which can be more than one).
+ */
 export function SetPartLocationDialog({
   partId,
   partStockId,
@@ -32,8 +34,13 @@ export function SetPartLocationDialog({
   branchName,
   currentLocationId,
   trigger,
+  open: openProp,
+  onOpenChange: onOpenChangeProp,
 }: SetPartLocationDialogProps) {
-  const [open, setOpen] = useState(false)
+  const [internalOpen, setInternalOpen] = useState(false)
+  const open = openProp ?? internalOpen
+  const setOpen = onOpenChangeProp ?? setInternalOpen
+  const [search, setSearch] = useState('')
   const queryClient = useQueryClient()
 
   const { data: locations, isLoading: locationsLoading } = useQuery({
@@ -42,18 +49,8 @@ export function SetPartLocationDialog({
     enabled: open,
   })
 
-  const {
-    control,
-    handleSubmit,
-    formState: { errors, isDirty },
-  } = useForm<SetLocationFormValues>({
-    resolver: zodResolver(setLocationSchema),
-    defaultValues: { location_id: currentLocationId ? String(currentLocationId) : '' },
-  })
-
   const mutation = useMutation({
-    mutationFn: (values: SetLocationFormValues) =>
-      updatePartStockLocation(partStockId, Number(values.location_id)),
+    mutationFn: (locationId: number) => updatePartStockLocation(partStockId, locationId),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['part', partId] })
       queryClient.invalidateQueries({ queryKey: ['part-stocks', branchId] })
@@ -63,42 +60,77 @@ export function SetPartLocationDialog({
     onError: () => toast.error('Gagal menyimpan lokasi.'),
   })
 
+  const filteredLocations = (locations ?? []).filter((location) => {
+    const term = search.trim().toLowerCase()
+    if (!term) return true
+    return location.code.toLowerCase().includes(term) || location.description?.toLowerCase().includes(term)
+  })
+
   return (
-    <FormSheet
-      trigger={trigger}
-      title={`Edit Lokasi${branchName ? ` — ${branchName}` : ''}`}
-      open={open}
-      onOpenChange={setOpen}
-      isDirty={isDirty}
-      onSubmit={handleSubmit((values) => mutation.mutate(values))}
-      submitLabel="Simpan"
-      isSubmitting={mutation.isPending}
-    >
-      <div className="flex flex-col gap-2">
-        <Label>Lokasi (Rak/Bin)</Label>
-        <Controller
-          control={control}
-          name="location_id"
-          render={({ field }) => (
-            <Select value={field.value} onValueChange={field.onChange}>
-              <SelectTrigger>
-                <SelectValue placeholder={locationsLoading ? 'Memuat lokasi...' : 'Pilih lokasi'} />
-              </SelectTrigger>
-              <SelectContent>
-                {locations?.map((location) => (
-                  <SelectItem key={location.id} value={String(location.id)}>
-                    {location.code} {location.description ? `— ${location.description}` : ''}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+    <Sheet open={open} onOpenChange={setOpen} modal={false}>
+      <SheetTrigger render={trigger as React.ReactElement} />
+      <SheetContent className="gap-0 p-0" showOverlay={false}>
+        <div className="flex flex-col gap-1 border-b px-4 py-4 pr-10">
+          <SheetTitle>Edit Lokasi{branchName ? ` — ${branchName}` : ''}</SheetTitle>
+          <SheetDescription>Cari lokasi (rak/bin) lalu tekan Tempatkan.</SheetDescription>
+        </div>
+        <div className="flex flex-1 flex-col gap-3 overflow-y-auto p-4">
+          <div className="relative">
+            <Search className="pointer-events-none absolute top-1/2 left-2.5 size-4 -translate-y-1/2 text-muted-foreground" />
+            <Input
+              placeholder="Cari lokasi..."
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              className="pl-9"
+            />
+          </div>
+
+          {locationsLoading ? (
+            <div className="flex flex-col gap-2">
+              {Array.from({ length: 4 }).map((_, i) => (
+                <Skeleton key={i} className="h-14 w-full" />
+              ))}
+            </div>
+          ) : filteredLocations.length === 0 ? (
+            <p className="text-sm text-muted-foreground">
+              {locations?.length === 0
+                ? 'Belum ada lokasi di plant ini. Tambah dulu lewat menu Lokasi.'
+                : 'Tidak ada lokasi yang cocok.'}
+            </p>
+          ) : (
+            <div className="flex flex-col gap-1.5">
+              {filteredLocations.map((location) => {
+                const isCurrent = location.id === currentLocationId
+                return (
+                  <div key={location.id} className="flex items-center justify-between gap-2 rounded-md border p-2.5">
+                    <div className="min-w-0">
+                      <p className="truncate font-mono text-sm font-medium">{location.code}</p>
+                      {location.description && (
+                        <p className="truncate text-xs text-muted-foreground">{location.description}</p>
+                      )}
+                    </div>
+                    {isCurrent ? (
+                      <Badge variant="outline" className="shrink-0 gap-1">
+                        <Check className="size-3" />
+                        Lokasi Saat Ini
+                      </Badge>
+                    ) : (
+                      <Button
+                        size="sm"
+                        className="shrink-0"
+                        onClick={() => mutation.mutate(location.id)}
+                        disabled={mutation.isPending}
+                      >
+                        Tempatkan
+                      </Button>
+                    )}
+                  </div>
+                )
+              })}
+            </div>
           )}
-        />
-        {errors.location_id && <p className="text-sm text-destructive">{errors.location_id.message}</p>}
-        {locations?.length === 0 && !locationsLoading && (
-          <p className="text-xs text-muted-foreground">Belum ada lokasi di plant ini. Tambah dulu lewat menu Lokasi.</p>
-        )}
-      </div>
-    </FormSheet>
+        </div>
+      </SheetContent>
+    </Sheet>
   )
 }

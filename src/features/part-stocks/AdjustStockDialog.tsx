@@ -15,10 +15,20 @@ interface AdjustStockDialogProps {
   partStockId: number
   branchId: number
   trigger?: React.ReactNode
+  open?: boolean
+  onOpenChange?: (open: boolean) => void
 }
 
-export function AdjustStockDialog({ partStockId, branchId, trigger }: AdjustStockDialogProps) {
-  const [open, setOpen] = useState(false)
+export function AdjustStockDialog({
+  partStockId,
+  branchId,
+  trigger,
+  open: openProp,
+  onOpenChange: onOpenChangeProp,
+}: AdjustStockDialogProps) {
+  const [internalOpen, setInternalOpen] = useState(false)
+  const open = openProp ?? internalOpen
+  const setOpen = onOpenChangeProp ?? setInternalOpen
   const queryClient = useQueryClient()
 
   const {
