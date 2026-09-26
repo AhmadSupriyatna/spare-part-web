@@ -17,7 +17,7 @@ import { LocationsPage } from '@/features/locations/LocationsPage'
 import { PartDetailPage } from '@/features/parts/PartDetailPage'
 import { PartsPage } from '@/features/parts/PartsPage'
 import { PartStockDetailPage } from '@/features/part-stocks/PartStockDetailPage'
-import { PartStocksPage } from '@/features/part-stocks/PartStocksPage'
+import { InventoryWorkspacePage } from '@/features/part-stocks/InventoryWorkspacePage'
 import { StockInPage } from '@/features/part-stocks/StockInPage'
 import { PartUnitScanPage } from '@/features/part-unit-actions/PartUnitScanPage'
 import { PartUnitDetailPage } from '@/features/part-units/PartUnitDetailPage'
@@ -57,7 +57,7 @@ function App() {
             <Route index element={<DashboardPage />} />
             <Route path="parts" element={<PartsPage />} />
             <Route path="parts/:id" element={<PartDetailPage />} />
-            <Route path="stock" element={<PartStocksPage />} />
+            <Route path="stock" element={<InventoryWorkspacePage />} />
             <Route path="stock/:id" element={<PartStockDetailPage />} />
             <Route path="stock-in" element={<StockInPage />} />
             <Route path="alerts" element={<AlertsPage />} />

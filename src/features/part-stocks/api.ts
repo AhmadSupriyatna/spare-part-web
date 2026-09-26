@@ -94,3 +94,11 @@ export async function updatePartStockLocation(id: number, locationId: number): P
   return data.data
 }
 
+/** Standalone "Pilih Supplier" — unlike receiveStock(), never touches quantity/cost. */
+export async function updatePartStockSupplier(id: number, supplierId: number): Promise<PartStock> {
+  const { data } = await apiClient.put<{ data: PartStock }>(`/part-stocks/${id}/supplier`, {
+    supplier_id: supplierId,
+  })
+  return data.data
+}
+

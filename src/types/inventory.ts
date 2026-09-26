@@ -30,6 +30,7 @@ export interface PartStock {
   branch_id: number
   branch_name?: string
   supplier_id: number | null
+  supplier_name?: string | null
   location_id: number | null
   location_code?: string | null
   minimum_stock: number
@@ -37,6 +38,8 @@ export interface PartStock {
   reorder_quantity: number
   unit_cost: string
   quantity_on_hand: number
+  /** Not yet subtracted from quantity_on_hand — spoken for by a still-open Task (see PartStockController::attachReservedQuantities()). */
+  reserved_quantity: number
   is_below_reorder_point: boolean
   is_critical: boolean
 }
