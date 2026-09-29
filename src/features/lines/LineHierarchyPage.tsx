@@ -1,5 +1,5 @@
 import { useQuery, useQueryClient } from '@tanstack/react-query'
-import { ChevronDown, Pencil, Plus, Trash2 } from 'lucide-react'
+import { Pencil, Plus, Trash2 } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { Link, useSearchParams } from 'react-router'
 import { AddRuntimeDialog } from '@/features/lines/AddRuntimeDialog'
@@ -9,25 +9,49 @@ import { LineRuntimeLogTable } from '@/features/lines/LineRuntimeLogTable'
 import { EquipmentFormDialog } from '@/features/equipment/EquipmentFormDialog'
 import { OutsideLineEquipmentFormDialog } from '@/features/equipment/OutsideLineEquipmentFormDialog'
 import { deleteEquipment, fetchEquipmentList, fetchOutsideLineEquipment } from '@/features/equipment/api'
-import { deleteMachine, fetchMachines } from '@/features/machines/api'
+import { deleteMachine, fetchMachines, fetchOutsideLineMachines } from '@/features/machines/api'
 import { MachineFormDialog } from '@/features/machines/MachineFormDialog'
+import { OutsideLineMachineFormDialog } from '@/features/machines/OutsideLineMachineFormDialog'
 import { InstalledPartsPanel } from '@/features/part-installations/InstalledPartsPanel'
 import { PartPickerSheet } from '@/features/part-installations/PartPickerSheet'
 import { useAuthStore } from '@/stores/auth-store'
 import { useBranchStore } from '@/stores/branch-store'
 import { useCanManage } from '@/stores/use-has-role'
+import type { Machine } from '@/types/tasks'
 import type { Part } from '@/types/inventory'
 import { cn } from '@/lib/utils'
 import { DeleteWithPasswordDialog } from '@/components/DeleteWithPasswordDialog'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu'
 import { Skeleton } from '@/components/ui/skeleton'
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 
 export function LineHierarchyPage() {
   const activeBranchId = useBranchStore((state) => state.activeBranchId)
   const activeBranchName =
     useAuthStore((state) => state.user?.branches.find((branch) => branch.id === activeBranchId)?.name) ?? ''
+
+  if (!activeBranchId) {
+    return <p className="text-muted-foreground">Pilih plant terlebih dahulu.</p>
+  }
+
+  return (
+    <Tabs defaultValue="produksi">
+      <TabsList>
+        <TabsTrigger value="produksi">Line Produksi</TabsTrigger>
+        <TabsTrigger value="non-produksi">Mesin & Asset Luar Line</TabsTrigger>
+      </TabsList>
+      <TabsContent value="produksi" className="mt-4">
+        <ProductionLineBrowser activeBranchId={activeBranchId} />
+      </TabsContent>
+      <TabsContent value="non-produksi" className="mt-4">
+        <NonProductionAssetsBrowser activeBranchId={activeBranchId} activeBranchName={activeBranchName} />
+      </TabsContent>
+    </Tabs>
+  )
+}
+
+function ProductionLineBrowser({ activeBranchId }: { activeBranchId: number }) {
   const canManage = useCanManage()
   const queryClient = useQueryClient()
   const [searchParams, setSearchParams] = useSearchParams()
@@ -38,11 +62,10 @@ export function LineHierarchyPage() {
   const [droppedPart, setDroppedPart] = useState<Part | null>(null)
   // Lifted out of the "+ Tambah" dropdown's menu items on purpose: the
   // DropdownMenu unmounts its popup content (and anything nested inside it)
-  // the instant an item is clicked, which was destroying these dialogs' own
+  // the instant an item is clicked, which was destroying this dialog's own
   // internal `open` state before the Sheet ever got to render — see the
-  // dialogs' `open`/`onOpenChange` props.
+  // dialog's `open`/`onOpenChange` props.
   const [addLineOpen, setAddLineOpen] = useState(false)
-  const [addOutsideLineOpen, setAddOutsideLineOpen] = useState(false)
 
   const selectedLineId = searchParams.get('line') ? Number(searchParams.get('line')) : null
   const selectedMachineId = searchParams.get('machine') ? Number(searchParams.get('machine')) : null
@@ -64,12 +87,6 @@ export function LineHierarchyPage() {
     queryKey: ['equipment', selectedMachineId],
     queryFn: () => fetchEquipmentList(selectedMachineId!),
     enabled: !!selectedMachineId,
-  })
-
-  const { data: outsideLineEquipment, isLoading: outsideLineEquipmentLoading } = useQuery({
-    queryKey: ['outside-line-equipment', activeBranchId],
-    queryFn: () => fetchOutsideLineEquipment(activeBranchId!),
-    enabled: !!activeBranchId,
   })
 
   // Default to the first line once loaded, if nothing is selected via the URL yet.
@@ -104,10 +121,6 @@ export function LineHierarchyPage() {
       machine: String(selectedMachineId),
       equipment: String(equipmentId),
     })
-  }
-
-  if (!activeBranchId) {
-    return <p className="text-muted-foreground">Pilih plant terlebih dahulu.</p>
   }
 
   return (
@@ -176,105 +189,24 @@ export function LineHierarchyPage() {
           ))
         )}
         {canManage && !linesLoading && (
-          <DropdownMenu>
-            <DropdownMenuTrigger
-              render={
-                <button
-                  type="button"
-                  aria-label="Tambah"
-                  title="Tambah"
-                  className="flex h-20 w-48 shrink-0 flex-col items-center justify-center gap-1 rounded-xl border-2 border-dashed border-muted-foreground/40 text-muted-foreground transition-colors hover:border-primary hover:bg-primary/5 hover:text-primary"
-                />
-              }
-            >
-              <Plus className="size-5" />
-              <span className="flex items-center gap-1 text-sm font-medium">
-                Tambah <ChevronDown className="size-3.5" />
-              </span>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="start">
-              <DropdownMenuItem onClick={() => setAddLineOpen(true)}>
-                <Plus /> Tambah Line
-              </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => setAddOutsideLineOpen(true)}>
-                <Plus /> Tambah Asset Luar Line
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
+          <Button
+            variant="outline"
+            onClick={() => setAddLineOpen(true)}
+            className="flex h-20 w-48 shrink-0 flex-col items-center justify-center gap-1 border-2 border-dashed border-muted-foreground/40 text-muted-foreground hover:border-primary hover:bg-primary/5 hover:text-primary"
+          >
+            <Plus className="size-5" />
+            Tambah Line
+          </Button>
         )}
       </div>
 
-      {/*
-        Rendered here (siblings of the dropdown, not nested inside its
-        DropdownMenuContent) so their own `open` state survives the menu
-        closing — see the `addLineOpen`/`addOutsideLineOpen` comment above.
-        `trigger` is inert: opening is driven entirely by `open`/onOpenChange.
-      */}
       {canManage && (
-        <>
-          <LineFormDialog
-            branchId={activeBranchId}
-            open={addLineOpen}
-            onOpenChange={setAddLineOpen}
-            trigger={<span className="hidden" aria-hidden="true" />}
-          />
-          <OutsideLineEquipmentFormDialog
-            branchId={activeBranchId}
-            branchName={activeBranchName}
-            open={addOutsideLineOpen}
-            onOpenChange={setAddOutsideLineOpen}
-            trigger={<span className="hidden" aria-hidden="true" />}
-          />
-        </>
-      )}
-
-      {/* Phase 3B "Asset Outside Line" — small dedicated area, separate from the Line -> Mesin -> Equipment browser above. */}
-      {(outsideLineEquipmentLoading || (outsideLineEquipment && outsideLineEquipment.length > 0)) && (
-        <div className="flex flex-col rounded-lg border">
-          <div className="flex items-center justify-between gap-2 border-b px-3 py-2">
-            <h2 className="truncate text-sm font-semibold text-muted-foreground">
-              Asset Luar Line — {activeBranchName}
-            </h2>
-          </div>
-          <div className="flex flex-col">
-            {outsideLineEquipmentLoading ? (
-              <div className="flex flex-col gap-2 p-3">
-                {Array.from({ length: 2 }).map((_, i) => (
-                  <Skeleton key={i} className="h-10 w-full" />
-                ))}
-              </div>
-            ) : (
-              outsideLineEquipment?.map((equipment) => (
-                <ColumnRow
-                  key={equipment.id}
-                  isSelected={false}
-                  onClick={() => {}}
-                  title={equipment.name}
-                  subtitle={equipment.category ?? equipment.code}
-                  badge={!equipment.is_active ? <Badge variant="secondary">Nonaktif</Badge> : undefined}
-                  detailHref={`/equipment/${equipment.id}`}
-                  deleteAction={
-                    canManage && (
-                      <DeleteWithPasswordDialog
-                        title={`Hapus Asset "${equipment.name}"?`}
-                        description="Semua work order, tugas, BOM, dan riwayat pemasangan part di asset ini akan ikut terhapus permanen. Tindakan ini tidak bisa dibatalkan."
-                        onConfirm={(password) => deleteEquipment(equipment.id, password)}
-                        onSuccess={() => {
-                          queryClient.invalidateQueries({ queryKey: ['outside-line-equipment', activeBranchId] })
-                        }}
-                        trigger={
-                          <Button variant="ghost" size="icon-xs" aria-label="Hapus Asset" title="Hapus Asset">
-                            <Trash2 />
-                          </Button>
-                        }
-                      />
-                    )
-                  }
-                />
-              ))
-            )}
-          </div>
-        </div>
+        <LineFormDialog
+          branchId={activeBranchId}
+          open={addLineOpen}
+          onOpenChange={setAddLineOpen}
+          trigger={<span className="hidden" aria-hidden="true" />}
+        />
       )}
 
       {/* Mesin (30%) | Equipment (30%) | Part terpasang (40%) */}
@@ -489,6 +421,303 @@ export function LineHierarchyPage() {
           <LineRuntimeLogTable lineId={selectedLine.id} />
         </div>
       )}
+    </div>
+  )
+}
+
+/**
+ * "Mesin & Asset Luar Line" — everything that doesn't sit under a
+ * production Line. Two independent groups, since they're structurally
+ * different (see Machine::booted()/Equipment::booted()'s XOR invariants):
+ * standalone Mesin (own Equipment/Part sub-tree, same 2-column shape as the
+ * production browser above minus the Line strip) and standalone Equipment
+ * with no Machine at all (a flat list, unchanged from before this tab
+ * split existed).
+ */
+function NonProductionAssetsBrowser({
+  activeBranchId,
+  activeBranchName,
+}: {
+  activeBranchId: number
+  activeBranchName: string
+}) {
+  const canManage = useCanManage()
+  const queryClient = useQueryClient()
+
+  const [selectedMachine, setSelectedMachine] = useState<Machine | null>(null)
+  const [selectedEquipmentId, setSelectedEquipmentId] = useState<number | null>(null)
+  const [partSheetOpen, setPartSheetOpen] = useState(false)
+  const [draggingPart, setDraggingPart] = useState<Part | null>(null)
+  const [dropTargetActive, setDropTargetActive] = useState(false)
+  const [droppedPart, setDroppedPart] = useState<Part | null>(null)
+  const [addMachineOpen, setAddMachineOpen] = useState(false)
+
+  const { data: outsideLineMachines, isLoading: machinesLoading } = useQuery({
+    queryKey: ['outside-line-machines', activeBranchId],
+    queryFn: () => fetchOutsideLineMachines(activeBranchId),
+  })
+
+  const { data: equipmentList, isLoading: equipmentLoading } = useQuery({
+    queryKey: ['equipment', selectedMachine?.id],
+    queryFn: () => fetchEquipmentList(selectedMachine!.id),
+    enabled: !!selectedMachine,
+  })
+
+  const { data: outsideLineEquipment, isLoading: outsideLineEquipmentLoading } = useQuery({
+    queryKey: ['outside-line-equipment', activeBranchId],
+    queryFn: () => fetchOutsideLineEquipment(activeBranchId),
+  })
+
+  const selectedEquipment = equipmentList?.find((equipment) => equipment.id === selectedEquipmentId)
+
+  return (
+    <div className="flex flex-col gap-6">
+      <div className="grid grid-cols-1 gap-4 lg:grid-cols-[3fr_3fr_4fr]">
+        <HierarchyColumn
+          title="Mesin Luar Line"
+          isLoading={machinesLoading}
+          isEmpty={outsideLineMachines?.length === 0}
+          emptyMessage="Belum ada mesin luar line di plant ini."
+          addAction={
+            canManage && (
+              <Button
+                variant="ghost"
+                size="icon-xs"
+                aria-label="Tambah Mesin Luar Line"
+                title="Tambah Mesin Luar Line"
+                onClick={() => setAddMachineOpen(true)}
+              >
+                <Plus />
+              </Button>
+            )
+          }
+        >
+          {outsideLineMachines?.map((machine) => (
+            <ColumnRow
+              key={machine.id}
+              isSelected={machine.id === selectedMachine?.id}
+              onClick={() => {
+                setSelectedMachine(machine)
+                setSelectedEquipmentId(null)
+              }}
+              title={machine.name}
+              subtitle={machine.category ?? machine.code}
+              badge={!machine.is_active ? <Badge variant="secondary">Nonaktif</Badge> : undefined}
+              deleteAction={
+                canManage && (
+                  <DeleteWithPasswordDialog
+                    title={`Hapus Mesin "${machine.name}"?`}
+                    description="Semua equipment, work order, tugas, dan riwayat di bawah mesin ini akan ikut terhapus permanen. Tindakan ini tidak bisa dibatalkan."
+                    onConfirm={(password) => deleteMachine(machine.id, password)}
+                    onSuccess={() => {
+                      queryClient.invalidateQueries({ queryKey: ['outside-line-machines', activeBranchId] })
+                      if (machine.id === selectedMachine?.id) setSelectedMachine(null)
+                    }}
+                    trigger={
+                      <Button variant="ghost" size="icon-xs" aria-label="Hapus Mesin" title="Hapus Mesin">
+                        <Trash2 />
+                      </Button>
+                    }
+                  />
+                )
+              }
+            />
+          ))}
+        </HierarchyColumn>
+
+        <HierarchyColumn
+          title={selectedMachine ? `Equipment — ${selectedMachine.name}` : 'Equipment'}
+          isLoading={!!selectedMachine && equipmentLoading}
+          isEmpty={!selectedMachine || equipmentList?.length === 0}
+          emptyMessage={!selectedMachine ? 'Pilih mesin terlebih dahulu.' : 'Belum ada equipment di mesin ini.'}
+          addAction={
+            canManage &&
+            selectedMachine && (
+              <EquipmentFormDialog
+                machineId={selectedMachine.id}
+                trigger={
+                  <Button variant="ghost" size="icon-xs" aria-label="Tambah Equipment" title="Tambah Equipment">
+                    <Plus />
+                  </Button>
+                }
+              />
+            )
+          }
+        >
+          {equipmentList?.map((equipment) => (
+            <ColumnRow
+              key={equipment.id}
+              isSelected={equipment.id === selectedEquipmentId}
+              onClick={() => setSelectedEquipmentId(equipment.id)}
+              title={equipment.name}
+              subtitle={equipment.category ?? equipment.code}
+              badge={!equipment.is_active ? <Badge variant="secondary">Nonaktif</Badge> : undefined}
+              detailHref={`/equipment/${equipment.id}`}
+              editAction={
+                canManage &&
+                selectedMachine && (
+                  <EquipmentFormDialog
+                    machineId={selectedMachine.id}
+                    equipment={equipment}
+                    trigger={
+                      <Button variant="ghost" size="icon-xs" aria-label="Ubah Equipment" title="Ubah Equipment">
+                        <Pencil />
+                      </Button>
+                    }
+                  />
+                )
+              }
+              deleteAction={
+                canManage && (
+                  <DeleteWithPasswordDialog
+                    title={`Hapus Equipment "${equipment.name}"?`}
+                    description="Semua work order, tugas, BOM, dan riwayat pemasangan part di equipment ini akan ikut terhapus permanen. Tindakan ini tidak bisa dibatalkan."
+                    onConfirm={(password) => deleteEquipment(equipment.id, password)}
+                    onSuccess={() => {
+                      queryClient.invalidateQueries({ queryKey: ['equipment', selectedMachine?.id] })
+                      if (equipment.id === selectedEquipmentId) setSelectedEquipmentId(null)
+                    }}
+                    trigger={
+                      <Button variant="ghost" size="icon-xs" aria-label="Hapus Equipment" title="Hapus Equipment">
+                        <Trash2 />
+                      </Button>
+                    }
+                  />
+                )
+              }
+            />
+          ))}
+        </HierarchyColumn>
+
+        <div className="flex flex-col rounded-lg border">
+          <div className="flex items-center justify-between gap-2 border-b px-3 py-2">
+            <h2 className="truncate text-sm font-semibold text-muted-foreground">
+              {selectedEquipment ? `Part — ${selectedEquipment.name}` : 'Part'}
+            </h2>
+            {canManage && selectedEquipment && (
+              <Button
+                variant="ghost"
+                size="icon-xs"
+                aria-label="Pasang Part"
+                title="Pasang Part"
+                onClick={() => setPartSheetOpen(true)}
+              >
+                <Plus />
+              </Button>
+            )}
+          </div>
+          <div
+            className={cn(
+              'max-h-[36rem] overflow-y-auto rounded-b-lg p-3 transition-colors',
+              dropTargetActive &&
+                selectedEquipment &&
+                'bg-primary/5 outline-2 -outline-offset-2 outline-primary/50 outline-dashed',
+            )}
+            onDragOver={(e) => {
+              if (!selectedEquipment) return
+              e.preventDefault()
+              e.dataTransfer.dropEffect = 'copy'
+              setDropTargetActive(true)
+            }}
+            onDragLeave={() => setDropTargetActive(false)}
+            onDrop={(e) => {
+              e.preventDefault()
+              setDropTargetActive(false)
+              if (!selectedEquipment || !draggingPart) return
+              setDroppedPart(draggingPart)
+            }}
+          >
+            {selectedEquipment ? (
+              <InstalledPartsPanel equipmentId={selectedEquipment.id} />
+            ) : (
+              <p className="text-sm text-muted-foreground">Pilih equipment untuk lihat part yang terpasang.</p>
+            )}
+          </div>
+        </div>
+      </div>
+
+      {selectedEquipment && (
+        <PartPickerSheet
+          open={partSheetOpen}
+          onOpenChange={setPartSheetOpen}
+          equipmentId={selectedEquipment.id}
+          equipmentName={selectedEquipment.name}
+          droppedPart={droppedPart}
+          onDropHandled={() => setDroppedPart(null)}
+          onDragStartPart={setDraggingPart}
+          onDragEndPart={() => setDraggingPart(null)}
+        />
+      )}
+
+      {canManage && (
+        <OutsideLineMachineFormDialog
+          branchId={activeBranchId}
+          branchName={activeBranchName}
+          open={addMachineOpen}
+          onOpenChange={setAddMachineOpen}
+          trigger={<span className="hidden" aria-hidden="true" />}
+        />
+      )}
+
+      {/* Asset tanpa Mesin sama sekali — panel listrik, hand pallet, dsb. */}
+      <div className="flex flex-col rounded-lg border">
+        <div className="flex items-center justify-between gap-2 border-b px-3 py-2">
+          <h2 className="truncate text-sm font-semibold text-muted-foreground">
+            Asset Tanpa Mesin — {activeBranchName}
+          </h2>
+          {canManage && (
+            <OutsideLineEquipmentFormDialog
+              branchId={activeBranchId}
+              branchName={activeBranchName}
+              trigger={
+                <Button variant="ghost" size="icon-xs" aria-label="Tambah Asset Luar Line" title="Tambah Asset Luar Line">
+                  <Plus />
+                </Button>
+              }
+            />
+          )}
+        </div>
+        <div className="flex flex-col">
+          {outsideLineEquipmentLoading ? (
+            <div className="flex flex-col gap-2 p-3">
+              {Array.from({ length: 2 }).map((_, i) => (
+                <Skeleton key={i} className="h-10 w-full" />
+              ))}
+            </div>
+          ) : outsideLineEquipment?.length === 0 ? (
+            <p className="p-3 text-sm text-muted-foreground">Belum ada asset tanpa mesin di plant ini.</p>
+          ) : (
+            outsideLineEquipment?.map((equipment) => (
+              <ColumnRow
+                key={equipment.id}
+                isSelected={false}
+                onClick={() => {}}
+                title={equipment.name}
+                subtitle={equipment.category ?? equipment.code}
+                badge={!equipment.is_active ? <Badge variant="secondary">Nonaktif</Badge> : undefined}
+                detailHref={`/equipment/${equipment.id}`}
+                deleteAction={
+                  canManage && (
+                    <DeleteWithPasswordDialog
+                      title={`Hapus Asset "${equipment.name}"?`}
+                      description="Semua work order, tugas, BOM, dan riwayat pemasangan part di asset ini akan ikut terhapus permanen. Tindakan ini tidak bisa dibatalkan."
+                      onConfirm={(password) => deleteEquipment(equipment.id, password)}
+                      onSuccess={() => {
+                        queryClient.invalidateQueries({ queryKey: ['outside-line-equipment', activeBranchId] })
+                      }}
+                      trigger={
+                        <Button variant="ghost" size="icon-xs" aria-label="Hapus Asset" title="Hapus Asset">
+                          <Trash2 />
+                        </Button>
+                      }
+                    />
+                  )
+                }
+              />
+            ))
+          )}
+        </div>
+      </div>
     </div>
   )
 }

@@ -24,8 +24,12 @@ export interface LineRuntimeLog {
 
 export interface Machine {
   id: number
-  line_id: number
+  /** null for an outside-line machine ("Mesin Luar Line") — see branch_id instead. */
+  line_id: number | null
   line_name?: string
+  /** Set only when line_id is null. */
+  branch_id?: number | null
+  branch_name?: string | null
   code: string
   name: string
   category: string | null

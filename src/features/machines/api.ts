@@ -26,3 +26,25 @@ export async function updateMachine(id: number, payload: Partial<MachinePayload>
 export async function deleteMachine(id: number, password: string): Promise<void> {
   await apiClient.delete(`/machines/${id}`, { data: { password } })
 }
+
+// --- "Mesin Luar Line" ---
+
+/** No `line_id` (there is none) and no `code` — system-generated from `name`, same policy as production Machine. */
+export interface OutsideLineMachinePayload {
+  name: string
+  category?: string | null
+  is_active?: boolean
+}
+
+export async function fetchOutsideLineMachines(branchId: number): Promise<Machine[]> {
+  const { data } = await apiClient.get<{ data: Machine[] }>(`/branches/${branchId}/machines`)
+  return data.data
+}
+
+export async function createOutsideLineMachine(
+  branchId: number,
+  payload: OutsideLineMachinePayload,
+): Promise<Machine> {
+  const { data } = await apiClient.post<{ data: Machine }>(`/branches/${branchId}/machines`, payload)
+  return data.data
+}
