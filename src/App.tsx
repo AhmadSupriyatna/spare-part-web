@@ -14,6 +14,7 @@ import { LineHierarchyPage } from '@/features/lines/LineHierarchyPage'
 import { LineRuntimeScanPage } from '@/features/lines/LineRuntimeScanPage'
 import { LocationDetailPage } from '@/features/locations/LocationDetailPage'
 import { LocationsPage } from '@/features/locations/LocationsPage'
+import { MachineMonitoringPage } from '@/features/machines/MachineMonitoringPage'
 import { PartDetailPage } from '@/features/parts/PartDetailPage'
 import { KelolaStokPage } from '@/features/part-stocks/KelolaStokPage'
 import { PartStockDetailPage } from '@/features/part-stocks/PartStockDetailPage'
@@ -45,6 +46,9 @@ function App() {
 
         {/* Public QR-per-unit flow — no login, reachable from a QR stuck on a specific part unit. */}
         <Route path="/part-units/:id/scan" element={<PartUnitScanPage />} />
+
+        {/* Public QR-per-machine "Monitoring Life Time Mesin" flow — no login, reachable from a QR stuck on the machine. */}
+        <Route path="/machines/scan/:machineId" element={<MachineMonitoringPage />} />
 
         <Route element={<ProtectedRoute />}>
           {/* Requires login (any role) but deliberately outside AppLayout — a

@@ -1,5 +1,6 @@
 import { apiClient } from '@/lib/api-client'
-import type { Machine } from '@/types/tasks'
+import type { Machine, Task } from '@/types/tasks'
+import type { PartInstallation } from '@/types/relations'
 
 /** No `code` — it's system-generated from `name` server-side (see Machine::generateCode()), never client-supplied. */
 export interface MachinePayload {
@@ -46,5 +47,23 @@ export async function createOutsideLineMachine(
   payload: OutsideLineMachinePayload,
 ): Promise<Machine> {
   const { data } = await apiClient.post<{ data: Machine }>(`/branches/${branchId}/machines`, payload)
+  return data.data
+}
+
+// --- "Monitoring Life Time Mesin" (public QR-scan landing page) ---
+
+export interface MachineMonitoringData {
+  machine: Machine
+  equipment_count: number
+  upcoming_tasks: Task[]
+  overdue_task_count: number
+  installations: PartInstallation[]
+  monthly_failure_trend: { month: string; count: number }[]
+  average_lifetime_hours: number | null
+}
+
+/** Unauthenticated — see PublicMachineMonitoringController. Reached by scanning a Machine's printed QR, no login. */
+export async function fetchMachineMonitoring(machineId: number): Promise<MachineMonitoringData> {
+  const { data } = await apiClient.get<{ data: MachineMonitoringData }>(`/public/machines/${machineId}/monitoring`)
   return data.data
 }
