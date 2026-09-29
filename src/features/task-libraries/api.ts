@@ -2,9 +2,9 @@ import { apiClient } from '@/lib/api-client'
 import type { TaskLibrary, TaskLibraryPart, TaskLibraryScheduleType } from '@/types/pm'
 import type { Task } from '@/types/tasks'
 
+/** No `quantity_required` — it's always the part's current active-installation count on the equipment, computed server-side (see Equipment::activeInstallationCountForPart()), never client-supplied. */
 export interface TaskLibraryPartInput {
   part_id: number
-  quantity_required?: number
 }
 
 export interface TaskLibraryPayload {
@@ -19,9 +19,9 @@ export interface TaskLibraryPayload {
   parts?: TaskLibraryPartInput[]
 }
 
+/** No `quantity_required` — see TaskLibraryPartInput. */
 export interface TaskLibraryPartPayload {
   part_id: number
-  quantity_required?: number
   notes?: string | null
 }
 

@@ -56,31 +56,33 @@ function calendarIntervalFromDays(days: number | null): 'weekly' | 'monthly' | u
   return undefined
 }
 
-/** Clamps to a valid quantity (integer >= 1) — never lets a bad keystroke stage a 0/negative/decimal value. */
-function sanitizeQuantity(value: string): number {
-  const parsed = Math.trunc(Number(value))
-  return Number.isFinite(parsed) && parsed >= 1 ? parsed : 1
-}
-
 interface InstalledPartOption {
   partId: number
   partName: string
   itemMasterNo: string
+  /** How many active units of this part are installed on this equipment — the checklist quantity is always exactly this, never a typed-in number. */
+  installedCount: number
 }
 
-function dedupeInstalledParts(
+function summarizeInstalledParts(
   installations: { part_id: number; part_name: string; item_master_no: string; is_active: boolean }[] | undefined,
 ): InstalledPartOption[] {
-  const seen = new Map<number, InstalledPartOption>()
+  const byPart = new Map<number, InstalledPartOption>()
   for (const installation of installations ?? []) {
-    if (!installation.is_active || seen.has(installation.part_id)) continue
-    seen.set(installation.part_id, {
+    if (!installation.is_active) continue
+    const existing = byPart.get(installation.part_id)
+    if (existing) {
+      existing.installedCount += 1
+      continue
+    }
+    byPart.set(installation.part_id, {
       partId: installation.part_id,
       partName: installation.part_name,
       itemMasterNo: installation.item_master_no,
+      installedCount: 1,
     })
   }
-  return Array.from(seen.values())
+  return Array.from(byPart.values())
 }
 
 interface TaskLibraryFormDialogProps {
@@ -93,16 +95,17 @@ interface TaskLibraryFormDialogProps {
  * The single "laci input" for a Task Library (PM recipe): identity fields,
  * the calendar-vs-running-hours interval (metadata only — nothing here
  * actually schedules a due date, that stays PM Schedule's job later), and
- * the checklist of parts to work on (each with its own quantity — how many
- * physical units of that part this recipe replaces, see
- * PmSchedulingService::schedule() which turns quantity_required into that
- * many independent TaskPartCheck rows), picked only from what's actually
- * installed on this equipment. Creating submits everything — including the
- * chosen parts and quantities — in one atomic request; editing keeps the
- * parts checklist incremental (quantity is set once, at add time, since
- * there's no update-quantity endpoint — only add/remove), and a newly
- * picked part is staged with an editable quantity before it's actually
- * sent, rather than firing immediately like a plain toggle.
+ * the checklist of parts to work on, picked only from what's actually
+ * installed on this equipment. Quantity is never typed in — it's always
+ * however many units of that part are currently installed (computed
+ * server-side, see Equipment::activeInstallationCountForPart(), which
+ * PmSchedulingService::schedule() then turns into that many independent
+ * TaskPartCheck rows), so a PM checklist always covers every installed unit
+ * rather than some number a user might mistype. Creating submits everything
+ * — including the chosen parts — in one atomic request; editing keeps the
+ * parts checklist incremental (add/remove only, no quantity to set), and a
+ * newly picked part is staged before it's actually sent, rather than firing
+ * immediately like a plain toggle.
  */
 export function TaskLibraryFormDialog({ equipmentId, library, trigger }: TaskLibraryFormDialogProps) {
   const [open, setOpen] = useState(false)
@@ -114,12 +117,12 @@ export function TaskLibraryFormDialog({ equipmentId, library, trigger }: TaskLib
     queryFn: () => fetchPartInstallations(equipmentId),
     enabled: open,
   })
-  const installedParts = useMemo(() => dedupeInstalledParts(installations), [installations])
+  const installedParts = useMemo(() => summarizeInstalledParts(installations), [installations])
 
-  // partId -> quantity. Create mode: every part the user has picked,
-  // submitted together with the rest of the form. Edit mode: parts picked
-  // but not yet sent — each gets its own "Tambah" once its quantity is set.
-  const [stagedParts, setStagedParts] = useState<Map<number, number>>(new Map())
+  // Create mode: every part the user has picked, submitted together with
+  // the rest of the form. Edit mode: parts picked but not yet sent — each
+  // gets its own "Tambah".
+  const [stagedPartIds, setStagedPartIds] = useState<Set<number>>(new Set())
 
   const {
     register,
@@ -150,7 +153,7 @@ export function TaskLibraryFormDialog({ equipmentId, library, trigger }: TaskLib
         interval_hours: library?.interval_hours ? String(library.interval_hours) : '',
         estimated_duration_minutes: library?.estimated_duration_minutes ? String(library.estimated_duration_minutes) : '',
       })
-      setStagedParts(new Map())
+      setStagedPartIds(new Set())
     }
   }, [open, library, reset])
 
@@ -169,10 +172,7 @@ export function TaskLibraryFormDialog({ equipmentId, library, trigger }: TaskLib
       }
       if (isEdit) return updateTaskLibrary(library!.id, payload)
 
-      const parts: TaskLibraryPartInput[] = Array.from(stagedParts.entries()).map(([partId, quantity]) => ({
-        part_id: partId,
-        quantity_required: quantity,
-      }))
+      const parts: TaskLibraryPartInput[] = Array.from(stagedPartIds).map((partId) => ({ part_id: partId }))
       return createTaskLibrary(equipmentId, { ...payload, parts })
     },
     onSuccess: () => {
@@ -184,12 +184,11 @@ export function TaskLibraryFormDialog({ equipmentId, library, trigger }: TaskLib
   })
 
   const addPartMutation = useMutation({
-    mutationFn: ({ partId, quantity }: { partId: number; quantity: number }) =>
-      addTaskLibraryPart(library!.id, { part_id: partId, quantity_required: quantity }),
-    onSuccess: (_data, { partId }) => {
+    mutationFn: (partId: number) => addTaskLibraryPart(library!.id, { part_id: partId }),
+    onSuccess: (_data, partId) => {
       queryClient.invalidateQueries({ queryKey: ['task-libraries', equipmentId] })
-      setStagedParts((prev) => {
-        const next = new Map(prev)
+      setStagedPartIds((prev) => {
+        const next = new Set(prev)
         next.delete(partId)
         return next
       })
@@ -206,25 +205,21 @@ export function TaskLibraryFormDialog({ equipmentId, library, trigger }: TaskLib
   })
 
   function stagePart(partId: number) {
-    setStagedParts((prev) => new Map(prev).set(partId, 1))
+    setStagedPartIds((prev) => new Set(prev).add(partId))
   }
 
   function unstagePart(partId: number) {
-    setStagedParts((prev) => {
-      const next = new Map(prev)
+    setStagedPartIds((prev) => {
+      const next = new Set(prev)
       next.delete(partId)
       return next
     })
   }
 
-  function setStagedQuantity(partId: number, quantity: number) {
-    setStagedParts((prev) => new Map(prev).set(partId, quantity))
-  }
-
   const alreadyAddedParts = new Map(library?.parts.map((p) => [p.part_id, p]) ?? [])
   const pickablePartIds = new Set(installedParts.map((p) => p.partId))
   const availableParts = installedParts.filter(
-    (part) => !alreadyAddedParts.has(part.partId) && !stagedParts.has(part.partId),
+    (part) => !alreadyAddedParts.has(part.partId) && !stagedPartIds.has(part.partId),
   )
 
   return (
@@ -234,7 +229,7 @@ export function TaskLibraryFormDialog({ equipmentId, library, trigger }: TaskLib
       description="Resep kegiatan PM — interval di sini hanya metadata untuk otomasi ke depan, penjadwalan tanggal aktual tetap dilakukan lewat PM Schedule."
       open={open}
       onOpenChange={setOpen}
-      isDirty={isDirty || stagedParts.size > 0}
+      isDirty={isDirty || stagedPartIds.size > 0}
       onSubmit={handleSubmit((values) => mutation.mutate(values))}
       submitLabel="Simpan"
       isSubmitting={mutation.isPending}
@@ -343,7 +338,8 @@ export function TaskLibraryFormDialog({ equipmentId, library, trigger }: TaskLib
         <div>
           <Label>Part & Quantity</Label>
           <p className="text-xs text-muted-foreground">
-            Berapa unit fisik part ini yang akan diganti setiap kali kegiatan ini dikerjakan.
+            Quantity otomatis mengikuti jumlah unit part yang sedang terpasang di equipment ini — bukan angka yang
+            diketik manual.
           </p>
         </div>
 
@@ -369,32 +365,20 @@ export function TaskLibraryFormDialog({ equipmentId, library, trigger }: TaskLib
           </div>
         )}
 
-        {stagedParts.size > 0 && (
+        {stagedPartIds.size > 0 && (
           <div className="flex flex-col gap-1.5">
-            {Array.from(stagedParts.entries()).map(([partId, quantity]) => {
+            {Array.from(stagedPartIds).map((partId) => {
               const part = installedParts.find((p) => p.partId === partId)
               if (!part) return null
-              const adding = isEdit && addPartMutation.isPending && addPartMutation.variables?.partId === partId
+              const adding = isEdit && addPartMutation.isPending && addPartMutation.variables === partId
               return (
                 <div key={partId} className="flex items-center gap-2 rounded-md border border-primary/40 bg-primary/5 px-3 py-1.5">
                   <span className="min-w-0 flex-1 truncate text-sm">{part.partName}</span>
-                  <Input
-                    type="number"
-                    min={1}
-                    step={1}
-                    value={quantity}
-                    disabled={adding}
-                    onChange={(e) => setStagedQuantity(partId, sanitizeQuantity(e.target.value))}
-                    className="h-8 w-16 text-center"
-                    aria-label={`Quantity ${part.partName}`}
-                  />
+                  <span className="shrink-0 text-xs text-muted-foreground">
+                    Terpasang: <span className="font-medium text-foreground">{part.installedCount}</span> unit
+                  </span>
                   {isEdit && (
-                    <Button
-                      type="button"
-                      size="sm"
-                      disabled={adding}
-                      onClick={() => addPartMutation.mutate({ partId, quantity })}
-                    >
+                    <Button type="button" size="sm" disabled={adding} onClick={() => addPartMutation.mutate(partId)}>
                       {adding ? '...' : 'Tambah'}
                     </Button>
                   )}
