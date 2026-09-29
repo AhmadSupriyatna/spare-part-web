@@ -1,10 +1,5 @@
 import { apiClient } from '@/lib/api-client'
-import type { ReorderRequest, ReorderStatus, StockAlert } from '@/types/inventory'
-
-export async function fetchStockAlerts(branchId: number): Promise<StockAlert[]> {
-  const { data } = await apiClient.get<{ data: StockAlert[] }>(`/branches/${branchId}/stock-alerts`)
-  return data.data
-}
+import type { ReorderRequest, ReorderStatus } from '@/types/inventory'
 
 export async function fetchReorderRequests(
   branchId: number,

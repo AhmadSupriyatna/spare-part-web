@@ -100,18 +100,6 @@ export interface StockLedgerEntry {
   occurred_at: string
 }
 
-export interface StockAlert {
-  id: number
-  part_stock_id: number
-  part_name: string
-  item_master_no: string
-  level: 'low' | 'critical'
-  quantity_on_hand_at_trigger: number
-  is_resolved: boolean
-  resolved_at: string | null
-  created_at: string
-}
-
 export type ReorderStatus = 'pending' | 'approved' | 'ordered' | 'completed' | 'cancelled'
 
 export interface ReorderRequest {
