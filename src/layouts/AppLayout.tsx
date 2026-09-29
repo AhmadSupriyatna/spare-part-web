@@ -1,5 +1,6 @@
 import { useMutation } from '@tanstack/react-query'
 import {
+  ArrowLeftRight,
   Bell,
   Boxes,
   Building2,
@@ -64,6 +65,7 @@ const navSections: NavSection[] = [
     icon: Warehouse,
     items: [
       { to: '/stock', label: 'Stok & Part', icon: Boxes },
+      { to: '/stock/ledger', label: 'Ledger Stok', icon: ArrowLeftRight },
       { to: '/suppliers', label: 'Supplier', icon: Truck },
       { to: '/locations', label: 'Lokasi', icon: MapPin },
     ],

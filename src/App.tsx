@@ -17,6 +17,7 @@ import { LocationsPage } from '@/features/locations/LocationsPage'
 import { PartDetailPage } from '@/features/parts/PartDetailPage'
 import { KelolaStokPage } from '@/features/part-stocks/KelolaStokPage'
 import { PartStockDetailPage } from '@/features/part-stocks/PartStockDetailPage'
+import { StockLedgerPage } from '@/features/part-stocks/StockLedgerPage'
 import { PartUnitScanPage } from '@/features/part-unit-actions/PartUnitScanPage'
 import { PartUnitDetailPage } from '@/features/part-units/PartUnitDetailPage'
 import { PrintRepairHistoryPage } from '@/features/part-repairs/PrintRepairHistoryPage'
@@ -55,6 +56,7 @@ function App() {
             <Route index element={<DashboardPage />} />
             <Route path="parts/:id" element={<PartDetailPage />} />
             <Route path="stock" element={<KelolaStokPage />} />
+            <Route path="stock/ledger" element={<StockLedgerPage />} />
             <Route path="stock/:id" element={<PartStockDetailPage />} />
             <Route path="alerts" element={<AlertsPage />} />
             <Route path="branches" element={<BranchesPage />} />
