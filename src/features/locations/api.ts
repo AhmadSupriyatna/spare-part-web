@@ -2,6 +2,7 @@ import { apiClient } from '@/lib/api-client'
 import type { Location, Rack, RackLevel } from '@/types/inventory'
 
 export interface LocationPayload {
+  code?: string
   description?: string | null
   is_active?: boolean
 }

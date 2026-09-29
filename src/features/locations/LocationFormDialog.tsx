@@ -9,10 +9,12 @@ import type { Location } from '@/types/inventory'
 import { Button } from '@/components/ui/button'
 import { Checkbox } from '@/components/ui/checkbox'
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog'
+import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
 
 const locationSchema = z.object({
+  code: z.string().max(50, 'Maksimal 50 karakter').optional(),
   description: z.string().optional(),
   is_active: z.boolean(),
 })
@@ -48,6 +50,7 @@ export function LocationFormDialog({ branchId, location, trigger }: LocationForm
   } = useForm<LocationFormValues>({
     resolver: zodResolver(locationSchema),
     defaultValues: {
+      code: location?.code ?? '',
       description: location?.description ?? '',
       is_active: location?.is_active ?? true,
     },
@@ -56,6 +59,7 @@ export function LocationFormDialog({ branchId, location, trigger }: LocationForm
   useEffect(() => {
     if (open) {
       reset({
+        code: location?.code ?? '',
         description: location?.description ?? '',
         is_active: location?.is_active ?? true,
       })
@@ -64,12 +68,14 @@ export function LocationFormDialog({ branchId, location, trigger }: LocationForm
 
   const mutation = useMutation({
     mutationFn: async (values: LocationFormValues) => {
-      if (location) return updateLocation(location.id, values)
+      const code = values.code?.trim() || undefined
+
+      if (location) return updateLocation(location.id, { ...values, code })
 
       const racks = await fetchRacks(branchId)
       const rack = racks[0] ?? (await createRack(branchId))
       const level = rack.levels[0] ?? (await createRackLevel(rack.id))
-      return createLocation(level.id, { description: values.description })
+      return createLocation(level.id, { description: values.description, code })
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['locations', branchId] })
@@ -87,12 +93,11 @@ export function LocationFormDialog({ branchId, location, trigger }: LocationForm
           <DialogTitle>{isEdit ? 'Ubah Lokasi' : 'Tambah Lokasi'}</DialogTitle>
         </DialogHeader>
         <form className="flex flex-col gap-4" onSubmit={handleSubmit((values) => mutation.mutate(values))}>
-          {isEdit && (
-            <div className="flex flex-col gap-1">
-              <Label>Kode</Label>
-              <p className="font-mono text-sm text-muted-foreground">{location!.code}</p>
-            </div>
-          )}
+          <div className="flex flex-col gap-2">
+            <Label htmlFor="code">Kode</Label>
+            <Input id="code" className="font-mono" placeholder="Kosongkan untuk kode otomatis" {...register('code')} />
+            {errors.code && <p className="text-sm text-destructive">{errors.code.message}</p>}
+          </div>
           <div className="flex flex-col gap-2">
             <Label htmlFor="description">Deskripsi</Label>
             <Textarea
