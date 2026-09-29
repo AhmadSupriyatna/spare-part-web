@@ -58,6 +58,9 @@ export function PartStockDetailPage() {
           <div className="flex gap-2">
             <AdjustStockDialog partStockId={stock.id} branchId={stock.branch_id} />
             <ReceiveStockDialog
+              partId={stock.part_id}
+              partName={part?.name}
+              itemMasterNo={part?.item_master_no}
               partStockId={stock.id}
               branchId={stock.branch_id}
               currentQuantity={stock.quantity_on_hand}

@@ -5,7 +5,7 @@ import { useForm } from 'react-hook-form'
 import { toast } from 'sonner'
 import { createPartStock, receiveStock } from '@/features/part-stocks/api'
 import { receiveStockSchema, type ReceiveStockFormValues } from '@/features/part-stocks/schema'
-import { fetchSuppliers } from '@/features/suppliers/api'
+import { fetchPartSuppliers } from '@/features/part-suppliers/api'
 import { FormSheet } from '@/components/FormSheet'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -17,10 +17,12 @@ const currencyFormatter = new Intl.NumberFormat('id-ID', { style: 'currency', cu
 
 interface ReceiveStockDialogProps {
   branchId: number
+  /** Always required now — identifies which Part this receipt is for, both for the header display and for scoping the supplier list to only this part's registered suppliers. */
+  partId: number
+  partName?: string
+  itemMasterNo?: string
   /** An existing part_stocks row — tops it up via POST /part-stocks/{id}/receive. */
   partStockId?: number
-  /** A part with no part_stocks row for this branch yet — creates one via POST /branches/{branch}/part-stocks. */
-  partId?: number
   currentQuantity?: number
   currentUnitCost?: string
   trigger?: React.ReactNode
@@ -32,13 +34,14 @@ interface ReceiveStockDialogProps {
  * Handles two cases behind one form: topping up a part that already has a
  * part_stocks row here (`partStockId`, the established flow — Inventory
  * Workspace's per-card action, Part detail page) or receiving a part into
- * this branch's stock for the very first time (`partId`). Exactly one of
- * the two must be given.
+ * this branch's stock for the very first time (no `partStockId`).
  */
 export function ReceiveStockDialog({
   branchId,
-  partStockId,
   partId,
+  partName,
+  itemMasterNo,
+  partStockId,
   currentQuantity = 0,
   currentUnitCost = '0',
   trigger,
@@ -50,11 +53,12 @@ export function ReceiveStockDialog({
   const setOpen = onOpenChangeProp ?? setInternalOpen
   const queryClient = useQueryClient()
 
-  const { data: suppliers } = useQuery({
-    queryKey: ['suppliers', branchId],
-    queryFn: () => fetchSuppliers(branchId),
+  const { data: partSuppliers } = useQuery({
+    queryKey: ['part-suppliers', partId],
+    queryFn: () => fetchPartSuppliers(partId),
     enabled: open,
   })
+  const suppliers = partSuppliers?.filter((ps) => ps.branch_id === branchId)
 
   const {
     register,
@@ -90,7 +94,7 @@ export function ReceiveStockDialog({
       }
       return partStockId
         ? receiveStock(partStockId, payload)
-        : createPartStock(branchId, { ...payload, part_id: partId! })
+        : createPartStock(branchId, { ...payload, part_id: partId })
     },
     onSuccess: () => {
       if (partStockId) {
@@ -116,6 +120,12 @@ export function ReceiveStockDialog({
       submitLabel="Simpan"
       isSubmitting={mutation.isPending}
     >
+      {(partName || itemMasterNo) && (
+        <div className="rounded-md border bg-muted/40 px-3 py-2">
+          {partName && <p className="text-sm font-medium">{partName}</p>}
+          {itemMasterNo && <p className="font-mono text-xs text-muted-foreground">{itemMasterNo}</p>}
+        </div>
+      )}
       <p className="text-xs text-muted-foreground">
         Stok saat ini: <span className="font-medium text-foreground">{currentQuantity} unit</span> @{' '}
         <span className="font-medium text-foreground">{currencyFormatter.format(oldUnitCost)}</span>
@@ -149,13 +159,19 @@ export function ReceiveStockDialog({
             <SelectValue placeholder="Pilih supplier" />
           </SelectTrigger>
           <SelectContent>
-            {suppliers?.map((supplier) => (
-              <SelectItem key={supplier.id} value={String(supplier.id)}>
-                {supplier.name}
+            {suppliers?.map((ps) => (
+              <SelectItem key={ps.supplier_id} value={String(ps.supplier_id)}>
+                {ps.supplier_name}
+                {ps.is_preferred && ' (Utama)'}
               </SelectItem>
             ))}
           </SelectContent>
         </Select>
+        {suppliers?.length === 0 && (
+          <p className="text-xs text-muted-foreground">
+            Belum ada supplier terdaftar untuk part ini — atur lewat "Pilih Supplier" di Kelola Stok.
+          </p>
+        )}
       </div>
       <div className="flex flex-col gap-2">
         <Label htmlFor="notes">Catatan</Label>

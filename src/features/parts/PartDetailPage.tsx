@@ -272,6 +272,9 @@ export function PartDetailPage() {
         <div className="flex flex-wrap gap-2">
           <ReceiveStockDialog
             branchId={activeStock.branch_id}
+            partId={part.id}
+            partName={part.name}
+            itemMasterNo={part.item_master_no}
             partStockId={activeStock.id}
             currentQuantity={activeStock.quantity_on_hand}
             currentUnitCost={activeStock.unit_cost}

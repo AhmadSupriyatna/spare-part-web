@@ -189,6 +189,9 @@ function StockRow({ stock, part, branchId, canManage, selected, onToggleSelect }
           <>
             <ReceiveStockDialog
               branchId={branchId}
+              partId={stock.part_id}
+              partName={part?.name ?? stock.part_name}
+              itemMasterNo={part?.item_master_no ?? stock.item_master_no}
               partStockId={stock.id}
               currentQuantity={stock.quantity_on_hand}
               currentUnitCost={stock.unit_cost}
@@ -316,6 +319,8 @@ function UnstockedPartRow({ part, branchId }: UnstockedPartRowProps) {
         <ReceiveStockDialog
           branchId={branchId}
           partId={part.id}
+          partName={part.name}
+          itemMasterNo={part.item_master_no}
           trigger={
             <Button variant="outline" size="sm">
               <PackagePlus />

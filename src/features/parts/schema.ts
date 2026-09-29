@@ -7,8 +7,7 @@ import { z } from 'zod'
  * belongs to Task Library maintenance activity, not a Part-level
  * replacement policy, and "on demand" is a Task-creation trigger, not a
  * strategy. There is no safe default among these 3, so callers must never
- * fall back to one silently (see PartFormDialog, LocationPartDrawer,
- * SupplierPartDrawer).
+ * fall back to one silently (see PartFormDialog).
  */
 export const partReplacementStrategyOptions = [
   {

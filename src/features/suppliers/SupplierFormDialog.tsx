@@ -1,12 +1,13 @@
 import { zodResolver } from '@hookform/resolvers/zod'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { useEffect, useState } from 'react'
-import { useForm } from 'react-hook-form'
+import { Controller, useForm } from 'react-hook-form'
 import { toast } from 'sonner'
 import { z } from 'zod'
 import { createSupplier, updateSupplier } from '@/features/suppliers/api'
 import type { Supplier } from '@/types/inventory'
 import { Button } from '@/components/ui/button'
+import { Checkbox } from '@/components/ui/checkbox'
 import {
   Dialog,
   DialogContent,
@@ -26,6 +27,7 @@ const supplierSchema = z.object({
   email: z.string().email('Format email tidak valid').optional().or(z.literal('')),
   address: z.string().optional(),
   notes: z.string().optional(),
+  is_active: z.boolean(),
 })
 
 type SupplierFormValues = z.infer<typeof supplierSchema>
@@ -43,6 +45,7 @@ export function SupplierFormDialog({ branchId, supplier, trigger }: SupplierForm
 
   const {
     register,
+    control,
     handleSubmit,
     reset,
     formState: { errors },
@@ -55,6 +58,7 @@ export function SupplierFormDialog({ branchId, supplier, trigger }: SupplierForm
       email: supplier?.email ?? '',
       address: supplier?.address ?? '',
       notes: supplier?.notes ?? '',
+      is_active: supplier?.is_active ?? true,
     },
   })
 
@@ -67,6 +71,7 @@ export function SupplierFormDialog({ branchId, supplier, trigger }: SupplierForm
         email: supplier?.email ?? '',
         address: supplier?.address ?? '',
         notes: supplier?.notes ?? '',
+        is_active: supplier?.is_active ?? true,
       })
     }
   }, [open, supplier, reset])
@@ -121,6 +126,16 @@ export function SupplierFormDialog({ branchId, supplier, trigger }: SupplierForm
             <Label htmlFor="notes">Catatan</Label>
             <Textarea id="notes" {...register('notes')} />
           </div>
+          <Controller
+            control={control}
+            name="is_active"
+            render={({ field }) => (
+              <label className="flex w-fit items-center gap-2 text-sm">
+                <Checkbox checked={field.value} onCheckedChange={field.onChange} />
+                Aktif
+              </label>
+            )}
+          />
           <DialogFooter>
             <Button type="submit" disabled={mutation.isPending}>
               {mutation.isPending ? 'Menyimpan...' : 'Simpan'}
