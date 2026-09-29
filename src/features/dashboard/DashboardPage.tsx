@@ -130,7 +130,7 @@ export function DashboardPage() {
             title="Total Part"
             value={parts?.length ?? 0}
             icon={Package}
-            href="/parts"
+            href="/stock"
             loading={partsLoading}
           />
           <SummaryCard

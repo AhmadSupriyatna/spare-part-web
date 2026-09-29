@@ -13,7 +13,6 @@ import {
   List,
   MapPin,
   NotebookPen,
-  Package,
   QrCode,
   Ruler,
   Settings,
@@ -64,7 +63,7 @@ const navSections: NavSection[] = [
     label: 'Kelola Stok',
     icon: Warehouse,
     items: [
-      { to: '/stock', label: 'Inventory Workspace', icon: Boxes },
+      { to: '/stock', label: 'Stok & Part', icon: Boxes },
       { to: '/suppliers', label: 'Supplier', icon: Truck },
       { to: '/locations', label: 'Lokasi', icon: MapPin },
     ],
@@ -85,7 +84,6 @@ const navSections: NavSection[] = [
     items: [
       { to: '/branches', label: 'Plant', icon: Building2 },
       { to: '/lines', label: 'Line Equipment', icon: Factory },
-      { to: '/parts', label: 'Part', icon: Package },
     ],
   },
   {

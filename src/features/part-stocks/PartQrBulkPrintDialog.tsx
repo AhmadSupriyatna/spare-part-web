@@ -23,18 +23,29 @@ interface PartQrBulkPrintDialogProps {
   stocks?: PartStock[]
   branchId: number
   trigger: React.ReactNode
+  open?: boolean
+  onOpenChange?: (open: boolean) => void
 }
 
 /**
- * Inventory Workspace's "Cetak QR Terpilih (N)" (and the per-card single-
- * part Print button) — same QR-per-part-per-branch target
+ * Inventory Workspace's "Cetak QR Terpilih (N)" (and the per-row single-
+ * part Print action) — same QR-per-part-per-branch target
  * (`/breakdown/scan/:partId/:branchId`) as PartQrPrintSection, but a
  * landscape row per label (QR left, Item Master/description/location
  * right) instead of that page's stacked square card, and for a fixed set
  * of already-selected parts instead of its own search+select UI.
  */
-export function PartQrBulkPrintDialog({ parts, stocks, branchId, trigger }: PartQrBulkPrintDialogProps) {
-  const [quantityDialogOpen, setQuantityDialogOpen] = useState(false)
+export function PartQrBulkPrintDialog({
+  parts,
+  stocks,
+  branchId,
+  trigger,
+  open: openProp,
+  onOpenChange: onOpenChangeProp,
+}: PartQrBulkPrintDialogProps) {
+  const [internalOpen, setInternalOpen] = useState(false)
+  const quantityDialogOpen = openProp ?? internalOpen
+  const setQuantityDialogOpen = onOpenChangeProp ?? setInternalOpen
   const [quantities, setQuantities] = useState<Record<number, string>>({})
   const [printEntries, setPrintEntries] = useState<{ part: Part; copy: number }[] | null>(null)
 
