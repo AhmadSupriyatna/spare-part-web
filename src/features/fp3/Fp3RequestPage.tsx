@@ -1,14 +1,16 @@
 import { zodResolver } from '@hookform/resolvers/zod'
-import { useMutation } from '@tanstack/react-query'
+import { useMutation, useQuery } from '@tanstack/react-query'
 import { useRef, useState } from 'react'
-import { useForm } from 'react-hook-form'
+import { Controller, useForm } from 'react-hook-form'
 import { useParams } from 'react-router'
 import { z } from 'zod'
+import { fetchPublicDepartments } from '@/features/departments/api'
 import { submitFp3Request } from '@/features/fp3/api'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Textarea } from '@/components/ui/textarea'
 
 const formSchema = z.object({
@@ -40,8 +42,14 @@ export function Fp3RequestPage() {
   const [photoPreview, setPhotoPreview] = useState<string | null>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
 
+  const { data: departments, isLoading: departmentsLoading } = useQuery({
+    queryKey: ['public-departments'],
+    queryFn: fetchPublicDepartments,
+  })
+
   const {
     register,
+    control,
     handleSubmit,
     setError,
     formState: { errors },
@@ -104,7 +112,24 @@ export function Fp3RequestPage() {
             </div>
             <div className="flex flex-col gap-2">
               <Label htmlFor="department">Departemen</Label>
-              <Input id="department" {...register('department')} />
+              <Controller
+                control={control}
+                name="department"
+                render={({ field }) => (
+                  <Select value={field.value} onValueChange={(value) => field.onChange(value ?? '')} disabled={departmentsLoading}>
+                    <SelectTrigger id="department">
+                      <SelectValue placeholder={departmentsLoading ? 'Memuat...' : 'Pilih departemen'} />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {departments?.map((department) => (
+                        <SelectItem key={department.id} value={department.name}>
+                          {department.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                )}
+              />
               {errors.department && <p className="text-sm text-destructive">{errors.department.message}</p>}
             </div>
             <div className="flex flex-col gap-2">

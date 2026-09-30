@@ -135,6 +135,7 @@ const navSections: NavSection[] = [
     items: [
       { to: '/settings/company', label: 'Profil Perusahaan', icon: Settings },
       { to: '/settings/units', label: 'Satuan Part', icon: Ruler },
+      { to: '/settings/departments', label: 'Departemen', icon: Building2 },
       { to: '/settings/users', label: 'Kelola Pengguna', icon: UserRoundCog, roles: ['superadmin'] },
       {
         to: '/settings/activity-log',

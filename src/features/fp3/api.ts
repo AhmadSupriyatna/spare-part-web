@@ -5,9 +5,10 @@ export type Fp3Disposition = 'open' | 'closed' | 'closed_with_note'
 
 export interface Fp3PartUsage {
   id: number
-  part_id: number
+  part_id: number | null
   part_name?: string
   item_master_no?: string
+  is_registered: boolean
   quantity: number
   notes: string | null
 }
@@ -75,8 +76,15 @@ export async function receiveFp3Request(id: number, dueDate?: string | null): Pr
   return data.data
 }
 
+/** Sets due_date only — no claim, no status change. Used when dragging an unscheduled FP3 card onto a PM Calendar day, mirroring scheduleTaskLibrary()'s "just give it a date" shape. */
+export async function scheduleFp3Request(id: number, dueDate: string): Promise<Fp3Request> {
+  const { data } = await apiClient.put<{ data: Fp3Request }>(`/fp3-requests/${id}/schedule`, { due_date: dueDate })
+  return data.data
+}
+
 export interface CompleteFp3RequestPartInput {
-  part_id: number
+  part_id?: number | null
+  part_name_manual?: string | null
   quantity: number
   notes?: string | null
 }
@@ -100,7 +108,8 @@ export async function completeFp3Request(id: number, payload: CompleteFp3Request
   if (payload.disposition_note) formData.append('disposition_note', payload.disposition_note)
   if (payload.photo) formData.append('photo', payload.photo)
   ;(payload.parts ?? []).forEach((part, index) => {
-    formData.append(`parts[${index}][part_id]`, String(part.part_id))
+    if (part.part_id) formData.append(`parts[${index}][part_id]`, String(part.part_id))
+    if (part.part_name_manual) formData.append(`parts[${index}][part_name_manual]`, part.part_name_manual)
     formData.append(`parts[${index}][quantity]`, String(part.quantity))
     if (part.notes) formData.append(`parts[${index}][notes]`, part.notes)
   })

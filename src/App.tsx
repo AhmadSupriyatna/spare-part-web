@@ -9,6 +9,7 @@ import { PrintQrCodesPage } from '@/features/breakdown/PrintQrCodesPage'
 import { BudgetsPage } from '@/features/budgets/BudgetsPage'
 import { DashboardPage } from '@/features/dashboard/DashboardPage'
 import { DatabaseBackupPage } from '@/features/database-backup/DatabaseBackupPage'
+import { DepartmentsPage } from '@/features/departments/DepartmentsPage'
 import { EquipmentDetailPage } from '@/features/equipment/EquipmentDetailPage'
 import { Fp3ListPage } from '@/features/fp3/Fp3ListPage'
 import { Fp3RequestPage } from '@/features/fp3/Fp3RequestPage'
@@ -83,6 +84,7 @@ function App() {
             <Route path="breakdown/print-qr" element={<PrintQrCodesPage />} />
             <Route path="settings/company" element={<CompanySettingsPage />} />
             <Route path="settings/units" element={<UnitsPage />} />
+            <Route path="settings/departments" element={<DepartmentsPage />} />
             <Route path="settings/users" element={<UsersPage />} />
             <Route path="settings/activity-log" element={<ActivityLogPage />} />
             <Route path="settings/backup" element={<DatabaseBackupPage />} />
