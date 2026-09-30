@@ -1,23 +1,25 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { CalendarDays, ChevronLeft, ChevronRight, List, Plus, Wrench } from 'lucide-react'
 import { useMemo, useState } from 'react'
-import { useSearchParams } from 'react-router'
+import { Link, useSearchParams } from 'react-router'
 import { toast } from 'sonner'
+import { fetchFp3RequestsForBranch, scheduleFp3Request, type Fp3Request } from '@/features/fp3/api'
 import { FindingActionView } from '@/features/findings/FindingActionView'
 import { MaintenanceHistoryView } from '@/features/maintenance-history/MaintenanceHistoryView'
 import { fetchNationalHolidays, fetchTaskRescheduleHistory } from '@/features/pm/api'
 import { RescheduleReasonDialog } from '@/features/pm/RescheduleReasonDialog'
 import { taskChipVariant, taskSource } from '@/features/pm/taskColors'
 import { TaskDetailSheet } from '@/features/pm/TaskDetailSheet'
-import { UpcomingWoPanel } from '@/features/pm/UpcomingWoPanel'
+import { UnscheduledWorkPanel } from '@/features/pm/UnscheduledWorkPanel'
 import { WoListView } from '@/features/pm/WoListView'
 import { RepairBoard } from '@/features/part-repairs/RepairBoard'
 import { ScheduleTaskLibraryDialog } from '@/features/task-libraries/ScheduleTaskLibraryDialog'
-import { fetchTaskLibrariesForBranch } from '@/features/task-libraries/api'
+import { fetchTaskLibrariesForBranch, scheduleTaskLibrary } from '@/features/task-libraries/api'
 import { fetchPmTasksForBranch, rescheduleTask } from '@/features/tasks/api'
 import { useBranchStore } from '@/stores/branch-store'
 import { diffInDays, toDateKey } from '@/lib/dates'
 import { cn } from '@/lib/utils'
+import type { TaskLibrary } from '@/types/pm'
 import type { Task } from '@/types/tasks'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -47,6 +49,8 @@ export function MaintenancePage() {
     return new Date(now.getFullYear(), now.getMonth(), 1)
   })
   const [draggingTask, setDraggingTask] = useState<Task | null>(null)
+  const [draggingLibrary, setDraggingLibrary] = useState<TaskLibrary | null>(null)
+  const [draggingFp3, setDraggingFp3] = useState<Fp3Request | null>(null)
   const [dragOverKey, setDragOverKey] = useState<string | null>(null)
   const [pendingReschedule, setPendingReschedule] = useState<{ task: Task; newDate: string; diffDays: number } | null>(
     null,
@@ -62,6 +66,12 @@ export function MaintenancePage() {
   const { data: libraries } = useQuery({
     queryKey: ['task-libraries', 'branch', activeBranchId],
     queryFn: () => fetchTaskLibrariesForBranch(activeBranchId!),
+    enabled: !!activeBranchId,
+  })
+
+  const { data: fp3Requests, isLoading: fp3Loading } = useQuery({
+    queryKey: ['fp3-requests', activeBranchId],
+    queryFn: () => fetchFp3RequestsForBranch(activeBranchId!),
     enabled: !!activeBranchId,
   })
 
@@ -131,6 +141,44 @@ export function MaintenancePage() {
     return map
   }, [tasks])
 
+  const fp3ByDate = useMemo(() => {
+    const map = new Map<string, Fp3Request[]>()
+    fp3Requests?.forEach((fp3) => {
+      if (!fp3.due_date) return
+      const key = toDateKey(new Date(fp3.due_date))
+      map.set(key, [...(map.get(key) ?? []), fp3])
+    })
+    return map
+  }, [fp3Requests])
+
+  const scheduleLibraryMutation = useMutation({
+    mutationFn: ({ id, dueDate }: { id: number; dueDate: string }) => scheduleTaskLibrary(id, { due_date: dueDate }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['pm-tasks', activeBranchId] })
+      toast.success('Task manual berhasil dijadwalkan.')
+    },
+    onError: (error: unknown) => {
+      const message =
+        (error as { response?: { data?: { message?: string } } })?.response?.data?.message ??
+        'Gagal menjadwalkan task manual.'
+      toast.error(message)
+    },
+  })
+
+  const scheduleFp3Mutation = useMutation({
+    mutationFn: ({ id, dueDate }: { id: number; dueDate: string }) => scheduleFp3Request(id, dueDate),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['fp3-requests', activeBranchId] })
+      toast.success('FP3 berhasil dijadwalkan.')
+    },
+    onError: (error: unknown) => {
+      const message =
+        (error as { response?: { data?: { message?: string } } })?.response?.data?.message ??
+        'Gagal menjadwalkan FP3.'
+      toast.error(message)
+    },
+  })
+
   const cells = useMemo(() => {
     const firstOfMonth = monthCursor
     const jsDay = firstOfMonth.getDay() // 0 = Sunday
@@ -153,6 +201,19 @@ export function MaintenancePage() {
 
   function handleDrop(dateKey: string) {
     setDragOverKey(null)
+
+    if (draggingLibrary) {
+      scheduleLibraryMutation.mutate({ id: draggingLibrary.id, dueDate: dateKey })
+      setDraggingLibrary(null)
+      return
+    }
+
+    if (draggingFp3) {
+      scheduleFp3Mutation.mutate({ id: draggingFp3.id, dueDate: dateKey })
+      setDraggingFp3(null)
+      return
+    }
+
     if (!draggingTask || !draggingTask.due_date) return
     const currentKey = toDateKey(new Date(draggingTask.due_date))
     if (currentKey === dateKey) return
@@ -229,6 +290,9 @@ export function MaintenancePage() {
                   <span className="size-2.5 rounded-full bg-destructive" /> Breakdown
                 </span>
                 <span className="flex items-center gap-1">
+                  <span className="size-2.5 rounded-full bg-chart-2" /> WO FP3
+                </span>
+                <span className="flex items-center gap-1">
                   <span className="size-2.5 rounded-full bg-success" /> Selesai
                 </span>
               </div>
@@ -286,6 +350,7 @@ export function MaintenancePage() {
                   const key = toDateKey(date)
                   const isCurrentMonth = date.getMonth() === monthCursor.getMonth()
                   const dayTasks = tasksByDate.get(key) ?? []
+                  const dayFp3 = fp3ByDate.get(key) ?? []
                   const isSunday = date.getDay() === 0
                   const holidayName = holidays?.[key]
                   const isSpecialDay = isSunday || !!holidayName
@@ -385,6 +450,53 @@ export function MaintenancePage() {
                             </PopoverContent>
                           </Popover>
                         )}
+                        {dayFp3.slice(0, VISIBLE_TASKS_PER_DAY).map((fp3) => (
+                          <Link
+                            key={fp3.id}
+                            to="/workspace"
+                            title={`${fp3.code} — ${fp3.requester_name}: ${fp3.description}`}
+                            className="block w-full truncate rounded text-left text-[10px] leading-tight"
+                          >
+                            <Badge
+                              variant="outline"
+                              className="max-w-full border-chart-2/40 bg-chart-2/15 px-1 py-0 text-chart-2"
+                            >
+                              <span className="truncate">{fp3.requester_name}</span>
+                            </Badge>
+                          </Link>
+                        ))}
+                        {dayFp3.length > VISIBLE_TASKS_PER_DAY && (
+                          <Popover>
+                            <PopoverTrigger
+                              render={
+                                <button
+                                  type="button"
+                                  className="text-left text-[10px] text-muted-foreground hover:underline"
+                                />
+                              }
+                            >
+                              +{dayFp3.length - VISIBLE_TASKS_PER_DAY} FP3 lagi
+                            </PopoverTrigger>
+                            <PopoverContent side="right" align="start" className="w-56">
+                              <div className="flex flex-col gap-1">
+                                {dayFp3.map((fp3) => (
+                                  <Link
+                                    key={fp3.id}
+                                    to="/workspace"
+                                    className="rounded px-1 py-0.5 text-left"
+                                  >
+                                    <Badge
+                                      variant="outline"
+                                      className="max-w-full border-chart-2/40 bg-chart-2/15 text-chart-2"
+                                    >
+                                      <span className="truncate">{fp3.requester_name}</span>
+                                    </Badge>
+                                  </Link>
+                                ))}
+                              </div>
+                            </PopoverContent>
+                          </Popover>
+                        )}
                       </div>
                     </div>
                   )
@@ -452,7 +564,17 @@ export function MaintenancePage() {
             </div>
           </div>
 
-          <UpcomingWoPanel tasks={tasks} isLoading={tasksLoading} onSelect={setDetailTask} />
+          <UnscheduledWorkPanel
+            libraries={libraries}
+            fp3Requests={fp3Requests}
+            isLoading={fp3Loading}
+            onDragLibraryStart={setDraggingLibrary}
+            onDragFp3Start={setDraggingFp3}
+            onDragEnd={() => {
+              setDraggingLibrary(null)
+              setDraggingFp3(null)
+            }}
+          />
         </div>
       )}
 
