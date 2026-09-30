@@ -12,6 +12,7 @@ import { DatabaseBackupPage } from '@/features/database-backup/DatabaseBackupPag
 import { DepartmentsPage } from '@/features/departments/DepartmentsPage'
 import { EquipmentDetailPage } from '@/features/equipment/EquipmentDetailPage'
 import { Fp3ListPage } from '@/features/fp3/Fp3ListPage'
+import { Fp3PrintPage } from '@/features/fp3/Fp3PrintPage'
 import { Fp3RequestPage } from '@/features/fp3/Fp3RequestPage'
 import { LineHierarchyPage } from '@/features/lines/LineHierarchyPage'
 import { LineRuntimeScanPage } from '@/features/lines/LineRuntimeScanPage'
@@ -79,6 +80,7 @@ function App() {
             <Route path="equipment/:id" element={<EquipmentDetailPage />} />
             <Route path="workspace" element={<WorkspacePage />} />
             <Route path="fp3" element={<Fp3ListPage />} />
+            <Route path="fp3/:id/print" element={<Fp3PrintPage />} />
             <Route path="approval" element={<ApprovalPage />} />
             <Route path="task-libraries" element={<TaskLibraryPage />} />
             <Route path="breakdown/print-qr" element={<PrintQrCodesPage />} />

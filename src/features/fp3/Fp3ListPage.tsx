@@ -1,11 +1,13 @@
 import { useQuery } from '@tanstack/react-query'
-import { FileWarning } from 'lucide-react'
+import { FileWarning, Printer } from 'lucide-react'
 import { useMemo, useState } from 'react'
+import { Link } from 'react-router'
 import { fetchFp3RequestsForBranch, type Fp3Request } from '@/features/fp3/api'
 import { useBranchStore } from '@/stores/branch-store'
 import { EmptyState } from '@/components/EmptyState'
 import { PageHeader } from '@/components/PageHeader'
 import { Badge } from '@/components/ui/badge'
+import { Button } from '@/components/ui/button'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
@@ -92,6 +94,7 @@ export function Fp3ListPage() {
               <TableHead>Status</TableHead>
               <TableHead>Disposisi</TableHead>
               <TableHead>Tanggal</TableHead>
+              <TableHead className="text-right">Aksi</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -118,6 +121,18 @@ export function Fp3ListPage() {
                 </TableCell>
                 <TableCell className="text-muted-foreground">
                   {new Date(request.created_at).toLocaleDateString('id-ID')}
+                </TableCell>
+                <TableCell className="text-right">
+                  <Button
+                    variant="ghost"
+                    size="icon-sm"
+                    nativeButton={false}
+                    aria-label="Cetak FP3"
+                    title="Cetak FP3"
+                    render={<Link to={`/fp3/${request.id}/print`} />}
+                  >
+                    <Printer />
+                  </Button>
                 </TableCell>
               </TableRow>
             ))}

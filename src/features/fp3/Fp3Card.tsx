@@ -1,6 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { CircleCheck, CircleDot, FileWarning, Search, X } from 'lucide-react'
+import { CircleCheck, CircleDot, FileWarning, Printer, Search, X } from 'lucide-react'
 import { useRef, useState } from 'react'
+import { Link } from 'react-router'
 import { toast } from 'sonner'
 import { cancelFp3Request, completeFp3Request, receiveFp3Request, type Fp3Disposition, type Fp3Request } from '@/features/fp3/api'
 import { fetchParts } from '@/features/parts/api'
@@ -206,6 +207,16 @@ export function Fp3Card({ fp3, invalidateKey }: Fp3CardProps) {
           </div>
         </div>
         <div className="flex shrink-0 flex-col items-end gap-1">
+          <Button
+            variant="ghost"
+            size="icon-sm"
+            nativeButton={false}
+            aria-label="Cetak FP3"
+            title="Cetak FP3"
+            render={<Link to={`/fp3/${fp3.id}/print`} />}
+          >
+            <Printer />
+          </Button>
           <Badge
             variant={
               fp3.status === 'completed'
