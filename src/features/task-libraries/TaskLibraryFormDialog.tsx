@@ -1,6 +1,6 @@
 import { zodResolver } from '@hookform/resolvers/zod'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { Calendar, Gauge, X } from 'lucide-react'
+import { Calendar, Gauge, Hand, X } from 'lucide-react'
 import { useEffect, useMemo, useState } from 'react'
 import { Controller, useForm } from 'react-hook-form'
 import { toast } from 'sonner'
@@ -247,6 +247,10 @@ export function TaskLibraryFormDialog({ equipmentId, library, trigger }: TaskLib
 
       <div className="flex flex-col gap-2">
         <Label>Interval Pekerjaan</Label>
+        <p className="text-xs text-muted-foreground">
+          Kalender/Running Hours membuat WO terjadwal otomatis berulang. Manual tidak — dijadwalkan sendiri kapan
+          perlu lewat menu PM Schedule.
+        </p>
         <Controller
           control={control}
           name="schedule_type"
@@ -254,7 +258,18 @@ export function TaskLibraryFormDialog({ equipmentId, library, trigger }: TaskLib
             <div className="flex gap-2">
               <button
                 type="button"
-                onClick={() => field.onChange(field.value === 'calendar' ? 'none' : 'calendar')}
+                onClick={() => field.onChange('none')}
+                className={cn(
+                  'flex flex-1 flex-col items-center gap-1 rounded-md border p-3 text-xs font-medium transition-colors',
+                  field.value === 'none' ? 'border-primary bg-primary/5 text-primary' : 'text-muted-foreground hover:bg-muted',
+                )}
+              >
+                <Hand className="size-5" />
+                Manual
+              </button>
+              <button
+                type="button"
+                onClick={() => field.onChange('calendar')}
                 className={cn(
                   'flex flex-1 flex-col items-center gap-1 rounded-md border p-3 text-xs font-medium transition-colors',
                   field.value === 'calendar' ? 'border-primary bg-primary/5 text-primary' : 'text-muted-foreground hover:bg-muted',
@@ -265,7 +280,7 @@ export function TaskLibraryFormDialog({ equipmentId, library, trigger }: TaskLib
               </button>
               <button
                 type="button"
-                onClick={() => field.onChange(field.value === 'runtime' ? 'none' : 'runtime')}
+                onClick={() => field.onChange('runtime')}
                 className={cn(
                   'flex flex-1 flex-col items-center gap-1 rounded-md border p-3 text-xs font-medium transition-colors',
                   field.value === 'runtime' ? 'border-primary bg-primary/5 text-primary' : 'text-muted-foreground hover:bg-muted',
