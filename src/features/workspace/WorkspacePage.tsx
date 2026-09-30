@@ -1,6 +1,8 @@
 import { useQuery } from '@tanstack/react-query'
-import { ClipboardCheck, Search } from 'lucide-react'
+import { ClipboardCheck, FileWarning, Search } from 'lucide-react'
 import { useMemo, useState } from 'react'
+import { fetchFp3RequestsForBranch } from '@/features/fp3/api'
+import { Fp3Card } from '@/features/fp3/Fp3Card'
 import { fetchMyTasks } from '@/features/tasks/api'
 import { WoCard } from '@/features/workspace/WoCard'
 import { useBranchStore } from '@/stores/branch-store'
@@ -9,6 +11,7 @@ import { EmptyState } from '@/components/EmptyState'
 import { PageHeader } from '@/components/PageHeader'
 import { Input } from '@/components/ui/input'
 import { Skeleton } from '@/components/ui/skeleton'
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 
 const DUE_WINDOW_DAYS = 7
 
@@ -85,6 +88,64 @@ function TaskPoolView({ branchId }: { branchId: number }) {
   )
 }
 
+/**
+ * FP3 pool — every request not yet Completed/Cancelled for this branch, no
+ * due-date windowing the way the WO pool has (an FP3 with no schedule is
+ * meant to be worked as soon as someone's free, not filtered by a date).
+ */
+function Fp3PoolView({ branchId }: { branchId: number }) {
+  const invalidateKey = ['fp3-requests', branchId]
+  const { data: requests, isLoading } = useQuery({
+    queryKey: invalidateKey,
+    queryFn: () => fetchFp3RequestsForBranch(branchId),
+  })
+
+  const [search, setSearch] = useState('')
+
+  const openRequests = useMemo(
+    () => (requests ?? []).filter((r) => r.status === 'pending' || r.status === 'in_progress'),
+    [requests],
+  )
+
+  const visibleRequests = useMemo(() => {
+    const term = search.trim().toLowerCase()
+    if (!term) return openRequests
+    return openRequests.filter((r) =>
+      [r.code, r.requester_name, r.department, r.description].join(' ').toLowerCase().includes(term),
+    )
+  }, [openRequests, search])
+
+  return (
+    <div className="flex flex-col gap-4">
+      <div className="relative">
+        <Search className="pointer-events-none absolute top-1/2 left-2.5 size-4 -translate-y-1/2 text-muted-foreground" />
+        <Input
+          placeholder="Cari FP3, pengaju, atau departemen..."
+          className="pl-8"
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+        />
+      </div>
+
+      {isLoading ? (
+        <Skeleton className="h-40 w-full" />
+      ) : visibleRequests.length === 0 ? (
+        <EmptyState
+          icon={FileWarning}
+          title={search ? 'Tidak ada FP3 yang cocok' : 'Tidak ada permintaan FP3 yang belum selesai'}
+          description="Permintaan baru dari Ajukan FP3 akan muncul di sini."
+        />
+      ) : (
+        <div className="flex flex-col gap-3">
+          {visibleRequests.map((request) => (
+            <Fp3Card key={request.id} fp3={request} invalidateKey={invalidateKey} />
+          ))}
+        </div>
+      )}
+    </div>
+  )
+}
+
 export function WorkspacePage() {
   const activeBranchId = useBranchStore((state) => state.activeBranchId)
 
@@ -95,7 +156,18 @@ export function WorkspacePage() {
       {!activeBranchId ? (
         <p className="text-muted-foreground">Pilih plant terlebih dahulu.</p>
       ) : (
-        <TaskPoolView branchId={activeBranchId} />
+        <Tabs defaultValue="wo">
+          <TabsList>
+            <TabsTrigger value="wo">WO</TabsTrigger>
+            <TabsTrigger value="fp3">FP3</TabsTrigger>
+          </TabsList>
+          <TabsContent value="wo" className="mt-4">
+            <TaskPoolView branchId={activeBranchId} />
+          </TabsContent>
+          <TabsContent value="fp3" className="mt-4">
+            <Fp3PoolView branchId={activeBranchId} />
+          </TabsContent>
+        </Tabs>
       )}
     </div>
   )

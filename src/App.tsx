@@ -10,6 +10,8 @@ import { BudgetsPage } from '@/features/budgets/BudgetsPage'
 import { DashboardPage } from '@/features/dashboard/DashboardPage'
 import { DatabaseBackupPage } from '@/features/database-backup/DatabaseBackupPage'
 import { EquipmentDetailPage } from '@/features/equipment/EquipmentDetailPage'
+import { Fp3ListPage } from '@/features/fp3/Fp3ListPage'
+import { Fp3RequestPage } from '@/features/fp3/Fp3RequestPage'
 import { LineHierarchyPage } from '@/features/lines/LineHierarchyPage'
 import { LineRuntimeScanPage } from '@/features/lines/LineRuntimeScanPage'
 import { LocationDetailPage } from '@/features/locations/LocationDetailPage'
@@ -50,6 +52,9 @@ function App() {
         {/* Public QR-per-machine "Monitoring Life Time Mesin" flow — no login, reachable from a QR stuck on the machine. */}
         <Route path="/machines/scan/:machineId" element={<MachineMonitoringPage />} />
 
+        {/* Public "Ajukan FP3" flow — no login, one generic QR per branch (not tied to any machine/line). */}
+        <Route path="/fp3/request/:branchId" element={<Fp3RequestPage />} />
+
         <Route element={<ProtectedRoute />}>
           {/* Requires login (any role) but deliberately outside AppLayout — a
               QR scan landing page is meant to be a quick in-and-out phone
@@ -72,6 +77,7 @@ function App() {
             <Route path="lines" element={<LineHierarchyPage />} />
             <Route path="equipment/:id" element={<EquipmentDetailPage />} />
             <Route path="workspace" element={<WorkspacePage />} />
+            <Route path="fp3" element={<Fp3ListPage />} />
             <Route path="approval" element={<ApprovalPage />} />
             <Route path="task-libraries" element={<TaskLibraryPage />} />
             <Route path="breakdown/print-qr" element={<PrintQrCodesPage />} />

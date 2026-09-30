@@ -8,6 +8,7 @@ import {
   ClipboardList,
   DatabaseBackup,
   Factory,
+  FileWarning,
   Hammer,
   History,
   LayoutDashboard,
@@ -91,13 +92,16 @@ const navSections: NavSection[] = [
     ],
   },
   {
+    label: 'Workspace',
+    icon: ClipboardList,
     items: [
       {
         to: '/workspace',
-        label: 'Workspace',
+        label: 'WO & FP3 Saya',
         icon: ClipboardList,
         roles: ['superadmin', 'supervisor', 'engineer'],
       },
+      { to: '/fp3', label: 'Riwayat FP3', icon: FileWarning },
     ],
   },
   {
