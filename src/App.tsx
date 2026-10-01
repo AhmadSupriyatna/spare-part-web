@@ -1,6 +1,5 @@
 import { BrowserRouter, Navigate, Route, Routes } from 'react-router'
 import { ActivityLogPage } from '@/features/activity-log/ActivityLogPage'
-import { AlertsPage } from '@/features/alerts/AlertsPage'
 import { ApprovalPage } from '@/features/approval/ApprovalPage'
 import { LoginPage } from '@/features/auth/LoginPage'
 import { BranchesPage } from '@/features/branches/BranchesPage'
@@ -14,11 +13,16 @@ import { EquipmentDetailPage } from '@/features/equipment/EquipmentDetailPage'
 import { Fp3ListPage } from '@/features/fp3/Fp3ListPage'
 import { Fp3PrintPage } from '@/features/fp3/Fp3PrintPage'
 import { Fp3RequestPage } from '@/features/fp3/Fp3RequestPage'
+import { Fp3ScanPage } from '@/features/fp3/Fp3ScanPage'
 import { LineHierarchyPage } from '@/features/lines/LineHierarchyPage'
+import { LineReportsPage } from '@/features/lines/LineReportsPage'
 import { LineRuntimeScanPage } from '@/features/lines/LineRuntimeScanPage'
+import { PrintLineMonthlyReportPage } from '@/features/lines/PrintLineMonthlyReportPage'
+import { PrintLineRuntimeReportPage } from '@/features/lines/PrintLineRuntimeReportPage'
 import { LocationDetailPage } from '@/features/locations/LocationDetailPage'
 import { LocationsPage } from '@/features/locations/LocationsPage'
 import { MachineMonitoringPage } from '@/features/machines/MachineMonitoringPage'
+import { MaintenanceReportScanPage } from '@/features/pm/MaintenanceReportScanPage'
 import { PartDetailPage } from '@/features/parts/PartDetailPage'
 import { KelolaStokPage } from '@/features/part-stocks/KelolaStokPage'
 import { PartStockDetailPage } from '@/features/part-stocks/PartStockDetailPage'
@@ -27,6 +31,7 @@ import { PartUnitScanPage } from '@/features/part-unit-actions/PartUnitScanPage'
 import { PartUnitDetailPage } from '@/features/part-units/PartUnitDetailPage'
 import { PrintRepairHistoryPage } from '@/features/part-repairs/PrintRepairHistoryPage'
 import { MaintenancePage } from '@/features/pm/MaintenancePage'
+import { PrintMaintenanceReportPage } from '@/features/pm/PrintMaintenanceReportPage'
 import { PrintWoChecklistPage } from '@/features/pm/PrintWoChecklistPage'
 import { PrintWoChecklistsPage } from '@/features/pm/PrintWoChecklistsPage'
 import { CompanySettingsPage } from '@/features/settings/CompanySettingsPage'
@@ -54,8 +59,14 @@ function App() {
         {/* Public QR-per-machine "Monitoring Life Time Mesin" flow — no login, reachable from a QR stuck on the machine. */}
         <Route path="/machines/scan/:machineId" element={<MachineMonitoringPage />} />
 
+        {/* QR Validator for Laporan Pemeriksaan Mesin — no login, see MaintenanceReportScanPage. */}
+        <Route path="/maintenance-report/scan" element={<MaintenanceReportScanPage />} />
+
         {/* Public "Ajukan FP3" flow — no login, one generic QR per branch (not tied to any machine/line). */}
         <Route path="/fp3/request/:branchId" element={<Fp3RequestPage />} />
+
+        {/* QR Validator for Cetak FP3 — no login, see Fp3ScanPage. */}
+        <Route path="/fp3/scan/:id" element={<Fp3ScanPage />} />
 
         <Route element={<ProtectedRoute />}>
           {/* Requires login (any role) but deliberately outside AppLayout — a
@@ -69,7 +80,6 @@ function App() {
             <Route path="stock" element={<KelolaStokPage />} />
             <Route path="stock/ledger" element={<StockLedgerPage />} />
             <Route path="stock/:id" element={<PartStockDetailPage />} />
-            <Route path="alerts" element={<AlertsPage />} />
             <Route path="branches" element={<BranchesPage />} />
             <Route path="suppliers" element={<SuppliersPage />} />
             <Route path="suppliers/:id" element={<SupplierDetailPage />} />
@@ -77,6 +87,9 @@ function App() {
             <Route path="locations/:id" element={<LocationDetailPage />} />
             <Route path="budgets" element={<BudgetsPage />} />
             <Route path="lines" element={<LineHierarchyPage />} />
+            <Route path="lines/report" element={<LineReportsPage />} />
+            <Route path="lines/runtime-report/print" element={<PrintLineRuntimeReportPage />} />
+            <Route path="lines/monthly-report/print" element={<PrintLineMonthlyReportPage />} />
             <Route path="equipment/:id" element={<EquipmentDetailPage />} />
             <Route path="workspace" element={<WorkspacePage />} />
             <Route path="fp3" element={<Fp3ListPage />} />
@@ -94,6 +107,7 @@ function App() {
             <Route path="pm/calendar" element={<MaintenancePage />} />
             <Route path="pm/tasks/print" element={<PrintWoChecklistsPage />} />
             <Route path="pm/tasks/:id/print" element={<PrintWoChecklistPage />} />
+            <Route path="pm/maintenance-report/print" element={<PrintMaintenanceReportPage />} />
             <Route path="pm/repairs/print" element={<PrintRepairHistoryPage />} />
           </Route>
         </Route>
