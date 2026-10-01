@@ -25,6 +25,10 @@ const branchSchema = z.object({
   code: z.string().min(1, 'Kode wajib diisi').max(50),
   name: z.string().min(1, 'Nama wajib diisi').max(255),
   address: z.string().optional(),
+  default_minimum_stock: z
+    .string()
+    .min(1, 'Wajib diisi')
+    .refine((val) => Number.isInteger(Number(val)) && Number(val) >= 0, 'Harus angka bulat, minimal 0'),
 })
 
 type BranchFormValues = z.infer<typeof branchSchema>
@@ -51,18 +55,26 @@ export function BranchFormDialog({ branch, trigger }: BranchFormDialogProps) {
       code: branch?.code ?? '',
       name: branch?.name ?? '',
       address: branch?.address ?? '',
+      default_minimum_stock: String(branch?.default_minimum_stock ?? 0),
     },
   })
 
   useEffect(() => {
     if (open) {
-      reset({ code: branch?.code ?? '', name: branch?.name ?? '', address: branch?.address ?? '' })
+      reset({
+        code: branch?.code ?? '',
+        name: branch?.name ?? '',
+        address: branch?.address ?? '',
+        default_minimum_stock: String(branch?.default_minimum_stock ?? 0),
+      })
     }
   }, [open, branch, reset])
 
   const mutation = useMutation({
-    mutationFn: (values: BranchFormValues) =>
-      isEdit ? updateBranch(branch!.id, values) : createBranch(values),
+    mutationFn: (values: BranchFormValues) => {
+      const payload = { ...values, default_minimum_stock: Number(values.default_minimum_stock) }
+      return isEdit ? updateBranch(branch!.id, payload) : createBranch(payload)
+    },
     onSuccess: async () => {
       queryClient.invalidateQueries({ queryKey: ['branches'] })
       // Refresh the logged-in user's accessible-branches list so the header
@@ -96,6 +108,22 @@ export function BranchFormDialog({ branch, trigger }: BranchFormDialogProps) {
           <div className="flex flex-col gap-2">
             <Label htmlFor="address">Alamat</Label>
             <Textarea id="address" {...register('address')} />
+          </div>
+          <div className="flex flex-col gap-2">
+            <Label htmlFor="default_minimum_stock">Standar Minimum Stock</Label>
+            <Input
+              id="default_minimum_stock"
+              type="number"
+              min={0}
+              {...register('default_minimum_stock')}
+            />
+            <p className="text-xs text-muted-foreground">
+              Dipakai sebagai minimum stock default untuk part yang strategi minimum stock-nya "Standar
+              Minimum Plant" (diatur di pendaftaran Part).
+            </p>
+            {errors.default_minimum_stock && (
+              <p className="text-sm text-destructive">{errors.default_minimum_stock.message}</p>
+            )}
           </div>
           <DialogFooter>
             <Button type="submit" disabled={mutation.isPending}>

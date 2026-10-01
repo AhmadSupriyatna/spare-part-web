@@ -1,5 +1,5 @@
 import { apiClient } from '@/lib/api-client'
-import type { Part, PartReplacementStrategy } from '@/types/inventory'
+import type { Part, PartMinimumStockStrategy, PartReplacementStrategy } from '@/types/inventory'
 
 export interface PartPayload {
   item_master_no: string
@@ -8,6 +8,7 @@ export interface PartPayload {
   unit: string
   estimated_lifetime_hours?: number | null
   replacement_strategy: PartReplacementStrategy
+  minimum_stock_strategy?: PartMinimumStockStrategy
   image?: File | null
   is_active?: boolean
 }

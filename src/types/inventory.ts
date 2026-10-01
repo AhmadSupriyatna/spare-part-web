@@ -5,6 +5,9 @@ export interface Unit {
 
 export type PartReplacementStrategy = 'life_based' | 'failure_based' | 'scheduled'
 
+/** How a Part's effective minimum_stock (per branch) is determined — see PartStockController::attachComputedAttributes(). 'standard' (the safe default) reads the branch's own "Standar Minimum Plant"; 'installed' reads that part's own active_installation_count in that branch instead. */
+export type PartMinimumStockStrategy = 'installed' | 'standard'
+
 export interface Part {
   id: number
   item_master_no: string
@@ -14,6 +17,7 @@ export interface Part {
   price: string
   estimated_lifetime_hours: number | null
   replacement_strategy: PartReplacementStrategy
+  minimum_stock_strategy: PartMinimumStockStrategy
   image_url: string | null
   is_active: boolean
   stocks?: PartStock[]
@@ -27,15 +31,15 @@ export interface PartStock {
   part_name?: string
   item_master_no?: string
   replacement_strategy?: PartReplacementStrategy
+  minimum_stock_strategy?: PartMinimumStockStrategy
   branch_id: number
   branch_name?: string
   supplier_id: number | null
   supplier_name?: string | null
   location_id: number | null
   location_code?: string | null
+  /** Computed, not stored — see PartMinimumStockStrategy. */
   minimum_stock: number
-  reorder_point: number
-  reorder_quantity: number
   unit_cost: string
   quantity_on_hand: number
   /** Not yet subtracted from quantity_on_hand — spoken for by a still-open Task (see PartStockController::attachComputedAttributes()). */
@@ -98,26 +102,6 @@ export interface StockLedgerEntry {
   notes: string | null
   user: { id: number; name: string } | null
   occurred_at: string
-}
-
-export type ReorderStatus = 'pending' | 'approved' | 'ordered' | 'completed' | 'cancelled'
-
-export interface ReorderRequest {
-  id: number
-  part_stock_id: number
-  part_name: string
-  item_master_no: string
-  supplier_id: number | null
-  supplier_name: string | null
-  quantity_requested: number
-  status: ReorderStatus
-  requested_by: number | null
-  requested_by_name: string | null
-  approved_by: number | null
-  approved_by_name: string | null
-  approved_at: string | null
-  notes: string | null
-  created_at: string
 }
 
 export interface PaginatedResponse<T> {

@@ -6,6 +6,8 @@ export interface Branch {
   name: string
   address?: string | null
   is_active?: boolean
+  /** "Standar Minimum Plant" — this Plant's default minimum_stock for a Part whose minimum_stock_strategy is 'standard'. */
+  default_minimum_stock?: number
 }
 
 export interface AuthUser {

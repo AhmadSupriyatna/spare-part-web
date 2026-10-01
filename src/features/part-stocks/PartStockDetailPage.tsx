@@ -70,7 +70,7 @@ export function PartStockDetailPage() {
         )}
       </div>
 
-      <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-5">
+      <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
         <Card>
           <CardHeader className="pb-2">
             <CardTitle className="text-sm font-normal text-muted-foreground">Stok Saat Ini</CardTitle>
@@ -93,13 +93,12 @@ export function PartStockDetailPage() {
           <CardHeader className="pb-2">
             <CardTitle className="text-sm font-normal text-muted-foreground">Batas Minimum</CardTitle>
           </CardHeader>
-          <CardContent className="text-2xl font-semibold">{stock.minimum_stock}</CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-normal text-muted-foreground">Titik Reorder</CardTitle>
-          </CardHeader>
-          <CardContent className="text-2xl font-semibold">{stock.reorder_point}</CardContent>
+          <CardContent className="flex items-center gap-2">
+            <span className="text-2xl font-semibold">{stock.minimum_stock}</span>
+            <Badge variant="outline" className="text-[10px]">
+              {stock.minimum_stock_strategy === 'installed' ? 'Part Terinstal' : 'Standar Plant'}
+            </Badge>
+          </CardContent>
         </Card>
         <Card>
           <CardHeader className="pb-2">

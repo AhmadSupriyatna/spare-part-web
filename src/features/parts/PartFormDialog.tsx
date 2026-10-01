@@ -4,7 +4,12 @@ import { useEffect, useRef, useState } from 'react'
 import { Controller, useForm } from 'react-hook-form'
 import { toast } from 'sonner'
 import { createPart, updatePart } from '@/features/parts/api'
-import { partReplacementStrategyOptions, partSchema, type PartFormValues } from '@/features/parts/schema'
+import {
+  partMinimumStockStrategyOptions,
+  partReplacementStrategyOptions,
+  partSchema,
+  type PartFormValues,
+} from '@/features/parts/schema'
 import { fetchUnits } from '@/features/units/api'
 import { cn } from '@/lib/utils'
 import type { Part } from '@/types/inventory'
@@ -55,6 +60,8 @@ export function PartFormDialog({ part, trigger, open: openProp, onOpenChange: on
       // (see schema.ts), so a new Part starts with nothing selected and
       // must be explicitly chosen before the form can submit.
       replacement_strategy: part?.replacement_strategy,
+      // Unlike replacement_strategy, this one has a safe default.
+      minimum_stock_strategy: part?.minimum_stock_strategy ?? 'standard',
     },
   })
 
@@ -69,6 +76,7 @@ export function PartFormDialog({ part, trigger, open: openProp, onOpenChange: on
         unit: part?.unit ?? 'pcs',
         estimated_lifetime_hours: part?.estimated_lifetime_hours ? String(part.estimated_lifetime_hours) : '',
         replacement_strategy: part?.replacement_strategy,
+        minimum_stock_strategy: part?.minimum_stock_strategy ?? 'standard',
       })
       setImageFile(null)
       setImagePreview(part?.image_url ?? null)
@@ -187,6 +195,42 @@ export function PartFormDialog({ part, trigger, open: openProp, onOpenChange: on
         {errors.replacement_strategy && (
           <p className="text-sm text-destructive">Pilih salah satu strategi penggantian.</p>
         )}
+      </div>
+      <div className="flex flex-col gap-2">
+        <Label>Strategi Minimum Stock</Label>
+        <p className="-mt-1 text-xs text-muted-foreground">
+          Menentukan angka "minimum stock" part ini di tiap plant — ikut standar minimum plant, atau
+          mengikuti jumlah unit part ini yang sedang terpasang.
+        </p>
+        <Controller
+          control={control}
+          name="minimum_stock_strategy"
+          render={({ field }) => (
+            <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+              {partMinimumStockStrategyOptions.map((option) => {
+                const Icon = option.icon
+                const selected = field.value === option.value
+                return (
+                  <button
+                    key={option.value}
+                    type="button"
+                    onClick={() => field.onChange(option.value)}
+                    className={cn(
+                      'flex items-start gap-2.5 rounded-md border p-2.5 text-left transition-colors select-none hover:border-primary/50 hover:bg-muted',
+                      selected && 'border-primary bg-primary/5',
+                    )}
+                  >
+                    <Icon className={cn('mt-0.5 size-4 shrink-0', selected ? 'text-primary' : 'text-muted-foreground')} />
+                    <div className="min-w-0">
+                      <p className="text-sm font-medium">{option.label}</p>
+                      <p className="text-xs text-muted-foreground">{option.description}</p>
+                    </div>
+                  </button>
+                )
+              })}
+            </div>
+          )}
+        />
       </div>
       {replacementStrategy === 'life_based' ? (
         <div className="flex flex-col gap-2">

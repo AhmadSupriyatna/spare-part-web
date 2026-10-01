@@ -1,4 +1,4 @@
-import { CalendarClock, Clock, TriangleAlert } from 'lucide-react'
+import { Building2, CalendarClock, Clock, Layers, TriangleAlert } from 'lucide-react'
 import { z } from 'zod'
 
 /**
@@ -30,6 +30,26 @@ export const partReplacementStrategyOptions = [
   },
 ] as const
 
+/**
+ * Unlike replacement strategy, "standard" is a safe default — most parts
+ * just follow the plant's own standard minimum; "installed" is only for
+ * parts where full spare coverage per installed unit actually matters.
+ */
+export const partMinimumStockStrategyOptions = [
+  {
+    value: 'standard',
+    label: 'Standar Minimum Plant',
+    description: 'Ikut angka standar minimum stock plant ini (diatur di halaman Plant).',
+    icon: Building2,
+  },
+  {
+    value: 'installed',
+    label: 'Part Terinstal',
+    description: 'Mengikuti jumlah unit part ini yang sedang terpasang di plant ini.',
+    icon: Layers,
+  },
+] as const
+
 export const partSchema = z.object({
   item_master_no: z.string().min(1, 'Item Master wajib diisi').max(100),
   name: z.string().min(1, 'Nama wajib diisi').max(255),
@@ -40,6 +60,7 @@ export const partSchema = z.object({
     .optional()
     .refine((v) => !v || (Number.isInteger(Number(v)) && Number(v) >= 1), 'Harus angka lebih dari 0'),
   replacement_strategy: z.enum(['life_based', 'failure_based', 'scheduled']),
+  minimum_stock_strategy: z.enum(['installed', 'standard']),
 })
 
 export type PartFormValues = z.infer<typeof partSchema>
