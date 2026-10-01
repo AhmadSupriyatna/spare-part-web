@@ -1,4 +1,4 @@
-import { useMutation } from '@tanstack/react-query'
+import { useMutation, useQuery } from '@tanstack/react-query'
 import {
   ArrowLeftRight,
   Bell,
@@ -8,6 +8,7 @@ import {
   ClipboardList,
   DatabaseBackup,
   Factory,
+  FileText,
   FileWarning,
   Hammer,
   History,
@@ -15,7 +16,6 @@ import {
   List,
   MapPin,
   NotebookPen,
-  PackageSearch,
   QrCode,
   Ruler,
   Settings,
@@ -26,7 +26,7 @@ import {
   Warehouse,
   Wrench,
 } from 'lucide-react'
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { NavLink, Outlet, useLocation, useNavigate } from 'react-router'
 import { toast } from 'sonner'
 import { BranchSelector } from '@/components/BranchSelector'
@@ -34,13 +34,14 @@ import { GlobalSearch } from '@/components/GlobalSearch'
 import { ProfileMenu } from '@/components/ProfileMenu'
 import { ThemeToggle } from '@/components/ThemeToggle'
 import { logout as logoutRequest } from '@/features/auth/api'
+import { fetchCompanySetting } from '@/features/settings/api'
 import { cn } from '@/lib/utils'
 import { useAuthStore } from '@/stores/auth-store'
 import { useSheetStackStore } from '@/stores/sheet-stack-store'
 import type { UserRole } from '@/types/auth'
 import { Button } from '@/components/ui/button'
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
-import { Separator } from '@/components/ui/separator'
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
 
 interface NavItem {
   to: string
@@ -68,7 +69,6 @@ const navSections: NavSection[] = [
     items: [
       { to: '/stock', label: 'Stok & Part', icon: Boxes },
       { to: '/stock/ledger', label: 'Ledger Stok', icon: ArrowLeftRight },
-      { to: '/alerts', label: 'Pemesanan Ulang', icon: PackageSearch },
       { to: '/suppliers', label: 'Supplier', icon: Truck },
       { to: '/locations', label: 'Lokasi', icon: MapPin },
     ],
@@ -89,6 +89,7 @@ const navSections: NavSection[] = [
     items: [
       { to: '/branches', label: 'Plant', icon: Building2 },
       { to: '/lines', label: 'Line Equipment', icon: Factory },
+      { to: '/lines/report', label: 'Laporan', icon: FileText },
     ],
   },
   {
@@ -97,11 +98,11 @@ const navSections: NavSection[] = [
     items: [
       {
         to: '/workspace',
-        label: 'WO & FP3 Saya',
+        label: 'Task & Request',
         icon: ClipboardList,
         roles: ['superadmin', 'supervisor', 'engineer'],
       },
-      { to: '/fp3', label: 'Riwayat FP3', icon: FileWarning },
+      { to: '/fp3', label: 'Riwayat Request', icon: FileWarning },
     ],
   },
   {
@@ -123,6 +124,7 @@ const navSections: NavSection[] = [
     items: [
       { to: '/pm/calendar?tab=calendar', label: 'Kalender', icon: CalendarDays, end: true },
       { to: '/pm/calendar?tab=list', label: 'WO', icon: List, end: true },
+      { to: '/pm/calendar?tab=report', label: 'Laporan', icon: FileText, end: true },
       { to: '/pm/calendar?tab=repair', label: 'Repair Part', icon: Hammer, end: true },
     ],
   },
@@ -153,8 +155,10 @@ const navSections: NavSection[] = [
   },
 ]
 
-const navIconButtonClass = 'flex size-11 shrink-0 items-center justify-center rounded-md transition-colors'
-const navIconButtonActiveClass = 'bg-sidebar-primary/10 text-sidebar-primary'
+const navIconButtonClass = 'relative flex size-11 shrink-0 items-center justify-center rounded-lg transition-colors'
+/** The left accent bar reads like a control-panel indicator lamp next to whichever icon is "on". */
+const navIconButtonActiveClass =
+  "bg-sidebar-primary/10 text-sidebar-primary after:absolute after:top-1/2 after:left-0 after:h-5 after:w-[3px] after:-translate-y-1/2 after:rounded-r-full after:bg-warning after:content-['']"
 const navIconButtonInactiveClass = 'text-sidebar-foreground/70 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground'
 
 export function AppLayout() {
@@ -165,6 +169,16 @@ export function AppLayout() {
   const sheetOpenCount = useSheetStackStore((state) => state.openCount)
   const userRoles = useAuthStore((state) => state.user?.roles ?? [])
   const [openGroup, setOpenGroup] = useState<string | null>(null)
+
+  const { data: companySetting } = useQuery({
+    queryKey: ['settings', 'company'],
+    queryFn: fetchCompanySetting,
+    staleTime: 5 * 60 * 1000,
+  })
+
+  useEffect(() => {
+    document.title = companySetting?.app_name ?? 'Sistem Manajemen Spare Part'
+  }, [companySetting?.app_name])
 
   const visibleNavSections = useMemo(
     () =>
@@ -185,23 +199,45 @@ export function AppLayout() {
     },
   })
 
-  function isItemActive(item: NavItem) {
+  function pathMatches(item: NavItem) {
     const [path, search] = item.to.split('?')
-    const pathMatches = item.end ? location.pathname === path : location.pathname.startsWith(path)
-    if (!pathMatches) return false
+    const matchesLocation = item.end
+      ? location.pathname === path
+      : location.pathname === path || location.pathname.startsWith(`${path}/`)
+    if (!matchesLocation) return false
     return !search || location.search.replace(/^\?/, '') === search
+  }
+
+  /**
+   * Longest-prefix-wins within a group: without this, "Ledger Stok"
+   * (/stock/ledger) also lit up "Stok & Part" (/stock) since the latter is
+   * a plain prefix of the former's path — both used to show active at once.
+   */
+  function isItemActive(item: NavItem, siblings: NavItem[]) {
+    if (!pathMatches(item)) return false
+    return !siblings.some((other) => other !== item && pathMatches(other) && other.to.length > item.to.length)
   }
 
   return (
     <div className="flex h-svh overflow-hidden">
       <aside className="hidden h-full w-16 shrink-0 flex-col items-center border-r bg-sidebar text-sidebar-foreground sm:flex">
-        <div className="flex items-center justify-center py-5">
-          <div
-            className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-primary text-primary-foreground"
-            title="Spare Part — Sistem Manajemen"
-          >
-            <Wrench className="size-4" />
-          </div>
+        <div className="h-[3px] w-full shrink-0 bg-warning" />
+        <div className="flex items-center justify-center py-4">
+          {companySetting?.app_logo_url ? (
+            <img
+              src={companySetting.app_logo_url}
+              alt={companySetting.app_name}
+              title={companySetting.app_name}
+              className="size-8 shrink-0 rounded-lg object-contain"
+            />
+          ) : (
+            <div
+              className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-primary text-primary-foreground"
+              title={companySetting?.app_name ?? 'Sistem Manajemen Spare Part'}
+            >
+              <Wrench className="size-4" />
+            </div>
+          )}
         </div>
 
         <nav className="scroll-thin flex flex-1 flex-col items-center gap-1 overflow-y-auto px-2 pb-4">
@@ -211,22 +247,29 @@ export function AppLayout() {
             if (!isGroup) {
               const item = section.items[0]
               return (
-                <NavLink
-                  key={item.to}
-                  to={item.to}
-                  end={item.end}
-                  title={item.label}
-                  className={({ isActive }) =>
-                    cn(navIconButtonClass, isActive ? navIconButtonActiveClass : navIconButtonInactiveClass)
-                  }
-                >
-                  <item.icon className="size-5" />
-                </NavLink>
+                <Tooltip key={item.to}>
+                  <TooltipTrigger
+                    render={
+                      <NavLink
+                        to={item.to}
+                        end={item.end}
+                        className={({ isActive }) =>
+                          cn(navIconButtonClass, isActive ? navIconButtonActiveClass : navIconButtonInactiveClass)
+                        }
+                      />
+                    }
+                  >
+                    <item.icon className="size-5" />
+                  </TooltipTrigger>
+                  <TooltipContent side="right" sideOffset={10}>
+                    {item.label}
+                  </TooltipContent>
+                </Tooltip>
               )
             }
 
             const SectionIcon = section.icon ?? section.items[0].icon
-            const isGroupActive = section.items.some(isItemActive)
+            const isGroupActive = section.items.some((item) => isItemActive(item, section.items))
 
             return (
               <Popover
@@ -234,24 +277,34 @@ export function AppLayout() {
                 open={openGroup === section.label}
                 onOpenChange={(next) => setOpenGroup(next ? (section.label as string) : null)}
               >
-                <PopoverTrigger
-                  render={
-                    <button
-                      type="button"
-                      title={section.label}
-                      className={cn(
-                        navIconButtonClass,
-                        isGroupActive ? navIconButtonActiveClass : navIconButtonInactiveClass,
-                      )}
-                    />
-                  }
-                >
-                  <SectionIcon className="size-5" />
-                </PopoverTrigger>
-                <PopoverContent side="right" align="start" sideOffset={12} className="w-56">
-                  <p className="px-2 py-1.5 text-xs font-medium tracking-wide text-muted-foreground uppercase">
+                <Tooltip>
+                  <TooltipTrigger
+                    render={
+                      <PopoverTrigger
+                        render={
+                          <button
+                            type="button"
+                            className={cn(
+                              navIconButtonClass,
+                              isGroupActive ? navIconButtonActiveClass : navIconButtonInactiveClass,
+                            )}
+                          />
+                        }
+                      />
+                    }
+                  >
+                    <SectionIcon className="size-5" />
+                  </TooltipTrigger>
+                  <TooltipContent side="right" sideOffset={10}>
                     {section.label}
-                  </p>
+                  </TooltipContent>
+                </Tooltip>
+                <PopoverContent side="right" align="start" sideOffset={12} className="w-56">
+                  <div className="mb-1 border-b border-warning/30 px-2 pb-1.5">
+                    <p className="text-xs font-medium tracking-wide text-muted-foreground uppercase">
+                      {section.label}
+                    </p>
+                  </div>
                   <div className="flex flex-col gap-0.5">
                     {section.items.map((item) => (
                       <NavLink
@@ -261,7 +314,7 @@ export function AppLayout() {
                         onClick={() => setOpenGroup(null)}
                         className={cn(
                           'flex items-center gap-2.5 rounded-md px-2 py-2 text-sm font-medium transition-colors',
-                          isItemActive(item)
+                          isItemActive(item, section.items)
                             ? 'bg-sidebar-primary/10 text-sidebar-primary'
                             : 'text-foreground/80 hover:bg-accent hover:text-accent-foreground',
                         )}
@@ -278,8 +331,12 @@ export function AppLayout() {
         </nav>
       </aside>
       <div className="flex min-w-0 flex-1 flex-col">
-        <header className="flex shrink-0 items-center gap-4 border-b bg-background/95 px-6 py-3 backdrop-blur supports-backdrop-filter:bg-background/60">
-          <div className="flex flex-1 items-center">
+        <header className="flex shrink-0 items-center gap-4 border-b-2 border-warning/40 bg-background/95 px-6 py-3 backdrop-blur supports-backdrop-filter:bg-background/60">
+          <div className="flex flex-1 items-center gap-2.5">
+            <span className="relative flex size-2 shrink-0">
+              <span className="absolute inline-flex size-full animate-ping rounded-full bg-success opacity-75" />
+              <span className="relative inline-flex size-2 rounded-full bg-success" />
+            </span>
             <BranchSelector />
           </div>
           <div className="flex flex-1 justify-center">
@@ -305,7 +362,6 @@ export function AppLayout() {
             />
           </div>
         </header>
-        <Separator />
         <main
           className={cn(
             'flex-1 overflow-y-auto p-6 transition-[margin-right] duration-300',
