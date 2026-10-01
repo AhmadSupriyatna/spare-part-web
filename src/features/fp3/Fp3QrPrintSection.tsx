@@ -1,9 +1,9 @@
 import { useQuery } from '@tanstack/react-query'
-import { PrinterIcon } from 'lucide-react'
-import { QRCodeSVG } from 'qrcode.react'
+import { FileWarning, PrinterIcon } from 'lucide-react'
 import { fetchCompanySetting } from '@/features/settings/api'
 import { useAuthStore } from '@/stores/auth-store'
 import { useBranchStore } from '@/stores/branch-store'
+import { EquipmentQrPrintCard } from '@/components/EquipmentQrPrintCard'
 import { Button } from '@/components/ui/button'
 
 /**
@@ -49,39 +49,33 @@ export function Fp3QrPrintSection() {
         <p className="text-sm text-destructive print:hidden">Pilih plant di header terlebih dahulu.</p>
       ) : (
         <div className="flex justify-center rounded-md border p-8 print:hidden">
-          <div className="flex flex-col items-center gap-3 text-center">
-            {companySetting?.logo_url ? (
-              <img src={companySetting.logo_url} alt="" className="h-12 w-auto object-contain" />
-            ) : (
-              <div className="flex h-12 w-24 items-center justify-center rounded border border-dashed text-xs text-muted-foreground">
-                Logo
-              </div>
-            )}
-            <p className="text-sm font-semibold">{companySetting?.name ?? 'Nama Perusahaan'}</p>
-            <QRCodeSVG value={scanUrl ?? ''} size={200} />
-            <p className="text-lg font-bold">SCAN UNTUK AJUKAN FP3</p>
-            <p className="text-sm text-muted-foreground">{activeBranch?.name}</p>
-          </div>
+          <EquipmentQrPrintCard
+            badge="FP3"
+            icon={FileWarning}
+            title="Ajukan FP3"
+            subLabel={activeBranch?.name ?? ''}
+            purpose="Scan untuk Ajukan Perbaikan/Pembuatan"
+            qrValue={scanUrl ?? ''}
+            qrCm={7}
+            companyName={companySetting?.name}
+            companyLogoUrl={companySetting?.logo_url}
+          />
         </div>
       )}
 
       {scanUrl && (
         <div id="fp3-qr-print-area" className="hidden">
-          <div className="flex flex-col items-center gap-4 p-8 text-center">
-            {companySetting?.logo_url ? (
-              <img src={companySetting.logo_url} alt="" className="h-16 w-auto object-contain" />
-            ) : (
-              <div className="flex h-16 w-32 items-center justify-center rounded border border-dashed text-sm text-muted-foreground">
-                Logo
-              </div>
-            )}
-            <p className="text-lg font-semibold">{companySetting?.name ?? 'Nama Perusahaan'}</p>
-            <QRCodeSVG value={scanUrl} size={280} />
-            <p className="text-2xl font-bold">SCAN UNTUK AJUKAN FP3</p>
-            <p className="text-base text-muted-foreground">
-              Formulir Permintaan Perbaikan dan Pembuatan — {activeBranch?.name}
-            </p>
-          </div>
+          <EquipmentQrPrintCard
+            badge="FP3"
+            icon={FileWarning}
+            title="Ajukan FP3"
+            subLabel={activeBranch?.name ?? ''}
+            purpose="Scan untuk Ajukan Perbaikan/Pembuatan"
+            qrValue={scanUrl}
+            qrCm={7}
+            companyName={companySetting?.name}
+            companyLogoUrl={companySetting?.logo_url}
+          />
         </div>
       )}
     </div>

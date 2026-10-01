@@ -1,12 +1,12 @@
 import { useQueries, useQuery } from '@tanstack/react-query'
-import { PrinterIcon } from 'lucide-react'
-import { QRCodeSVG } from 'qrcode.react'
+import { Cog, PrinterIcon } from 'lucide-react'
 import { useMemo, useState } from 'react'
 import { fetchLines } from '@/features/lines/api'
 import { fetchMachines, fetchOutsideLineMachines } from '@/features/machines/api'
 import { fetchCompanySetting } from '@/features/settings/api'
 import { useBranchStore } from '@/stores/branch-store'
 import type { Machine } from '@/types/tasks'
+import { EquipmentQrPrintCard } from '@/components/EquipmentQrPrintCard'
 import { Button } from '@/components/ui/button'
 import { Checkbox } from '@/components/ui/checkbox'
 import { Skeleton } from '@/components/ui/skeleton'
@@ -98,7 +98,16 @@ export function MachineQrPrintSection() {
         @media print {
           body * { visibility: hidden; }
           #machine-qr-print-area, #machine-qr-print-area * { visibility: visible; }
-          #machine-qr-print-area { position: absolute; inset: 0; padding: 8px; }
+          #machine-qr-print-area {
+            position: absolute;
+            inset: 0;
+            padding: 8px;
+            display: grid;
+            grid-template-columns: repeat(auto-fill, 6.5cm);
+            gap: 0.4cm;
+            justify-content: start;
+            align-content: start;
+          }
         }
       `}</style>
 
@@ -173,28 +182,20 @@ export function MachineQrPrintSection() {
       )}
 
       {printMachines.length > 0 && (
-        <div id="machine-qr-print-area" className="hidden grid-cols-3 gap-3 print:grid">
+        <div id="machine-qr-print-area" className="hidden">
           {printMachines.map((machine) => (
-            <div
+            <EquipmentQrPrintCard
               key={machine.id}
-              className="flex flex-col items-center gap-1 rounded-md border p-2 text-center break-inside-avoid"
-            >
-              <div className="flex w-full items-center justify-center gap-1 border-b pb-1">
-                {companySetting?.logo_url ? (
-                  <img src={companySetting.logo_url} alt="" className="h-5 w-auto max-w-6 object-contain" />
-                ) : (
-                  <div className="flex size-5 items-center justify-center rounded border border-dashed text-[6px] text-muted-foreground">
-                    Logo
-                  </div>
-                )}
-                <p className="text-[9px] font-semibold leading-none">
-                  {companySetting?.name ?? 'Nama Perusahaan'}
-                </p>
-              </div>
-              <QRCodeSVG value={`${scanBaseUrl}/${machine.id}`} size={64} />
-              <p className="text-[10px] font-medium leading-tight">{machine.name}</p>
-              <p className="font-mono text-[9px] text-muted-foreground">{machine.code} · Monitoring Life Time</p>
-            </div>
+              badge="MESIN"
+              icon={Cog}
+              title={machine.name}
+              code={machine.code}
+              subLabel={machine.location_label}
+              purpose="Scan untuk Monitoring Life Time"
+              qrValue={`${scanBaseUrl}/${machine.id}`}
+              companyName={companySetting?.name}
+              companyLogoUrl={companySetting?.logo_url}
+            />
           ))}
         </div>
       )}

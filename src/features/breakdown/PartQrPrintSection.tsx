@@ -1,8 +1,8 @@
 import { useQuery } from '@tanstack/react-query'
 import { PrinterIcon } from 'lucide-react'
-import { QRCodeSVG } from 'qrcode.react'
 import { useMemo, useState } from 'react'
 import { fetchParts } from '@/features/parts/api'
+import { PartQrPrintCard } from '@/features/parts/PartQrPrintCard'
 import { partReplacementStrategyOptions } from '@/features/parts/schema'
 import { fetchCompanySetting } from '@/features/settings/api'
 import { useAuthStore } from '@/stores/auth-store'
@@ -126,7 +126,16 @@ export function PartQrPrintSection() {
         @media print {
           body * { visibility: hidden; }
           #part-qr-print-area, #part-qr-print-area * { visibility: visible; }
-          #part-qr-print-area { position: absolute; inset: 0; padding: 8px; }
+          #part-qr-print-area {
+            position: absolute;
+            inset: 0;
+            padding: 8px;
+            display: grid;
+            grid-template-columns: repeat(auto-fill, 8.5cm);
+            gap: 0.3cm;
+            justify-content: start;
+            align-content: start;
+          }
         }
       `}</style>
 
@@ -249,31 +258,16 @@ export function PartQrPrintSection() {
       </Dialog>
 
       {printEntries && activeBranchId && (
-        <div id="part-qr-print-area" className="hidden grid-cols-3 gap-3 print:grid">
+        <div id="part-qr-print-area" className="hidden">
           {printEntries.map((entry, index) => (
-            <div
+            <PartQrPrintCard
               key={`${entry.part.id}-${entry.copy}-${index}`}
-              className="flex flex-col items-center gap-1 rounded-md border p-2 text-center break-inside-avoid"
-            >
-              <div className="flex w-full items-center justify-center gap-1 border-b pb-1">
-                {companySetting?.logo_url ? (
-                  <img src={companySetting.logo_url} alt="" className="h-5 w-auto max-w-6 object-contain" />
-                ) : (
-                  <div className="flex size-5 items-center justify-center rounded border border-dashed text-[6px] text-muted-foreground">
-                    Logo
-                  </div>
-                )}
-                <p className="text-[9px] font-semibold leading-none">
-                  {companySetting?.name ?? 'Nama Perusahaan'}
-                </p>
-              </div>
-              <p className="text-[8px] leading-none text-muted-foreground">
-                {activeBranch ? `${activeBranch.code} — ${activeBranch.name}` : ''}
-              </p>
-              <QRCodeSVG value={`${scanBaseUrl}/${entry.part.id}/${activeBranchId}`} size={64} />
-              <p className="text-[10px] font-medium leading-tight">{entry.part.name}</p>
-              <p className="font-mono text-[9px] text-muted-foreground">{entry.part.item_master_no}</p>
-            </div>
+              part={entry.part}
+              qrValue={`${scanBaseUrl}/${entry.part.id}/${activeBranchId}`}
+              companyName={companySetting?.name}
+              companyLogoUrl={companySetting?.logo_url}
+              branchLabel={activeBranch?.code}
+            />
           ))}
         </div>
       )}

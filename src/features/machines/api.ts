@@ -50,6 +50,18 @@ export async function createOutsideLineMachine(
   return data.data
 }
 
+/**
+ * Laporan Pemeriksaan Mesin — every WO under this Machine (regular PM or
+ * Part Lifetime auto-scheduled) due within [from, to]. Purely a read-time
+ * grouping — see TaskController::woReportForMachine().
+ */
+export async function fetchWoReportForMachine(machineId: number, from: string, to: string): Promise<Task[]> {
+  const { data } = await apiClient.get<{ data: Task[] }>(`/machines/${machineId}/wo-report`, {
+    params: { from, to },
+  })
+  return data.data
+}
+
 // --- "Monitoring Life Time Mesin" (public QR-scan landing page) ---
 
 export interface MachineMonitoringData {

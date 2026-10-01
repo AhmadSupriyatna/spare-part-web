@@ -1,7 +1,7 @@
 import { useQuery } from '@tanstack/react-query'
 import { Printer } from 'lucide-react'
-import { QRCodeSVG } from 'qrcode.react'
 import { useEffect, useState } from 'react'
+import { PartQrPrintCard } from '@/features/parts/PartQrPrintCard'
 import { fetchCompanySetting } from '@/features/settings/api'
 import { useAuthStore } from '@/stores/auth-store'
 import type { Part, PartStock } from '@/types/inventory'
@@ -28,12 +28,12 @@ interface PartQrBulkPrintDialogProps {
 }
 
 /**
- * Inventory Workspace's "Cetak QR Terpilih (N)" (and the per-row single-
- * part Print action) — same QR-per-part-per-branch target
- * (`/breakdown/scan/:partId/:branchId`) as PartQrPrintSection, but a
- * landscape row per label (QR left, Item Master/description/location
- * right) instead of that page's stacked square card, and for a fixed set
- * of already-selected parts instead of its own search+select UI.
+ * Kelola Stok's "Cetak QR Terpilih (N)" (and the per-row single-part Print
+ * action) — same QR-per-part-per-branch target
+ * (`/breakdown/scan/:partId/:branchId`) and same PartQrPrintCard as the
+ * Cetak QR Code page's Part tab (PartQrPrintSection), so a sheet printed
+ * from either place looks identical; the only difference here is a fixed
+ * set of already-selected parts instead of its own search+select UI.
  */
 export function PartQrBulkPrintDialog({
   parts,
@@ -90,7 +90,16 @@ export function PartQrBulkPrintDialog({
         @media print {
           body * { visibility: hidden; }
           #inventory-qr-print-area, #inventory-qr-print-area * { visibility: visible; }
-          #inventory-qr-print-area { position: absolute; inset: 0; padding: 12px; }
+          #inventory-qr-print-area {
+            position: absolute;
+            inset: 0;
+            padding: 12px;
+            display: grid;
+            grid-template-columns: repeat(auto-fill, 8.5cm);
+            gap: 0.3cm;
+            justify-content: start;
+            align-content: start;
+          }
         }
       `}</style>
 
@@ -128,39 +137,19 @@ export function PartQrBulkPrintDialog({
       </Dialog>
 
       {printEntries && (
-        <div id="inventory-qr-print-area" className="hidden grid-cols-2 gap-3 print:grid">
+        <div id="inventory-qr-print-area" className="hidden">
           {printEntries.map((entry, index) => {
             const stock = stockByPartId.get(entry.part.id)
             return (
-              <div
+              <PartQrPrintCard
                 key={`${entry.part.id}-${entry.copy}-${index}`}
-                className="flex items-center gap-2 rounded-md border p-2 break-inside-avoid"
-              >
-                <QRCodeSVG value={`${scanBaseUrl}/${entry.part.id}/${branchId}`} size={64} className="shrink-0" />
-                <div className="min-w-0 flex-1">
-                  <div className="mb-1 flex items-center gap-1.5">
-                    {companySetting?.logo_url ? (
-                      <img src={companySetting.logo_url} alt="" className="h-4 w-auto max-w-5 object-contain" />
-                    ) : (
-                      <div className="flex size-4 items-center justify-center rounded border border-dashed text-[5px] text-muted-foreground">
-                        Logo
-                      </div>
-                    )}
-                    <p className="text-[9px] leading-none text-muted-foreground">
-                      {companySetting?.name ?? 'Nama Perusahaan'}
-                      {activeBranch ? ` · ${activeBranch.code}` : ''}
-                    </p>
-                  </div>
-                  <p className="truncate text-sm font-semibold">{entry.part.name}</p>
-                  <p className="font-mono text-xs text-muted-foreground">{entry.part.item_master_no}</p>
-                  {entry.part.description && (
-                    <p className="truncate text-xs text-muted-foreground">{entry.part.description}</p>
-                  )}
-                  <p className="text-xs text-muted-foreground">
-                    Lokasi: {stock?.location_code ?? '-'}
-                  </p>
-                </div>
-              </div>
+                part={entry.part}
+                qrValue={`${scanBaseUrl}/${entry.part.id}/${branchId}`}
+                companyName={companySetting?.name}
+                companyLogoUrl={companySetting?.logo_url}
+                branchLabel={activeBranch?.code}
+                locationLabel={stock?.location_code}
+              />
             )
           })}
         </div>
