@@ -1,10 +1,13 @@
 import { useQuery, useQueryClient } from '@tanstack/react-query'
-import { Pencil, Plus, Trash2 } from 'lucide-react'
+import { Eye, Pencil, Plus, Printer, Trash2 } from 'lucide-react'
 import { useEffect, useState } from 'react'
-import { Link, useSearchParams } from 'react-router'
+import { Link, useNavigate, useSearchParams } from 'react-router'
+import { toast } from 'sonner'
+import { AddKwhDialog } from '@/features/lines/AddKwhDialog'
 import { AddRuntimeDialog } from '@/features/lines/AddRuntimeDialog'
-import { deleteLine, fetchLines } from '@/features/lines/api'
+import { deleteLine, fetchAllLineRuntimeLogs, fetchLines } from '@/features/lines/api'
 import { LineFormDialog } from '@/features/lines/LineFormDialog'
+import { LineKwhLogTable } from '@/features/lines/LineKwhLogTable'
 import { LineRuntimeLogTable } from '@/features/lines/LineRuntimeLogTable'
 import { EquipmentFormDialog } from '@/features/equipment/EquipmentFormDialog'
 import { OutsideLineEquipmentFormDialog } from '@/features/equipment/OutsideLineEquipmentFormDialog'
@@ -25,6 +28,7 @@ import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
+import { PageHeader } from '@/components/PageHeader'
 
 export function LineHierarchyPage() {
   const activeBranchId = useBranchStore((state) => state.activeBranchId)
@@ -36,7 +40,12 @@ export function LineHierarchyPage() {
   }
 
   return (
-    <Tabs defaultValue="produksi">
+    <div className="flex flex-col gap-4">
+      <PageHeader
+        title="Line Equipment"
+        description="Hierarki Line, Mesin, dan Equipment produksi — beserta asset di luar line."
+      />
+      <Tabs defaultValue="produksi">
       <TabsList>
         <TabsTrigger value="produksi">Line Produksi</TabsTrigger>
         <TabsTrigger value="non-produksi">Mesin & Asset Luar Line</TabsTrigger>
@@ -47,14 +56,19 @@ export function LineHierarchyPage() {
       <TabsContent value="non-produksi" className="mt-4">
         <NonProductionAssetsBrowser activeBranchId={activeBranchId} activeBranchName={activeBranchName} />
       </TabsContent>
-    </Tabs>
+      </Tabs>
+    </div>
   )
 }
 
 function ProductionLineBrowser({ activeBranchId }: { activeBranchId: number }) {
   const canManage = useCanManage()
   const queryClient = useQueryClient()
+  const navigate = useNavigate()
+  const activeBranchName =
+    useAuthStore((state) => state.user?.branches.find((branch) => branch.id === activeBranchId)?.name) ?? ''
   const [searchParams, setSearchParams] = useSearchParams()
+  const [isPreparingPrint, setIsPreparingPrint] = useState(false)
 
   const [partSheetOpen, setPartSheetOpen] = useState(false)
   const [draggingPart, setDraggingPart] = useState<Part | null>(null)
@@ -121,6 +135,28 @@ function ProductionLineBrowser({ activeBranchId }: { activeBranchId: number }) {
       machine: String(selectedMachineId),
       equipment: String(equipmentId),
     })
+  }
+
+  async function handlePrintRuntimeReport() {
+    if (!selectedLine) return
+    setIsPreparingPrint(true)
+    try {
+      const logs = await fetchAllLineRuntimeLogs(selectedLine.id)
+      navigate('/lines/runtime-report/print', {
+        state: {
+          lineName: selectedLine.name,
+          lineCode: selectedLine.code,
+          branchName: activeBranchName,
+          currentHours: selectedLine.runtime_hours,
+          periodLabel: 'Seluruh Riwayat',
+          logs,
+        },
+      })
+    } catch {
+      toast.error('Gagal menyiapkan laporan.')
+    } finally {
+      setIsPreparingPrint(false)
+    }
   }
 
   return (
@@ -238,6 +274,19 @@ function ProductionLineBrowser({ activeBranchId }: { activeBranchId: number }) {
               title={machine.name}
               subtitle={machine.category ?? machine.code}
               badge={!machine.is_active ? <Badge variant="secondary">Nonaktif</Badge> : undefined}
+              viewAction={
+                <a
+                  href={`/machines/scan/${machine.id}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  onClick={(e) => e.stopPropagation()}
+                  className="p-1 text-muted-foreground hover:text-primary"
+                  aria-label="Lihat Monitoring Mesin"
+                  title="Lihat Monitoring Mesin (life time part & riwayat)"
+                >
+                  <Eye className="size-3.5" />
+                </a>
+              }
               editAction={
                 canManage &&
                 selectedLineId && (
@@ -402,23 +451,38 @@ function ProductionLineBrowser({ activeBranchId }: { activeBranchId: number }) {
         />
       )}
 
-      {/* Riwayat jam operasi line, per tanggal */}
+      {/* Riwayat jam operasi & kWh line, per tanggal */}
       {selectedLine && (
         <div className="flex flex-col gap-3">
-          <div className="flex items-center justify-between">
-            <h2 className="text-lg font-medium">Catatan Jam Operasional Line {selectedLine.name}</h2>
-            {canManage && (
-              <AddRuntimeDialog
-                lineId={selectedLine.id}
-                branchId={activeBranchId}
-                currentHours={selectedLine.runtime_hours}
-              />
-            )}
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <h2 className="text-lg font-medium">Catatan Operasional Line {selectedLine.name}</h2>
+            <div className="flex flex-wrap items-center gap-2">
+              {canManage && (
+                <AddRuntimeDialog
+                  lineId={selectedLine.id}
+                  branchId={activeBranchId}
+                  currentHours={selectedLine.runtime_hours}
+                />
+              )}
+              {canManage && <AddKwhDialog lineId={selectedLine.id} />}
+              <Button
+                variant="outline"
+                size="sm"
+                disabled={isPreparingPrint}
+                onClick={handlePrintRuntimeReport}
+              >
+                <Printer />
+                {isPreparingPrint ? 'Menyiapkan...' : 'Cetak Report'}
+              </Button>
+            </div>
           </div>
           <p className="text-sm text-muted-foreground">
             Jam operasi saat ini: <span className="font-medium text-foreground">{selectedLine.runtime_hours}</span> jam
           </p>
           <LineRuntimeLogTable lineId={selectedLine.id} />
+
+          <h3 className="mt-2 text-base font-medium">Catatan kWh</h3>
+          <LineKwhLogTable lineId={selectedLine.id} />
         </div>
       )}
     </div>
@@ -503,6 +567,19 @@ function NonProductionAssetsBrowser({
               title={machine.name}
               subtitle={machine.category ?? machine.code}
               badge={!machine.is_active ? <Badge variant="secondary">Nonaktif</Badge> : undefined}
+              viewAction={
+                <a
+                  href={`/machines/scan/${machine.id}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  onClick={(e) => e.stopPropagation()}
+                  className="p-1 text-muted-foreground hover:text-primary"
+                  aria-label="Lihat Monitoring Mesin"
+                  title="Lihat Monitoring Mesin (life time part & riwayat)"
+                >
+                  <Eye className="size-3.5" />
+                </a>
+              }
               deleteAction={
                 canManage && (
                   <DeleteWithPasswordDialog
@@ -762,6 +839,7 @@ interface ColumnRowProps {
   onClick: () => void
   badge?: React.ReactNode
   detailHref?: string
+  viewAction?: React.ReactNode
   editAction?: React.ReactNode
   deleteAction?: React.ReactNode
 }
@@ -773,6 +851,7 @@ function ColumnRow({
   onClick,
   badge,
   detailHref,
+  viewAction,
   editAction,
   deleteAction,
 }: ColumnRowProps) {
@@ -799,6 +878,7 @@ function ColumnRow({
           Detail
         </Link>
       )}
+      {viewAction}
       {editAction}
       {deleteAction}
     </div>

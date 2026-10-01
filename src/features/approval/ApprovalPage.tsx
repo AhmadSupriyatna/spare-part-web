@@ -1,4 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import type { UseMutationResult } from '@tanstack/react-query'
 import { Inbox, ShieldAlert } from 'lucide-react'
 import { useMemo, useState } from 'react'
 import { toast } from 'sonner'
@@ -16,6 +17,7 @@ import { useBranchStore } from '@/stores/branch-store'
 import { useCanApprove, useHasRole } from '@/stores/use-has-role'
 import type { ReplacementRequestStatus, ReplacementRequest } from '@/types/breakdown'
 import type { PartUnitActionRequest } from '@/types/part-unit-actions'
+import { cn } from '@/lib/utils'
 import { EmptyState } from '@/components/EmptyState'
 import { PageHeader } from '@/components/PageHeader'
 import {
@@ -33,7 +35,6 @@ import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 
 const statusLabels: Record<ReplacementRequestStatus, string> = {
   pending: 'Menunggu',
@@ -59,6 +60,17 @@ function originBadge(row: UnifiedRow) {
     return <Badge variant="warning">Part Hasil Repair</Badge>
   }
   return <Badge variant="secondary">Lepas Manual (Arsip)</Badge>
+}
+
+/** Left-edge accent strip — mirrors the same color the Asal badge already uses, so the card reads as "what kind of request" at a glance without needing to read the badge text first (same idea as Kelola Stok's stock-health strip). */
+function originAccentClass(row: UnifiedRow): string {
+  if (row.origin === 'breakdown') {
+    if (row.data.event_type === 'failure') return 'border-l-warning'
+    if (row.data.event_type === 'maintenance') return 'border-l-border'
+    return 'border-l-destructive'
+  }
+  if (row.data.action === 'reinstall') return 'border-l-warning'
+  return 'border-l-border'
 }
 
 function rowFields(row: UnifiedRow) {
@@ -196,11 +208,12 @@ function ApproveRepairAction({ request, onApprove, isPending }: { request: PartU
  * never sees this at all (hidden from nav, and blocked here too in case of
  * a direct link).
  *
- * Unified into one table (2026-09-19): Breakdown replacement and QR-unit
+ * Unified into one list (2026-09-19): Breakdown replacement and QR-unit
  * "Pasang" requests used to sit in separate tabs, which made it easy to
  * miss one board while checking the other. Both are the same kind of
- * decision — approve an installation — so they now share one table, one
- * status switch, and an "Asal" column marking where each request actually
+ * decision — approve an installation — so they now share one card list
+ * (rendered as list cards, not a table — see ApprovalCard), one status
+ * switch, and an Asal badge marking where each request actually
  * came from (Breakdown vs a repaired unit's QR). A bare "Lepas" (remove
  * with no replacement in the same action) is no longer something anyone
  * can submit — see StorePartUnitActionRequest — so "Lepas Manual (Arsip)"
@@ -238,13 +251,13 @@ export function ApprovalPage() {
             <TabsTrigger value="rejected">Ditolak</TabsTrigger>
           </TabsList>
           <TabsContent value="pending" className="mt-4">
-            <ApprovalTable branchId={activeBranchId} status="pending" canApprove={canApprove} />
+            <ApprovalList branchId={activeBranchId} status="pending" canApprove={canApprove} />
           </TabsContent>
           <TabsContent value="approved" className="mt-4">
-            <ApprovalTable branchId={activeBranchId} status="approved" canApprove={canApprove} />
+            <ApprovalList branchId={activeBranchId} status="approved" canApprove={canApprove} />
           </TabsContent>
           <TabsContent value="rejected" className="mt-4">
-            <ApprovalTable branchId={activeBranchId} status="rejected" canApprove={canApprove} />
+            <ApprovalList branchId={activeBranchId} status="rejected" canApprove={canApprove} />
           </TabsContent>
         </Tabs>
       )}
@@ -252,7 +265,7 @@ export function ApprovalPage() {
   )
 }
 
-function ApprovalTable({
+function ApprovalList({
   branchId,
   status,
   canApprove,
@@ -327,74 +340,109 @@ function ApprovalTable({
   }
 
   return (
-    <Table>
-      <TableHeader>
-        <TableRow>
-          <TableHead>Tanggal</TableHead>
-          <TableHead>Part</TableHead>
-          <TableHead>Equipment / Lokasi</TableHead>
-          <TableHead>Asal</TableHead>
-          <TableHead>Diajukan oleh</TableHead>
-          <TableHead>Keterangan</TableHead>
-          <TableHead className="text-right">Jumlah</TableHead>
-          {status !== 'pending' && <TableHead>Ditinjau oleh</TableHead>}
-          {status === 'pending' && canApprove && <TableHead className="text-right">Aksi</TableHead>}
-        </TableRow>
-      </TableHeader>
-      <TableBody>
-        {rows.map((row) => {
-          const f = rowFields(row)
-          return (
-            <TableRow key={`${row.origin}-${row.id}`}>
-              <TableCell className="text-muted-foreground">
-                {new Date(f.created_at).toLocaleString('id-ID', { dateStyle: 'medium', timeStyle: 'short' })}
-              </TableCell>
-              <TableCell>
-                <div className="font-medium">{f.part_name}</div>
-                <div className="font-mono text-xs text-muted-foreground">{f.item_master_no}</div>
-              </TableCell>
-              <TableCell className="text-muted-foreground">{f.location}</TableCell>
-              <TableCell>{originBadge(row)}</TableCell>
-              <TableCell>{f.requested_by_name}</TableCell>
-              <TableCell className="max-w-[200px] truncate text-muted-foreground" title={f.detail ?? ''}>
-                {f.detail ?? '-'}
-              </TableCell>
-              <TableCell className="text-right">{f.quantity}</TableCell>
-              {status !== 'pending' && (
-                <TableCell className="text-muted-foreground">
-                  {f.reviewed_by_name ?? '-'}
-                  {f.review_notes && <div className="text-xs italic">"{f.review_notes}"</div>}
-                </TableCell>
-              )}
-              {status === 'pending' && canApprove && (
-                <TableCell className="flex items-start justify-end gap-2">
-                  {row.origin === 'breakdown' ? (
-                    <>
-                      <ApproveReplacementAction
-                        request={row.data}
-                        isPending={approveReplacementMutation.isPending}
-                        onApprove={(oldInstallationIds) =>
-                          approveReplacementMutation.mutate({ id: row.id, oldInstallationIds })
-                        }
-                      />
-                      <RejectRequestDialog requestId={row.id} branchId={branchId} />
-                    </>
-                  ) : (
-                    <>
-                      <ApproveRepairAction
-                        request={row.data}
-                        isPending={approveRepairMutation.isPending}
-                        onApprove={() => approveRepairMutation.mutate(row.id)}
-                      />
-                      <RejectPartUnitActionDialog requestId={row.id} branchId={branchId} />
-                    </>
-                  )}
-                </TableCell>
-              )}
-            </TableRow>
-          )
-        })}
-      </TableBody>
-    </Table>
+    <div className="flex flex-col gap-3">
+      {rows.map((row) => (
+        <ApprovalCard
+          key={`${row.origin}-${row.id}`}
+          row={row}
+          status={status}
+          canApprove={canApprove}
+          branchId={branchId}
+          approveReplacementMutation={approveReplacementMutation}
+          approveRepairMutation={approveRepairMutation}
+        />
+      ))}
+    </div>
+  )
+}
+
+interface ApprovalCardProps {
+  row: UnifiedRow
+  status: ReplacementRequestStatus
+  canApprove: boolean
+  branchId: number
+  approveReplacementMutation: UseMutationResult<ReplacementRequest, unknown, { id: number; oldInstallationIds: number[] }>
+  approveRepairMutation: UseMutationResult<PartUnitActionRequest, unknown, number>
+}
+
+/**
+ * One "list card" per request — same visual language as Kelola Stok's
+ * part rows (rounded border, left-edge color strip, thin content blocks)
+ * but as a full card instead of a dense grid row, since an approval
+ * action can expand into a multi-unit picker that needs real vertical
+ * room. The left strip reuses the Asal badge's own color so the kind of
+ * request reads at a glance.
+ */
+function ApprovalCard({ row, status, canApprove, branchId, approveReplacementMutation, approveRepairMutation }: ApprovalCardProps) {
+  const f = rowFields(row)
+
+  return (
+    <div
+      className={cn(
+        'flex flex-col gap-3 rounded-lg border border-l-4 bg-card p-4 shadow-sm',
+        originAccentClass(row),
+      )}
+    >
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <div className="flex items-center gap-2">
+          {originBadge(row)}
+          <span className="text-xs text-muted-foreground">
+            {new Date(f.created_at).toLocaleString('id-ID', { dateStyle: 'medium', timeStyle: 'short' })}
+          </span>
+        </div>
+        <p className="text-sm text-muted-foreground">
+          Diajukan oleh <span className="font-medium text-foreground">{f.requested_by_name}</span>
+        </p>
+      </div>
+
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div className="min-w-0">
+          <p className="font-medium">{f.part_name}</p>
+          <p className="font-mono text-xs text-muted-foreground">{f.item_master_no}</p>
+          <p className="mt-1 text-sm text-muted-foreground">{f.location}</p>
+        </div>
+        <div className="shrink-0 text-right">
+          <p className="text-xs text-muted-foreground">Jumlah</p>
+          <p className="font-semibold tabular-nums">{f.quantity}</p>
+        </div>
+      </div>
+
+      {f.detail && (
+        <p className="rounded-md bg-muted/40 px-3 py-2 text-sm text-muted-foreground">{f.detail}</p>
+      )}
+
+      {status !== 'pending' && (
+        <div className="border-t pt-3 text-sm text-muted-foreground">
+          Ditinjau oleh <span className="font-medium text-foreground">{f.reviewed_by_name ?? '-'}</span>
+          {f.review_notes && <p className="mt-0.5 text-xs italic">"{f.review_notes}"</p>}
+        </div>
+      )}
+
+      {status === 'pending' && canApprove && (
+        <div className="flex flex-wrap items-center justify-end gap-2 border-t pt-3">
+          {row.origin === 'breakdown' ? (
+            <>
+              <ApproveReplacementAction
+                request={row.data}
+                isPending={approveReplacementMutation.isPending}
+                onApprove={(oldInstallationIds) =>
+                  approveReplacementMutation.mutate({ id: row.id, oldInstallationIds })
+                }
+              />
+              <RejectRequestDialog requestId={row.id} branchId={branchId} />
+            </>
+          ) : (
+            <>
+              <ApproveRepairAction
+                request={row.data}
+                isPending={approveRepairMutation.isPending}
+                onApprove={() => approveRepairMutation.mutate(row.id)}
+              />
+              <RejectPartUnitActionDialog requestId={row.id} branchId={branchId} />
+            </>
+          )}
+        </div>
+      )}
+    </div>
   )
 }
