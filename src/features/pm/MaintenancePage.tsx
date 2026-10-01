@@ -23,6 +23,7 @@ import { cn } from '@/lib/utils'
 import type { TaskLibrary } from '@/types/pm'
 import type { Task } from '@/types/tasks'
 import { PageHeader } from '@/components/PageHeader'
+import { QueryErrorState } from '@/components/QueryErrorState'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
@@ -63,7 +64,12 @@ export function MaintenancePage() {
   )
   const [detailTask, setDetailTask] = useState<Task | null>(null)
 
-  const { data: tasks, isLoading: tasksLoading } = useQuery({
+  const {
+    data: tasks,
+    isLoading: tasksLoading,
+    isError: tasksError,
+    refetch: refetchTasks,
+  } = useQuery({
     queryKey: ['pm-tasks', activeBranchId],
     queryFn: () => fetchPmTasksForBranch(activeBranchId!),
     enabled: !!activeBranchId,
@@ -347,6 +353,8 @@ export function MaintenancePage() {
 
             {tasksLoading ? (
               <Skeleton className="h-96 w-full" />
+            ) : tasksError ? (
+              <QueryErrorState onRetry={() => refetchTasks()} title="Gagal memuat jadwal PM" />
             ) : (
               <div className="grid grid-cols-7 gap-px overflow-hidden rounded-md border bg-border">
                 {WEEKDAYS.map((day, i) => (

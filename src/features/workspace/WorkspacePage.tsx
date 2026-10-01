@@ -10,6 +10,7 @@ import { diffInDays, toDateKey } from '@/lib/dates'
 import type { Task } from '@/types/tasks'
 import { EmptyState } from '@/components/EmptyState'
 import { PageHeader } from '@/components/PageHeader'
+import { QueryErrorState } from '@/components/QueryErrorState'
 import { Input } from '@/components/ui/input'
 import { Skeleton } from '@/components/ui/skeleton'
 
@@ -33,20 +34,36 @@ export function WorkspacePage() {
   const activeBranchId = useBranchStore((state) => state.activeBranchId)
   const [search, setSearch] = useState('')
 
-  const { data: tasks, isLoading: tasksLoading } = useQuery({
+  const {
+    data: tasks,
+    isLoading: tasksLoading,
+    isError: tasksError,
+    refetch: refetchTasks,
+  } = useQuery({
     queryKey: ['tasks', 'mine', activeBranchId],
     queryFn: () => fetchMyTasks(activeBranchId),
     enabled: !!activeBranchId,
   })
 
   const fp3InvalidateKey = ['fp3-requests', activeBranchId]
-  const { data: fp3Requests, isLoading: fp3Loading } = useQuery({
+  const {
+    data: fp3Requests,
+    isLoading: fp3Loading,
+    isError: fp3Error,
+    refetch: refetchFp3,
+  } = useQuery({
     queryKey: fp3InvalidateKey,
     queryFn: () => fetchFp3RequestsForBranch(activeBranchId!),
     enabled: !!activeBranchId,
   })
 
   const isLoading = tasksLoading || fp3Loading
+  const hasError = tasksError || fp3Error
+
+  function retryAll() {
+    refetchTasks()
+    refetchFp3()
+  }
 
   const items = useMemo(() => {
     const todayKey = toDateKey(new Date())
@@ -115,6 +132,8 @@ export function WorkspacePage() {
 
           {isLoading ? (
             <Skeleton className="h-40 w-full" />
+          ) : hasError ? (
+            <QueryErrorState onRetry={retryAll} title="Gagal memuat Workspace" />
           ) : visibleItems.length === 0 ? (
             <EmptyState
               icon={ClipboardCheck}

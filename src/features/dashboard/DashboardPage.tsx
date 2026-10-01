@@ -16,6 +16,7 @@ import { useAuthStore } from '@/stores/auth-store'
 import { useBranchStore } from '@/stores/branch-store'
 import { useHasRole } from '@/stores/use-has-role'
 import { PageHeader } from '@/components/PageHeader'
+import { QueryErrorState } from '@/components/QueryErrorState'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Skeleton } from '@/components/ui/skeleton'
 
@@ -24,34 +25,69 @@ export function DashboardPage() {
   const activeBranchId = useBranchStore((state) => state.activeBranchId)
   const canViewCost = useHasRole(['admin_spare_part', 'supervisor', 'superadmin'])
 
-  const { data: parts, isLoading: partsLoading } = useQuery({
+  const {
+    data: parts,
+    isLoading: partsLoading,
+    isError: partsError,
+    refetch: refetchParts,
+  } = useQuery({
     queryKey: ['parts'],
     queryFn: fetchParts,
   })
 
-  const { data: stocks, isLoading: stocksLoading } = useQuery({
+  const {
+    data: stocks,
+    isLoading: stocksLoading,
+    isError: stocksError,
+    refetch: refetchStocks,
+  } = useQuery({
     queryKey: ['part-stocks', activeBranchId],
     queryFn: () => fetchPartStocksForBranch(activeBranchId!),
     enabled: !!activeBranchId,
   })
 
-  const { data: pmTasks, isLoading: pmTasksLoading } = useQuery({
+  const {
+    data: pmTasks,
+    isLoading: pmTasksLoading,
+    isError: pmTasksError,
+    refetch: refetchPmTasks,
+  } = useQuery({
     queryKey: ['pm-tasks', activeBranchId],
     queryFn: () => fetchPmTasksForBranch(activeBranchId!),
     enabled: !!activeBranchId,
   })
 
-  const { data: fp3Requests, isLoading: fp3Loading } = useQuery({
+  const {
+    data: fp3Requests,
+    isLoading: fp3Loading,
+    isError: fp3Error,
+    refetch: refetchFp3,
+  } = useQuery({
     queryKey: ['fp3-requests', activeBranchId, 'dashboard'],
     queryFn: () => fetchFp3RequestsForBranch(activeBranchId!),
     enabled: !!activeBranchId,
   })
 
-  const { data: analytics, isLoading: analyticsLoading } = useQuery({
+  const {
+    data: analytics,
+    isLoading: analyticsLoading,
+    isError: analyticsError,
+    refetch: refetchAnalytics,
+  } = useQuery({
     queryKey: ['dashboard-analytics', activeBranchId],
     queryFn: () => fetchDashboardAnalytics(activeBranchId!),
     enabled: !!activeBranchId && canViewCost,
   })
+
+  const hasError = partsError || stocksError || pmTasksError || fp3Error || (canViewCost && analyticsError)
+
+  function retryAll() {
+    refetchParts()
+    refetchStocks()
+    refetchPmTasks()
+    refetchFp3()
+    if (canViewCost) refetchAnalytics()
+  }
 
   const criticalStocks = stocks?.filter((s) => s.is_critical) ?? []
   const criticalCount = criticalStocks.length
@@ -72,6 +108,8 @@ export function DashboardPage() {
         <p className="text-sm text-muted-foreground">
           Pilih plant di header untuk melihat ringkasan stok & breakdown plant tersebut.
         </p>
+      ) : hasError ? (
+        <QueryErrorState onRetry={retryAll} title="Gagal memuat data Dashboard" />
       ) : (
         <>
           <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-3 lg:grid-cols-5">

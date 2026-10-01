@@ -44,6 +44,7 @@ import {
 import { Badge } from '@/components/ui/badge'
 import { EmptyState } from '@/components/EmptyState'
 import { PageHeader } from '@/components/PageHeader'
+import { QueryErrorState } from '@/components/QueryErrorState'
 import { Button } from '@/components/ui/button'
 import { Checkbox } from '@/components/ui/checkbox'
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu'
@@ -397,16 +398,32 @@ export function KelolaStokPage() {
   const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set())
   const [statusFilter, setStatusFilter] = useState<StatusFilter>('all')
 
-  const { data: stocks, isLoading } = useQuery({
+  const {
+    data: stocks,
+    isLoading,
+    isError: stocksError,
+    refetch: refetchStocks,
+  } = useQuery({
     queryKey: ['part-stocks', activeBranchId],
     queryFn: () => fetchPartStocksForBranch(activeBranchId!),
     enabled: !!activeBranchId,
   })
 
-  const { data: parts } = useQuery({
+  const {
+    data: parts,
+    isError: partsError,
+    refetch: refetchParts,
+  } = useQuery({
     queryKey: ['parts'],
     queryFn: fetchParts,
   })
+
+  const hasError = stocksError || partsError
+
+  function retryAll() {
+    refetchStocks()
+    refetchParts()
+  }
 
   const partById = useMemo(() => new Map(parts?.map((part) => [part.id, part])), [parts])
   const stockByPartId = useMemo(() => new Map(stocks?.map((stock) => [stock.part_id, stock])), [stocks])
@@ -545,6 +562,8 @@ export function KelolaStokPage() {
             <Skeleton key={i} className="h-14 w-full" />
           ))}
         </div>
+      ) : hasError ? (
+        <QueryErrorState onRetry={retryAll} title="Gagal memuat data stok" />
       ) : filteredStocks.length === 0 && unstockedParts.length === 0 ? (
         <EmptyState
           icon={statusFilter === 'all' ? Boxes : statusFilter === 'critical' ? CircleAlert : AlertTriangle}
