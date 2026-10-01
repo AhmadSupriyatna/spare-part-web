@@ -52,6 +52,12 @@ export async function fetchActiveUsers(branchId: number): Promise<UserSummary[]>
   return data.data
 }
 
+/** The registered "SPV Teknik" for a branch — null if none is assigned, never guessed. */
+export async function fetchSupervisorForBranch(branchId: number): Promise<string | null> {
+  const { data } = await apiClient.get<{ data: { name: string | null } }>(`/branches/${branchId}/supervisor`)
+  return data.data.name
+}
+
 export async function createUser(payload: UserPayload): Promise<UserSummary> {
   const { data } = await apiClient.post<{ data: UserSummary }>('/users', toFormData(payload))
   return data.data

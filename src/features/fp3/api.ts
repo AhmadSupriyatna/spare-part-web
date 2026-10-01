@@ -68,6 +68,12 @@ export async function fetchFp3Request(id: number): Promise<Fp3Request> {
   return data.data
 }
 
+/** Unauthenticated "QR Validator" — scanning a printed Cetak FP3's QR lands here, see PublicFp3Controller::show(). */
+export async function fetchPublicFp3Request(id: number): Promise<Fp3Request> {
+  const { data } = await apiClient.get<{ data: Fp3Request }>(`/public/fp3-requests/${id}`)
+  return data.data
+}
+
 /** Claiming a request — an optional due_date schedules it for later instead of working it right away. */
 export async function receiveFp3Request(id: number, dueDate?: string | null): Promise<Fp3Request> {
   const { data } = await apiClient.post<{ data: Fp3Request }>(`/fp3-requests/${id}/receive`, {

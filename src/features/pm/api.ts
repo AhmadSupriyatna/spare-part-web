@@ -1,8 +1,37 @@
 import { apiClient } from '@/lib/api-client'
 import type { TaskReschedule } from '@/types/pm'
+import type { CompanySetting } from '@/types/settings'
+import type { Task } from '@/types/tasks'
 
 export async function fetchTaskRescheduleHistory(branchId: number): Promise<TaskReschedule[]> {
   const { data } = await apiClient.get<{ data: TaskReschedule[] }>(`/branches/${branchId}/task-reschedules`)
+  return data.data
+}
+
+export interface PublicMaintenanceReport {
+  title: string
+  scope: 'machine' | 'line'
+  machine_name: string | null
+  line_name: string | null
+  branch_name: string | null
+  from: string
+  to: string
+  runtime_hours: number | null
+  supervisor_name: string | null
+  tasks: Task[]
+  company: CompanySetting
+}
+
+/** Unauthenticated "QR Validator" — scanning a printed Laporan Pemeriksaan Mesin's QR lands here, see PublicMaintenanceReportController. */
+export async function fetchPublicMaintenanceReport(
+  scope: 'machine' | 'line',
+  id: number,
+  from: string,
+  to: string,
+): Promise<PublicMaintenanceReport> {
+  const { data } = await apiClient.get<{ data: PublicMaintenanceReport }>('/public/wo-report', {
+    params: { scope, id, from, to },
+  })
   return data.data
 }
 

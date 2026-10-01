@@ -52,10 +52,18 @@ export async function startTask(id: number): Promise<Task> {
   return data.data
 }
 
+/** Independent of checks/part_stock_id below — a task can carry both a part checklist and checklist items, or (checklist-only) just this. */
+export interface CompleteChecklistItemInput {
+  id: number
+  condition_ok: boolean
+  notes?: string | null
+}
+
 export interface CompleteTaskPayload {
   notes?: string
   part_stock_id?: number | null
   quantity_used?: number | null
+  checklist_items?: CompleteChecklistItemInput[]
 }
 
 export interface CompleteChecklistPayload {
@@ -69,6 +77,7 @@ export interface CompleteChecklistPayload {
     part_unit_id?: number | null
     old_installation_id?: number | null
   }>
+  checklist_items?: CompleteChecklistItemInput[]
 }
 
 export async function completeTask(

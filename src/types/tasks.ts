@@ -1,5 +1,12 @@
 import type { TaskPartCheck } from '@/types/pm'
 
+export interface TaskChecklistItem {
+  id: number
+  description: string
+  condition_ok: boolean | null
+  notes: string | null
+}
+
 export interface ProductionLine {
   id: number
   branch_id: number
@@ -20,6 +27,40 @@ export interface LineRuntimeLog {
   recorded_by_name: string | null
   notes: string | null
   created_at: string
+}
+
+export interface LineKwhLog {
+  id: number
+  line_id: number
+  /** Monday of the calendar week this entry is for — one entry per (line, week), YYYY-MM-DD. */
+  week_start_date: string
+  mode: 'reading' | 'direct'
+  /** Only set when mode is 'reading'. */
+  previous_reading: number | null
+  new_reading: number | null
+  kwh_used: number
+  recorded_by_name: string | null
+  notes: string | null
+  created_at: string
+}
+
+/** "Laporan kWh" — one row per Line, totaled for a chosen calendar month. */
+export interface LineKwhReportRow {
+  line_id: number
+  line_code: string
+  line_name: string
+  total_kwh: number
+  entry_count: number
+}
+
+/** "Laporan Running Hours Line" — one row per Line, for a chosen calendar month. hours_at_start/end are contextual only (null when no reading exists yet at that point); hours_added is always the exact sum for the month. */
+export interface LineRuntimeReportRow {
+  line_id: number
+  line_code: string
+  line_name: string
+  hours_at_start: number | null
+  hours_at_end: number | null
+  hours_added: number
 }
 
 export interface Machine {
@@ -100,6 +141,7 @@ export interface Task {
   item_master_no?: string | null
   quantity_used: number | null
   part_checks?: TaskPartCheck[]
+  checklist_items?: TaskChecklistItem[]
   is_overdue: boolean
   created_at: string
 }

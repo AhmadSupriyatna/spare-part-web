@@ -1,16 +1,19 @@
 import { zodResolver } from '@hookform/resolvers/zod'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { Calendar, Gauge, Hand, X } from 'lucide-react'
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { Controller, useForm } from 'react-hook-form'
 import { toast } from 'sonner'
 import { z } from 'zod'
 import { fetchPartInstallations } from '@/features/part-installations/api'
 import {
+  addTaskLibraryChecklistItem,
   addTaskLibraryPart,
   createTaskLibrary,
+  removeTaskLibraryChecklistItem,
   removeTaskLibraryPart,
   updateTaskLibrary,
+  type TaskLibraryChecklistItemInput,
   type TaskLibraryPartInput,
 } from '@/features/task-libraries/api'
 import type { TaskLibrary } from '@/types/pm'
@@ -124,6 +127,15 @@ export function TaskLibraryFormDialog({ equipmentId, library, trigger }: TaskLib
   // gets its own "Tambah".
   const [stagedPartIds, setStagedPartIds] = useState<Set<number>>(new Set())
 
+  // Checklist Kondisi — same create-vs-edit staging split as parts above,
+  // but free-text descriptions instead of a pick list (there's no
+  // "installed" set to choose from). Keyed by a local tempId, not the
+  // description text itself, since two items can legitimately share the
+  // same wording (e.g. "Periksa kebocoran" on more than one sub-bagian).
+  const [checklistDraft, setChecklistDraft] = useState('')
+  const [stagedChecklistItems, setStagedChecklistItems] = useState<{ tempId: number; description: string }[]>([])
+  const nextChecklistTempId = useRef(0)
+
   const {
     register,
     control,
@@ -154,6 +166,8 @@ export function TaskLibraryFormDialog({ equipmentId, library, trigger }: TaskLib
         estimated_duration_minutes: library?.estimated_duration_minutes ? String(library.estimated_duration_minutes) : '',
       })
       setStagedPartIds(new Set())
+      setStagedChecklistItems([])
+      setChecklistDraft('')
     }
   }, [open, library, reset])
 
@@ -173,7 +187,10 @@ export function TaskLibraryFormDialog({ equipmentId, library, trigger }: TaskLib
       if (isEdit) return updateTaskLibrary(library!.id, payload)
 
       const parts: TaskLibraryPartInput[] = Array.from(stagedPartIds).map((partId) => ({ part_id: partId }))
-      return createTaskLibrary(equipmentId, { ...payload, parts })
+      const checklistItems: TaskLibraryChecklistItemInput[] = stagedChecklistItems.map((item) => ({
+        description: item.description,
+      }))
+      return createTaskLibrary(equipmentId, { ...payload, parts, checklist_items: checklistItems })
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['task-libraries', equipmentId] })
@@ -204,6 +221,35 @@ export function TaskLibraryFormDialog({ equipmentId, library, trigger }: TaskLib
     onError: () => toast.error('Gagal menghapus part dari checklist.'),
   })
 
+  const addChecklistItemMutation = useMutation({
+    mutationFn: (item: { tempId: number; description: string }) =>
+      addTaskLibraryChecklistItem(library!.id, { description: item.description }),
+    onSuccess: (_data, item) => {
+      queryClient.invalidateQueries({ queryKey: ['task-libraries', equipmentId] })
+      setStagedChecklistItems((prev) => prev.filter((i) => i.tempId !== item.tempId))
+    },
+    onError: () => toast.error('Gagal menambahkan item checklist.'),
+  })
+
+  const removeChecklistItemMutation = useMutation({
+    mutationFn: removeTaskLibraryChecklistItem,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['task-libraries', equipmentId] })
+    },
+    onError: () => toast.error('Gagal menghapus item checklist.'),
+  })
+
+  function stageChecklistDescription() {
+    const description = checklistDraft.trim()
+    if (!description) return
+    setStagedChecklistItems((prev) => [...prev, { tempId: nextChecklistTempId.current++, description }])
+    setChecklistDraft('')
+  }
+
+  function unstageChecklistItem(tempId: number) {
+    setStagedChecklistItems((prev) => prev.filter((i) => i.tempId !== tempId))
+  }
+
   function stagePart(partId: number) {
     setStagedPartIds((prev) => new Set(prev).add(partId))
   }
@@ -229,7 +275,7 @@ export function TaskLibraryFormDialog({ equipmentId, library, trigger }: TaskLib
       description="Resep kegiatan PM — interval di sini hanya metadata untuk otomasi ke depan, penjadwalan tanggal aktual tetap dilakukan lewat PM Schedule."
       open={open}
       onOpenChange={setOpen}
-      isDirty={isDirty || stagedPartIds.size > 0}
+      isDirty={isDirty || stagedPartIds.size > 0 || stagedChecklistItems.length > 0}
       onSubmit={handleSubmit((values) => mutation.mutate(values))}
       submitLabel="Simpan"
       isSubmitting={mutation.isPending}
@@ -433,6 +479,80 @@ export function TaskLibraryFormDialog({ equipmentId, library, trigger }: TaskLib
             </div>
           )
         )}
+      </div>
+
+      <div className="flex flex-col gap-3">
+        <div>
+          <Label>Checklist Kondisi</Label>
+          <p className="text-xs text-muted-foreground">
+            Item pemeriksaan kondisi (Baik/Tidak) — independen dari checklist part di atas, mis. "Periksa kebocoran".
+          </p>
+        </div>
+
+        {isEdit && (library?.checklist_items.length ?? 0) > 0 && (
+          <div className="flex flex-col gap-1.5">
+            {library!.checklist_items.map((item) => (
+              <div key={item.id} className="flex items-center justify-between gap-2 rounded-md bg-muted/50 px-3 py-1.5 text-sm">
+                <span className="min-w-0 truncate">{item.description}</span>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="icon-sm"
+                  aria-label={`Hapus ${item.description}`}
+                  disabled={removeChecklistItemMutation.isPending && removeChecklistItemMutation.variables === item.id}
+                  onClick={() => removeChecklistItemMutation.mutate(item.id)}
+                >
+                  <X />
+                </Button>
+              </div>
+            ))}
+          </div>
+        )}
+
+        {stagedChecklistItems.length > 0 && (
+          <div className="flex flex-col gap-1.5">
+            {stagedChecklistItems.map((item) => {
+              const adding = isEdit && addChecklistItemMutation.isPending && addChecklistItemMutation.variables?.tempId === item.tempId
+              return (
+                <div key={item.tempId} className="flex items-center gap-2 rounded-md border border-primary/40 bg-primary/5 px-3 py-1.5">
+                  <span className="min-w-0 flex-1 truncate text-sm">{item.description}</span>
+                  {isEdit && (
+                    <Button type="button" size="sm" disabled={adding} onClick={() => addChecklistItemMutation.mutate(item)}>
+                      {adding ? '...' : 'Tambah'}
+                    </Button>
+                  )}
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="icon-sm"
+                    aria-label={`Batalkan ${item.description}`}
+                    disabled={adding}
+                    onClick={() => unstageChecklistItem(item.tempId)}
+                  >
+                    <X />
+                  </Button>
+                </div>
+              )
+            })}
+          </div>
+        )}
+
+        <div className="flex items-center gap-2">
+          <Input
+            placeholder="Mis. Periksa kebocoran"
+            value={checklistDraft}
+            onChange={(e) => setChecklistDraft(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter') {
+                e.preventDefault()
+                stageChecklistDescription()
+              }
+            }}
+          />
+          <Button type="button" variant="outline" onClick={stageChecklistDescription}>
+            Tambah
+          </Button>
+        </div>
       </div>
     </FormSheet>
   )

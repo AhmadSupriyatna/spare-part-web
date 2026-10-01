@@ -40,6 +40,12 @@ interface ChecklistRowState {
   picking: boolean
 }
 
+interface ChecklistItemRowState {
+  /** null until the technician explicitly picks Baik/Tidak — never defaulted, since condition_ok is required on submit. */
+  conditionOk: boolean | null
+  notes: string
+}
+
 interface WoCardProps {
   task: Task
   invalidateKey: unknown[]
@@ -65,6 +71,7 @@ export function WoCard({ task, invalidateKey }: WoCardProps) {
   const dueBadge = dueDateBadge(task.due_date)
 
   const [rows, setRows] = useState<Record<number, ChecklistRowState>>({})
+  const [itemRows, setItemRows] = useState<Record<number, ChecklistItemRowState>>({})
   const [completeDialogOpen, setCompleteDialogOpen] = useState(false)
   const [keterangan, setKeterangan] = useState('')
 
@@ -105,6 +112,12 @@ export function WoCard({ task, invalidateKey }: WoCardProps) {
       }
     }
     setRows(next)
+
+    const nextItems: Record<number, ChecklistItemRowState> = {}
+    for (const item of task.checklist_items ?? []) {
+      nextItems[item.id] = { conditionOk: item.condition_ok, notes: item.notes ?? '' }
+    }
+    setItemRows(nextItems)
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [task.id, task.status])
 
@@ -134,11 +147,21 @@ export function WoCard({ task, invalidateKey }: WoCardProps) {
 
   const hasChecklist = (task.part_checks?.length ?? 0) > 0
   const anyNotReplaced = (task.part_checks ?? []).some((check) => !(rows[check.id]?.checked ?? false))
+  const hasChecklistItems = (task.checklist_items?.length ?? 0) > 0
+  const allItemsDecided = (task.checklist_items ?? []).every((item) => itemRows[item.id]?.conditionOk != null)
   const keteranganRequired = hasChecklist && anyNotReplaced
 
   const completeMutation = useMutation({
-    mutationFn: (notes: string) =>
-      hasChecklist
+    mutationFn: (notes: string) => {
+      const checklistItems = hasChecklistItems
+        ? (task.checklist_items ?? []).map((item) => ({
+            id: item.id,
+            condition_ok: itemRows[item.id]?.conditionOk ?? false,
+            notes: itemRows[item.id]?.notes || undefined,
+          }))
+        : undefined
+
+      return hasChecklist
         ? completeTask(task.id, {
             notes: notes || undefined,
             checks: (task.part_checks ?? []).map((check) => {
@@ -153,12 +176,15 @@ export function WoCard({ task, invalidateKey }: WoCardProps) {
                 old_installation_id: checked ? (row?.oldInstallationId ?? null) : null,
               }
             }),
+            checklist_items: checklistItems,
           })
         : completeTask(task.id, {
             notes: notes || undefined,
             part_stock_id: task.part_stock_id ?? null,
             quantity_used: task.quantity_used ?? null,
-          }),
+            checklist_items: checklistItems,
+          })
+    },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: invalidateKey })
       toast.success('WO berhasil diselesaikan.')
@@ -310,6 +336,58 @@ export function WoCard({ task, invalidateKey }: WoCardProps) {
         </div>
       )}
 
+      {hasChecklistItems && (
+        <div className="flex flex-col gap-1.5">
+          <p className="text-xs font-medium tracking-wide text-muted-foreground uppercase">Checklist Kondisi</p>
+          {(task.checklist_items ?? []).map((item) => {
+            const row = itemRows[item.id] ?? { conditionOk: null, notes: '' }
+            return (
+              <div
+                key={item.id}
+                className={cn(
+                  'flex flex-col gap-2 rounded-md border p-2 transition-colors',
+                  row.conditionOk === true && 'border-success bg-success/10',
+                  row.conditionOk === false && 'border-destructive bg-destructive/10',
+                )}
+              >
+                <div className="flex items-center justify-between gap-2">
+                  <span className="min-w-0 flex-1 truncate text-sm">{item.description}</span>
+                  <div className="flex shrink-0 gap-1">
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant={row.conditionOk === true ? 'default' : 'outline'}
+                      disabled={!canAct || isDone}
+                      onClick={() => setItemRows((prev) => ({ ...prev, [item.id]: { ...row, conditionOk: true } }))}
+                    >
+                      Baik
+                    </Button>
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant={row.conditionOk === false ? 'destructive' : 'outline'}
+                      disabled={!canAct || isDone}
+                      onClick={() => setItemRows((prev) => ({ ...prev, [item.id]: { ...row, conditionOk: false } }))}
+                    >
+                      Tidak
+                    </Button>
+                  </div>
+                </div>
+                {row.conditionOk === false && (
+                  <Input
+                    placeholder="Keterangan (mis. ada rembesan kecil di seal)"
+                    disabled={!canAct || isDone}
+                    className="h-8"
+                    value={row.notes}
+                    onChange={(e) => setItemRows((prev) => ({ ...prev, [item.id]: { ...row, notes: e.target.value } }))}
+                  />
+                )}
+              </div>
+            )
+          })}
+        </div>
+      )}
+
       {canAct && !isDone && (
         <div className="flex justify-end gap-2 border-t pt-3">
           <Button size="sm" variant="ghost" onClick={() => cancelMutation.mutate()} disabled={cancelMutation.isPending}>
@@ -320,7 +398,12 @@ export function WoCard({ task, invalidateKey }: WoCardProps) {
               Mulai
             </Button>
           )}
-          <Button size="sm" onClick={() => setCompleteDialogOpen(true)}>
+          <Button
+            size="sm"
+            disabled={hasChecklistItems && !allItemsDecided}
+            title={hasChecklistItems && !allItemsDecided ? 'Isi Baik/Tidak untuk semua item checklist kondisi dulu' : undefined}
+            onClick={() => setCompleteDialogOpen(true)}
+          >
             Selesai
           </Button>
         </div>

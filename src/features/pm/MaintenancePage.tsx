@@ -1,5 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { CalendarDays, ChevronLeft, ChevronRight, List, Plus, Wrench } from 'lucide-react'
+import { CalendarDays, ChevronLeft, ChevronRight, FileText, List, Plus, Wrench } from 'lucide-react'
 import { useMemo, useState } from 'react'
 import { Link, useSearchParams } from 'react-router'
 import { toast } from 'sonner'
@@ -7,6 +7,7 @@ import { fetchFp3RequestsForBranch, scheduleFp3Request, type Fp3Request } from '
 import { FindingActionView } from '@/features/findings/FindingActionView'
 import { MaintenanceHistoryView } from '@/features/maintenance-history/MaintenanceHistoryView'
 import { fetchNationalHolidays, fetchTaskRescheduleHistory } from '@/features/pm/api'
+import { MaintenanceReportView } from '@/features/pm/MaintenanceReportView'
 import { RescheduleReasonDialog } from '@/features/pm/RescheduleReasonDialog'
 import { taskChipVariant, taskSource } from '@/features/pm/taskColors'
 import { TaskDetailSheet } from '@/features/pm/TaskDetailSheet'
@@ -21,6 +22,7 @@ import { diffInDays, toDateKey } from '@/lib/dates'
 import { cn } from '@/lib/utils'
 import type { TaskLibrary } from '@/types/pm'
 import type { Task } from '@/types/tasks'
+import { PageHeader } from '@/components/PageHeader'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
@@ -30,7 +32,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 const WEEKDAYS = ['Sen', 'Sel', 'Rab', 'Kam', 'Jum', 'Sab', 'Min']
 const VISIBLE_TASKS_PER_DAY = 3
 
-type MaintenanceView = 'calendar' | 'list' | 'repair' | 'history' | 'findings'
+type MaintenanceView = 'calendar' | 'list' | 'report' | 'repair' | 'history' | 'findings'
 
 export function MaintenancePage() {
   const activeBranchId = useBranchStore((state) => state.activeBranchId)
@@ -38,7 +40,11 @@ export function MaintenancePage() {
   const [searchParams, setSearchParams] = useSearchParams()
   const tabParam = searchParams.get('tab')
   const view: MaintenanceView =
-    tabParam === 'list' || tabParam === 'repair' || tabParam === 'history' || tabParam === 'findings'
+    tabParam === 'list' ||
+    tabParam === 'report' ||
+    tabParam === 'repair' ||
+    tabParam === 'history' ||
+    tabParam === 'findings'
       ? tabParam
       : 'calendar'
   function setView(next: MaintenanceView) {
@@ -232,20 +238,25 @@ export function MaintenancePage() {
 
   return (
     <div className="flex flex-col gap-3">
-      <div className="flex items-center justify-between gap-3">
-        <h1 className="text-base font-semibold">Maintenance</h1>
-        <div className="flex gap-1 rounded-md border p-1">
-          <Button
-            variant={view === 'calendar' ? 'default' : 'ghost'}
-            size="sm"
-            onClick={() => setView('calendar')}
-          >
-            <CalendarDays className="size-3.5" />
-            Kalender
-          </Button>
-          <Button variant={view === 'list' ? 'default' : 'ghost'} size="sm" onClick={() => setView('list')}>
-            <List className="size-3.5" />
-            WO
+      <PageHeader
+        title="Maintenance"
+        action={
+          <div className="flex gap-1 rounded-md border p-1">
+            <Button
+              variant={view === 'calendar' ? 'default' : 'ghost'}
+              size="sm"
+              onClick={() => setView('calendar')}
+            >
+              <CalendarDays className="size-3.5" />
+              Kalender
+            </Button>
+            <Button variant={view === 'list' ? 'default' : 'ghost'} size="sm" onClick={() => setView('list')}>
+              <List className="size-3.5" />
+              WO
+            </Button>
+          <Button variant={view === 'report' ? 'default' : 'ghost'} size="sm" onClick={() => setView('report')}>
+            <FileText className="size-3.5" />
+            Laporan
           </Button>
           <Button variant={view === 'repair' ? 'default' : 'ghost'} size="sm" onClick={() => setView('repair')}>
             <Wrench className="size-3.5" />
@@ -264,10 +275,13 @@ export function MaintenancePage() {
               decision. The feature stays fully wired (route/type/component
               below, API/backend untouched) as a dormant capability, reachable
               via ?tab=findings, without being surfaced in normal navigation. */}
-        </div>
-      </div>
+          </div>
+        }
+      />
 
       {view === 'list' && <WoListView tasks={tasks} isLoading={tasksLoading} onSelect={setDetailTask} />}
+
+      {view === 'report' && activeBranchId && <MaintenanceReportView branchId={activeBranchId} />}
 
       {view === 'repair' && <RepairBoard branchId={activeBranchId} />}
 

@@ -10,6 +10,12 @@ export interface TaskLibraryPart {
   notes: string | null
 }
 
+export interface TaskLibraryChecklistItem {
+  id: number
+  description: string
+  order: number
+}
+
 export interface TaskLibrary {
   id: number
   code: string
@@ -26,6 +32,7 @@ export interface TaskLibrary {
   estimated_duration_minutes: number | null
   is_active: boolean
   parts: TaskLibraryPart[]
+  checklist_items: TaskLibraryChecklistItem[]
   created_at: string
 }
 
@@ -39,6 +46,8 @@ export interface TaskPartCheck {
   quantity_used: number | null
   reason: string | null
   part_installation_id: number | null
+  /** Only ever set for a row that was actually replaced — a "not replaced" row never recorded which physical unit/address it was. */
+  slot_label?: string | null
 }
 
 export interface TaskReschedule {
