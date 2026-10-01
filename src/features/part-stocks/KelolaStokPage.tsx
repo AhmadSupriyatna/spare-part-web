@@ -52,8 +52,16 @@ import { Skeleton } from '@/components/ui/skeleton'
 
 type StatusFilter = 'all' | 'critical' | 'warning' | 'reserved'
 
-/** Shared between the header row and every data row so columns can never drift out of alignment — each row is its own CSS Grid box, so `auto`-sized columns would size independently per row (the bug being fixed here). */
-const ROW_GRID_CLASS = 'grid grid-cols-[28px_44px_1fr_76px_88px_80px_150px] items-center gap-3'
+/**
+ * Shared between every data row so columns can never drift out of alignment
+ * — each row is its own CSS Grid box, so `auto`-sized columns would size
+ * independently per row (the bug being fixed here). Stacks as a flex column
+ * below `lg` (the fixed 466px of non-1fr columns alone is wider than a
+ * phone) — the row's first and last groups use `lg:contents` so their own
+ * children become direct grid items at `lg`, see StockRow/UnstockedPartRow.
+ */
+const ROW_GRID_CLASS = 'flex flex-col gap-1.5 lg:grid lg:grid-cols-[28px_44px_1fr_76px_88px_80px_150px] lg:items-center lg:gap-3'
+const HEADER_GRID_CLASS = 'hidden lg:grid lg:grid-cols-[28px_44px_1fr_76px_88px_80px_150px] lg:items-center lg:gap-3'
 
 const strategyMeta = Object.fromEntries(partReplacementStrategyOptions.map((o) => [o.value, o]))
 
@@ -162,27 +170,38 @@ function StockRow({ stock, part, branchId, canManage, selected, onToggleSelect }
         isActive ? 'bg-primary/5 ring-1 ring-inset ring-primary/30' : 'hover:bg-muted/40',
       )}
     >
-      <Checkbox
-        checked={selected}
-        onCheckedChange={onToggleSelect}
-        aria-label={`Pilih ${part?.name ?? stock.part_name}`}
-      />
+      <div className="flex items-center gap-3 lg:contents">
+        <Checkbox
+          checked={selected}
+          onCheckedChange={onToggleSelect}
+          aria-label={`Pilih ${part?.name ?? stock.part_name}`}
+        />
 
-      <PartThumbnail part={part} />
+        <PartThumbnail part={part} />
 
-      <div className="min-w-0">
-        <div className="flex flex-wrap items-center gap-1.5">
-          <Link to={`/parts/${stock.part_id}`} className="truncate font-medium hover:underline">
-            {part?.name ?? stock.part_name}
-          </Link>
-          <StrategyBadge part={part} />
+        <div className="min-w-0 flex-1">
+          <div className="flex flex-wrap items-center gap-1.5">
+            <Link to={`/parts/${stock.part_id}`} className="truncate font-medium hover:underline">
+              {part?.name ?? stock.part_name}
+            </Link>
+            <StrategyBadge part={part} />
+          </div>
+          <p className="truncate font-mono text-xs text-muted-foreground">{part?.item_master_no ?? stock.item_master_no}</p>
         </div>
-        <p className="truncate font-mono text-xs text-muted-foreground">{part?.item_master_no ?? stock.item_master_no}</p>
       </div>
 
-      <p className={cn('text-right font-semibold tabular-nums', availableClass)}>{stock.available_quantity}</p>
-      <p className="text-right tabular-nums text-muted-foreground">{stock.reserved_quantity}</p>
-      <p className="text-right tabular-nums text-muted-foreground">{stock.active_installation_count}</p>
+      {/* Mobile-only labeled stats — the lg+ grid conveys the same numbers via column position (header row), but a stacked mobile row needs a label per number or they're meaningless. */}
+      <div className="flex flex-wrap items-center gap-x-4 gap-y-0.5 pl-[80px] text-xs lg:hidden">
+        <span className={cn('tabular-nums', availableClass)}>
+          Tersedia: <span className="font-semibold">{stock.available_quantity}</span>
+        </span>
+        <span className="tabular-nums text-muted-foreground">Direservasi: {stock.reserved_quantity}</span>
+        <span className="tabular-nums text-muted-foreground">Terinstal: {stock.active_installation_count}</span>
+      </div>
+
+      <p className={cn('hidden text-right font-semibold tabular-nums lg:block', availableClass)}>{stock.available_quantity}</p>
+      <p className="hidden text-right tabular-nums text-muted-foreground lg:block">{stock.reserved_quantity}</p>
+      <p className="hidden text-right tabular-nums text-muted-foreground lg:block">{stock.active_installation_count}</p>
 
       <div className="flex items-center justify-end gap-0.5">
         {canManage && (
@@ -303,18 +322,20 @@ interface UnstockedPartRowProps {
 function UnstockedPartRow({ part, branchId }: UnstockedPartRowProps) {
   return (
     <div className={cn(ROW_GRID_CLASS, 'border-b border-l-4 border-l-transparent px-2 py-2 text-sm last:border-b-0')}>
-      <span />
-      <PartThumbnail part={part} />
-      <div className="min-w-0">
-        <div className="flex flex-wrap items-center gap-1.5">
-          <p className="truncate font-medium text-muted-foreground">{part.name}</p>
-          <StrategyBadge part={part} />
+      <div className="flex items-center gap-3 lg:contents">
+        <span />
+        <PartThumbnail part={part} />
+        <div className="min-w-0 flex-1">
+          <div className="flex flex-wrap items-center gap-1.5">
+            <p className="truncate font-medium text-muted-foreground">{part.name}</p>
+            <StrategyBadge part={part} />
+          </div>
+          <p className="truncate font-mono text-xs text-muted-foreground">{part.item_master_no}</p>
         </div>
-        <p className="truncate font-mono text-xs text-muted-foreground">{part.item_master_no}</p>
       </div>
-      <span className="text-right text-muted-foreground">-</span>
-      <span className="text-right text-muted-foreground">-</span>
-      <span className="text-right text-muted-foreground">-</span>
+      <span className="hidden text-right text-muted-foreground lg:block">-</span>
+      <span className="hidden text-right text-muted-foreground lg:block">-</span>
+      <span className="hidden text-right text-muted-foreground lg:block">-</span>
       <div className="flex justify-end">
         <ReceiveStockDialog
           branchId={branchId}
@@ -538,7 +559,7 @@ export function KelolaStokPage() {
         <div className="rounded-lg border">
           <div
             className={cn(
-              ROW_GRID_CLASS,
+              HEADER_GRID_CLASS,
               'border-b border-l-4 border-l-transparent bg-muted/40 px-2 py-1.5 text-[10px] font-medium tracking-wide text-muted-foreground uppercase',
             )}
           >
