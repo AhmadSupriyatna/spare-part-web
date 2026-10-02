@@ -198,7 +198,7 @@ export function HierarchicalSunburst({
               d={ringSegmentPath(ring.r0, ring.r1, seg.start, seg.end)}
               fill={seg.color}
               opacity={hoveredKey === seg.key ? 1 : RING_OPACITY[seg.depth]}
-              className={seg.hasChildren ? 'cursor-pointer transition-opacity' : 'transition-opacity'}
+              className={`transition-all duration-300 ease-in-out ${seg.hasChildren ? 'cursor-pointer' : ''}`}
               onMouseEnter={() => setHoveredKey(seg.key)}
               onMouseLeave={() => setHoveredKey((current) => (current === seg.key ? null : current))}
               onClick={() => {
