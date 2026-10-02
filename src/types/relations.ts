@@ -59,6 +59,7 @@ export interface PartUnit {
   part_name?: string
   item_master_no?: string
   replacement_strategy?: PartReplacementStrategy | null
+  has_passport?: boolean
   unit_code: string | null
   status: PartUnitStatus
   /** Only set for a has_passport Part's unit, stamped when it was received into stock — null for a unit that only came into existence at first install. */

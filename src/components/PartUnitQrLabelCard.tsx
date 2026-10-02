@@ -17,8 +17,12 @@ interface PartUnitQrLabelCardProps {
   unitCode: string | null | undefined
   /** The owning Part's strategy — shown as the same chip a regular part's QR card uses. */
   replacementStrategy?: PartReplacementStrategy | null
+  /** Gates the Passport badge — this card is also used for a non-Passport unit's QR (e.g. reprinting after a repair), which must NOT show it. */
+  hasPassport?: boolean
   /** "Part Passport" units only — rendered next to the Passport badge when present. */
   arrivedAt?: string | null
+  /** Shown when reprinting a unit's QR after its repair completed — a repaired unit isn't necessarily Passport, so this is independent of hasPassport. */
+  repairedAt?: string | null
   companyName?: string | null
   companyLogoUrl?: string | null
 }
@@ -27,11 +31,11 @@ interface PartUnitQrLabelCardProps {
  * The printable label itself — same plant-engineer nameplate language as
  * PartQrPrintCard (amber hazard stripe, rivet corners, bracket-framed QR,
  * identical 8.5cm x 3.6cm footprint) so a sheet mixing regular and
- * Passport parts reads as one design, not two. Differs only where a
- * Passport unit genuinely differs from a regular part: the QR encodes this
- * one physical unit's scan URL rather than the part's breakdown-report
- * URL, there's a bare unit code chip alongside the Item Master chip, and a
- * Passport badge sits next to the usual strategy chip.
+ * Passport parts reads as one design, not two. This is a per-UNIT QR
+ * (/part-units/:id/scan), used both for genuine Part Passport units AND
+ * for reprinting any other unit's QR (e.g. after a repair) — the Passport
+ * badge is therefore gated on `hasPassport`, never assumed just because
+ * this is the per-unit (not per-part) card.
  */
 export function PartUnitQrLabelCard({
   unitId,
@@ -39,7 +43,9 @@ export function PartUnitQrLabelCard({
   itemMasterNo,
   unitCode,
   replacementStrategy,
+  hasPassport,
   arrivedAt,
+  repairedAt,
   companyName,
   companyLogoUrl,
 }: PartUnitQrLabelCardProps) {
@@ -93,13 +99,20 @@ export function PartUnitQrLabelCard({
                 {style.label}
               </span>
             )}
-            <span className="flex w-fit items-center gap-0.5 rounded-full border border-amber-300 bg-amber-100 px-1.5 py-[1px] text-[7px] leading-tight font-bold tracking-wide text-amber-800">
-              <ScanLine className="size-2" />
-              Passport
-            </span>
+            {hasPassport && (
+              <span className="flex w-fit items-center gap-0.5 rounded-full border border-amber-300 bg-amber-100 px-1.5 py-[1px] text-[7px] leading-tight font-bold tracking-wide text-amber-800">
+                <ScanLine className="size-2" />
+                Passport
+              </span>
+            )}
             {arrivedAt && (
               <span className="truncate text-[8px] leading-none text-neutral-500">
                 Arr: {formatArrivalDate(arrivedAt)}
+              </span>
+            )}
+            {repairedAt && (
+              <span className="truncate text-[8px] leading-none text-neutral-500">
+                Diperbaiki: {formatArrivalDate(repairedAt)}
               </span>
             )}
           </div>

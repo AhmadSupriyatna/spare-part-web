@@ -11,8 +11,11 @@ interface PartUnitQrPrintProps {
   itemMasterNo: string | null | undefined
   unitCode: string | null | undefined
   replacementStrategy?: PartReplacementStrategy | null
+  hasPassport?: boolean
   /** "Part Passport" units only — printed as an extra line when present. */
   arrivedAt?: string | null
+  /** Repair Part board's "Siap Dipasang" cards only — printed as an extra line when present. */
+  repairedAt?: string | null
   label?: string
 }
 
@@ -25,7 +28,17 @@ interface PartUnitQrPrintProps {
  * page (the Kanban board) don't collide. The label itself is
  * PartUnitQrLabelCard, shared with PartUnitBulkQrPrint's multi-unit print.
  */
-export function PartUnitQrPrint({ unitId, partName, itemMasterNo, unitCode, replacementStrategy, arrivedAt, label }: PartUnitQrPrintProps) {
+export function PartUnitQrPrint({
+  unitId,
+  partName,
+  itemMasterNo,
+  unitCode,
+  replacementStrategy,
+  hasPassport,
+  arrivedAt,
+  repairedAt,
+  label,
+}: PartUnitQrPrintProps) {
   const { data: companySetting } = useQuery({
     queryKey: ['settings', 'company'],
     queryFn: fetchCompanySetting,
@@ -49,7 +62,9 @@ export function PartUnitQrPrint({ unitId, partName, itemMasterNo, unitCode, repl
           itemMasterNo={itemMasterNo}
           unitCode={unitCode}
           replacementStrategy={replacementStrategy}
+          hasPassport={hasPassport}
           arrivedAt={arrivedAt}
+          repairedAt={repairedAt}
           companyName={companySetting?.name}
           companyLogoUrl={companySetting?.logo_url}
         />

@@ -11,6 +11,7 @@ export interface NewPartUnit {
   part_name?: string
   item_master_no?: string
   replacement_strategy?: PartReplacementStrategy | null
+  has_passport?: boolean
   unit_code: string | null
   arrived_at: string | null
 }
@@ -99,6 +100,7 @@ export function PartUnitBulkQrPrint({ units, open, onOpenChange }: PartUnitBulkQ
               partName={unit.part_name}
               itemMasterNo={unit.item_master_no}
               replacementStrategy={unit.replacement_strategy}
+              hasPassport={unit.has_passport}
               unitCode={unit.unit_code}
               arrivedAt={unit.arrived_at}
               companyName={companySetting?.name}
