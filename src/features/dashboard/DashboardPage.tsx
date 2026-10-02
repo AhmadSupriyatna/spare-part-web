@@ -1,6 +1,5 @@
 import { useQuery } from '@tanstack/react-query'
 import {
-  AlertTriangle,
   ArrowLeftRight,
   CalendarCheck,
   CalendarClock,
@@ -18,10 +17,11 @@ import {
 } from 'lucide-react'
 import { fetchDashboardAnalytics } from '@/features/dashboard/api'
 import { BudgetProjectionChart } from '@/features/dashboard/BudgetProjectionChart'
-import { InventoryHealthGauge } from '@/features/dashboard/InventoryHealthGauge'
-import { LifeBasedRadialChart } from '@/features/dashboard/LifeBasedRadialChart'
+import { InventoryHealthBar } from '@/features/dashboard/InventoryHealthBar'
+import { LifeBasedList } from '@/features/dashboard/LifeBasedList'
 import { MaintenancePerformanceChart } from '@/features/dashboard/MaintenancePerformanceChart'
 import { Nameplate } from '@/features/dashboard/Nameplate'
+import { PanelCard } from '@/features/dashboard/PanelCard'
 import { PmVsFailureCostChart } from '@/features/dashboard/PmVsFailureCostChart'
 import { RadialMapChart } from '@/features/dashboard/RadialMapChart'
 import { RankedBarList } from '@/features/dashboard/RankedBarList'
@@ -36,7 +36,7 @@ import { useBranchStore } from '@/stores/branch-store'
 import { useHasRole } from '@/stores/use-has-role'
 import { PageHeader } from '@/components/PageHeader'
 import { QueryErrorState } from '@/components/QueryErrorState'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Skeleton } from '@/components/ui/skeleton'
 
 function compactRupiah(value: number): string {
@@ -148,7 +148,7 @@ export function DashboardPage() {
         <QueryErrorState onRetry={retryAll} title="Gagal memuat data Dashboard" />
       ) : (
         <>
-          <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-3 lg:grid-cols-4">
+          <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-3 lg:grid-cols-6">
             {canViewCost && (
               <Nameplate
                 label="Nilai Total Stok"
@@ -166,24 +166,6 @@ export function DashboardPage() {
               icon={Package}
               href="/stock"
               loading={partsLoading}
-            />
-            <Nameplate
-              label="Part Kritis"
-              value={criticalCount}
-              sub="Stok di bawah cadangan"
-              icon={AlertTriangle}
-              href="/stock"
-              tone={criticalCount > 0 ? 'destructive' : 'default'}
-              loading={stocksLoading}
-            />
-            <Nameplate
-              label="Part Warning"
-              value={warningCount}
-              sub="Perlu dipantau"
-              icon={AlertTriangle}
-              href="/stock"
-              tone={warningCount > 0 ? 'warning' : 'default'}
-              loading={stocksLoading}
             />
             <Nameplate
               label="PM Schedule Open"
@@ -226,7 +208,7 @@ export function DashboardPage() {
           </div>
 
           <div className="grid grid-cols-1 gap-4 lg:grid-cols-4">
-            <Card className="lg:col-span-1">
+            <PanelCard className="lg:col-span-1">
               <CardHeader>
                 <CardTitle className="text-base">Inventory Health</CardTitle>
               </CardHeader>
@@ -235,7 +217,7 @@ export function DashboardPage() {
                   <Skeleton className="h-32 w-full" />
                 ) : (
                   <>
-                    <InventoryHealthGauge critical={criticalCount} warning={warningCount} normal={normalCount} />
+                    <InventoryHealthBar critical={criticalCount} warning={warningCount} normal={normalCount} />
                     {criticalCount > 0 && (
                       <div className="flex flex-col gap-1 border-t pt-3">
                         <p className="text-xs font-medium text-muted-foreground">Part Kritis</p>
@@ -249,11 +231,11 @@ export function DashboardPage() {
                   </>
                 )}
               </CardContent>
-            </Card>
+            </PanelCard>
 
             {canViewCost && (
               <>
-                <Card className="lg:col-span-2">
+                <PanelCard className="lg:col-span-2">
                   <CardHeader>
                     <CardTitle className="flex items-center gap-2 text-base">
                       <Sparkles className="size-4" />
@@ -261,11 +243,11 @@ export function DashboardPage() {
                     </CardTitle>
                   </CardHeader>
                   <CardContent>
-                    {analyticsLoading ? <Skeleton className="h-56 w-full" /> : <LifeBasedRadialChart parts={analytics?.at_risk_parts ?? []} />}
+                    {analyticsLoading ? <Skeleton className="h-56 w-full" /> : <LifeBasedList parts={analytics?.at_risk_parts ?? []} />}
                   </CardContent>
-                </Card>
+                </PanelCard>
 
-                <Card className="lg:col-span-1">
+                <PanelCard className="lg:col-span-1">
                   <CardHeader>
                     <CardTitle className="flex items-center gap-2 text-base">
                       <Target className="size-4" />
@@ -282,7 +264,7 @@ export function DashboardPage() {
                       />
                     )}
                   </CardContent>
-                </Card>
+                </PanelCard>
               </>
             )}
           </div>
@@ -290,7 +272,7 @@ export function DashboardPage() {
           {canViewCost && (
             <>
               <div className="grid grid-cols-1 gap-4 lg:grid-cols-4">
-                <Card className="lg:col-span-1">
+                <PanelCard className="lg:col-span-1">
                   <CardHeader>
                     <CardTitle className="flex items-center gap-2 text-base">
                       <Layers className="size-4" />
@@ -309,18 +291,18 @@ export function DashboardPage() {
                       />
                     )}
                   </CardContent>
-                </Card>
+                </PanelCard>
 
-                <Card className="lg:col-span-2">
+                <PanelCard className="lg:col-span-2">
                   <CardHeader>
                     <CardTitle className="text-base">Tren Replacement & Failure (12 Bulan Terakhir)</CardTitle>
                   </CardHeader>
                   <CardContent>
                     {analyticsLoading ? <Skeleton className="h-32 w-full" /> : <ReplacementCostTrendChart data={analytics?.failure_trend ?? []} />}
                   </CardContent>
-                </Card>
+                </PanelCard>
 
-                <Card className="lg:col-span-1">
+                <PanelCard className="lg:col-span-1">
                   <CardHeader>
                     <CardTitle className="text-base">Radial Map Failure</CardTitle>
                   </CardHeader>
@@ -336,10 +318,10 @@ export function DashboardPage() {
                       />
                     )}
                   </CardContent>
-                </Card>
+                </PanelCard>
               </div>
 
-              <Card>
+              <PanelCard>
                 <CardHeader>
                   <CardTitle className="flex items-center gap-2 text-base">
                     <Wallet className="size-4" />
@@ -356,10 +338,10 @@ export function DashboardPage() {
                     />
                   )}
                 </CardContent>
-              </Card>
+              </PanelCard>
 
               <div className="grid grid-cols-1 gap-4 lg:grid-cols-4">
-                <Card className="lg:col-span-1">
+                <PanelCard className="lg:col-span-1">
                   <CardHeader>
                     <CardTitle className="flex items-center gap-2 text-base">
                       <Scale className="size-4" />
@@ -376,9 +358,9 @@ export function DashboardPage() {
                       />
                     )}
                   </CardContent>
-                </Card>
+                </PanelCard>
 
-                <Card className="lg:col-span-2">
+                <PanelCard className="lg:col-span-2">
                   <CardHeader>
                     <CardTitle className="flex items-center gap-2 text-base">
                       <ArrowLeftRight className="size-4" />
@@ -388,9 +370,9 @@ export function DashboardPage() {
                   <CardContent>
                     {analyticsLoading ? <Skeleton className="h-32 w-full" /> : <StockMovementTrendChart data={analytics?.stock_movement_trend ?? []} />}
                   </CardContent>
-                </Card>
+                </PanelCard>
 
-                <Card className="lg:col-span-1">
+                <PanelCard className="lg:col-span-1">
                   <CardHeader>
                     <CardTitle className="flex items-center gap-2 text-base">
                       <Coins className="size-4" />
@@ -412,11 +394,11 @@ export function DashboardPage() {
                       />
                     )}
                   </CardContent>
-                </Card>
+                </PanelCard>
               </div>
 
               <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
-                <Card>
+                <PanelCard>
                   <CardHeader>
                     <CardTitle className="flex items-center gap-2 text-base">
                       <Users className="size-4" />
@@ -434,9 +416,9 @@ export function DashboardPage() {
                       />
                     )}
                   </CardContent>
-                </Card>
+                </PanelCard>
 
-                <Card>
+                <PanelCard>
                   <CardHeader>
                     <CardTitle className="flex items-center gap-2 text-base">
                       <PackageSearch className="size-4" />
@@ -475,7 +457,7 @@ export function DashboardPage() {
                       </>
                     )}
                   </CardContent>
-                </Card>
+                </PanelCard>
               </div>
             </>
           )}
