@@ -4,6 +4,7 @@ import {
   Boxes,
   CircleAlert,
   ImageOff,
+  Lock,
   MoreVertical,
   PackagePlus,
   Pencil,
@@ -44,6 +45,7 @@ import {
 } from '@/components/ui/alert-dialog'
 import { Badge } from '@/components/ui/badge'
 import { EmptyState } from '@/components/EmptyState'
+import { Nameplate } from '@/components/Nameplate'
 import { PageHeader } from '@/components/PageHeader'
 import { QueryErrorState } from '@/components/QueryErrorState'
 import { Button } from '@/components/ui/button'
@@ -371,42 +373,6 @@ function UnstockedPartRow({ part, branchId }: UnstockedPartRowProps) {
   )
 }
 
-function StatCard({
-  label,
-  value,
-  active,
-  onClick,
-  tone,
-}: {
-  label: string
-  value: number
-  active: boolean
-  onClick: () => void
-  tone?: 'destructive' | 'warning'
-}) {
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      className={cn(
-        'flex flex-col items-start gap-0.5 rounded-lg border p-3 text-left transition-colors hover:border-primary/50 hover:bg-muted',
-        active && 'border-primary bg-primary/5',
-      )}
-    >
-      <p className="text-xs text-muted-foreground">{label}</p>
-      <p
-        className={cn(
-          'text-2xl font-semibold tabular-nums',
-          tone === 'destructive' && 'text-destructive',
-          tone === 'warning' && 'text-warning',
-        )}
-      >
-        {value}
-      </p>
-    </button>
-  )
-}
-
 export function KelolaStokPage() {
   const activeBranchId = useBranchStore((state) => state.activeBranchId)
   const canManage = useCanManage()
@@ -515,27 +481,40 @@ export function KelolaStokPage() {
     <div className="flex flex-col gap-4">
       <PageHeader title="Kelola Stok" description="Pendaftaran part & posisi stoknya per lokasi di plant yang sedang aktif." />
 
-      <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-        <StatCard label="Total Part" value={counts.total} active={statusFilter === 'all'} onClick={() => setStatusFilter('all')} />
-        <StatCard
+      <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-4">
+        <Nameplate
+          label="Total Part"
+          value={counts.total}
+          sub="Semua part terdaftar di plant ini"
+          icon={Boxes}
+          onClick={() => setStatusFilter('all')}
+          active={statusFilter === 'all'}
+        />
+        <Nameplate
           label="Kritis"
           value={counts.critical}
-          active={statusFilter === 'critical'}
-          onClick={() => setStatusFilter(statusFilter === 'critical' ? 'all' : 'critical')}
+          sub="Stok di bawah batas minimum"
+          icon={CircleAlert}
           tone="destructive"
+          onClick={() => setStatusFilter(statusFilter === 'critical' ? 'all' : 'critical')}
+          active={statusFilter === 'critical'}
         />
-        <StatCard
+        <Nameplate
           label="Peringatan"
           value={counts.warning}
-          active={statusFilter === 'warning'}
-          onClick={() => setStatusFilter(statusFilter === 'warning' ? 'all' : 'warning')}
+          sub="Stok mendekati batas minimum"
+          icon={AlertTriangle}
           tone="warning"
+          onClick={() => setStatusFilter(statusFilter === 'warning' ? 'all' : 'warning')}
+          active={statusFilter === 'warning'}
         />
-        <StatCard
+        <Nameplate
           label="Direservasi"
           value={counts.reserved}
-          active={statusFilter === 'reserved'}
+          sub="Sedang direservasi oleh Work Order"
+          icon={Lock}
           onClick={() => setStatusFilter(statusFilter === 'reserved' ? 'all' : 'reserved')}
+          active={statusFilter === 'reserved'}
         />
       </div>
 
