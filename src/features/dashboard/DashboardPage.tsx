@@ -257,7 +257,7 @@ export function DashboardPage() {
                     </CardTitle>
                   </CardHeader>
                   <CardContent>
-                    {analyticsLoading ? <Skeleton className="h-64 w-full" /> : <StockMovementTrendChart data={analytics?.stock_movement_trend ?? []} />}
+                    {analyticsLoading ? <Skeleton className="h-60 w-full" /> : <StockMovementTrendChart data={analytics?.stock_movement_trend ?? []} />}
                   </CardContent>
                 </PanelCard>
 
@@ -267,7 +267,7 @@ export function DashboardPage() {
                   </CardHeader>
                   <CardContent>
                     {analyticsLoading ? (
-                      <Skeleton className="h-64 w-full" />
+                      <Skeleton className="h-60 w-full" />
                     ) : (
                       <ScheduledVsFailureTrendChart data={analytics?.scheduled_vs_failure_trend ?? []} />
                     )}

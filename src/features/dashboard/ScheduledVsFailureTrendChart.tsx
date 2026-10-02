@@ -33,7 +33,7 @@ export function ScheduledVsFailureTrendChart({ data }: { data: ScheduledVsFailur
         </span>
       </div>
 
-      <div className="flex flex-col gap-1">
+      <div className="flex max-h-52 flex-col gap-1 overflow-y-auto pr-1">
         {data.map((d) => (
           <div key={d.month} className="flex items-center gap-1.5">
             <span className="w-6 shrink-0 text-right text-[9px] text-muted-foreground">{monthLabel(d.month)}</span>
