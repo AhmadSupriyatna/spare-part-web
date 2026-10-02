@@ -1,8 +1,14 @@
-import { ScanLine } from 'lucide-react'
+import { CalendarDays, ScanLine } from 'lucide-react'
 import { QRCodeSVG } from 'qrcode.react'
 import { STRATEGY_STYLE } from '@/features/parts/PartQrPrintCard'
 import { cn } from '@/lib/utils'
 import type { PartReplacementStrategy } from '@/types/inventory'
+
+function formatArrivalDate(arrivedAt: string): string {
+  const date = new Date(arrivedAt)
+  const pad = (n: number) => String(n).padStart(2, '0')
+  return `${pad(date.getDate())}/${pad(date.getMonth() + 1)}/${date.getFullYear()}`
+}
 
 interface PartUnitQrLabelCardProps {
   unitId: number
@@ -79,6 +85,12 @@ export function PartUnitQrLabelCard({
             <span className="w-fit rounded border border-neutral-300 bg-neutral-50 px-1.5 py-[1px] font-mono text-[9px] leading-tight tracking-wider text-neutral-700">
               {unitCode}
             </span>
+            {arrivedAt && (
+              <span className="flex w-fit items-center gap-0.5 rounded-full border border-neutral-300 bg-neutral-100 px-1.5 py-[1px] text-[7px] leading-tight font-bold tracking-wide text-neutral-600">
+                <CalendarDays className="size-2" />
+                Arr.date: {formatArrivalDate(arrivedAt)}
+              </span>
+            )}
           </div>
 
           <div className="flex items-center gap-1.5">
@@ -91,11 +103,6 @@ export function PartUnitQrLabelCard({
               <ScanLine className="size-2" />
               Passport
             </span>
-            {arrivedAt && (
-              <span className="truncate text-[8px] leading-none text-neutral-500">
-                {new Date(arrivedAt).toLocaleDateString('id-ID', { dateStyle: 'medium' })}
-              </span>
-            )}
           </div>
         </div>
       </div>
