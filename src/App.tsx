@@ -21,6 +21,7 @@ import { PrintLineMonthlyReportPage } from '@/features/lines/PrintLineMonthlyRep
 import { PrintLineRuntimeReportPage } from '@/features/lines/PrintLineRuntimeReportPage'
 import { LocationDetailPage } from '@/features/locations/LocationDetailPage'
 import { LocationsPage } from '@/features/locations/LocationsPage'
+import { MachineDetailPage } from '@/features/machines/MachineDetailPage'
 import { MachineMonitoringPage } from '@/features/machines/MachineMonitoringPage'
 import { MaintenanceReportScanPage } from '@/features/pm/MaintenanceReportScanPage'
 import { PartDetailPage } from '@/features/parts/PartDetailPage'
@@ -91,6 +92,7 @@ function App() {
             <Route path="lines/runtime-report/print" element={<PrintLineRuntimeReportPage />} />
             <Route path="lines/monthly-report/print" element={<PrintLineMonthlyReportPage />} />
             <Route path="equipment/:id" element={<EquipmentDetailPage />} />
+            <Route path="machines/:id" element={<MachineDetailPage />} />
             <Route path="workspace" element={<WorkspacePage />} />
             <Route path="fp3" element={<Fp3ListPage />} />
             <Route path="fp3/:id/print" element={<Fp3PrintPage />} />

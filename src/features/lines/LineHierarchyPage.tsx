@@ -276,6 +276,7 @@ function ProductionLineBrowser({ activeBranchId }: { activeBranchId: number }) {
               title={machine.name}
               subtitle={machine.category ?? machine.code}
               badge={!machine.is_active ? <Badge variant="secondary">Nonaktif</Badge> : undefined}
+              detailHref={`/machines/${machine.id}`}
               viewAction={
                 <a
                   href={`/machines/scan/${machine.id}`}
@@ -570,6 +571,7 @@ function NonProductionAssetsBrowser({
               title={machine.name}
               subtitle={machine.category ?? machine.code}
               badge={!machine.is_active ? <Badge variant="secondary">Nonaktif</Badge> : undefined}
+              detailHref={`/machines/${machine.id}`}
               viewAction={
                 <a
                   href={`/machines/scan/${machine.id}`}

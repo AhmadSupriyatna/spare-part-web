@@ -64,6 +64,22 @@ export async function fetchWoReportForMachine(machineId: number, from: string, t
 
 // --- "Monitoring Life Time Mesin" (public QR-scan landing page) ---
 
+export interface MonthlyConsumption {
+  month: string
+  quantity: number
+  /** Only present on the authenticated summary — never on the public monitoring payload. */
+  cost?: string
+}
+
+export interface TopPartConsumed {
+  part_id: number
+  part_name: string
+  item_master_no: string
+  quantity: number
+  /** Only present on the authenticated summary — never on the public monitoring payload. */
+  cost?: string
+}
+
 export interface MachineMonitoringData {
   machine: Machine
   equipment_count: number
@@ -72,10 +88,24 @@ export interface MachineMonitoringData {
   installations: PartInstallation[]
   monthly_failure_trend: { month: string; count: number }[]
   average_lifetime_hours: number | null
+  monthly_consumption_trend: MonthlyConsumption[]
+  top_parts_consumed: TopPartConsumed[]
 }
 
 /** Unauthenticated — see PublicMachineMonitoringController. Reached by scanning a Machine's printed QR, no login. */
 export async function fetchMachineMonitoring(machineId: number): Promise<MachineMonitoringData> {
   const { data } = await apiClient.get<{ data: MachineMonitoringData }>(`/public/machines/${machineId}/monitoring`)
+  return data.data
+}
+
+// --- Machine Detail (authenticated menu page) ---
+
+export interface MachineSummaryData extends MachineMonitoringData {
+  /** Current branch unit_cost x active installation count, summed — cost fields only ever appear here, never on the public endpoint. */
+  installed_part_value: string
+}
+
+export async function fetchMachineSummary(machineId: number): Promise<MachineSummaryData> {
+  const { data } = await apiClient.get<{ data: MachineSummaryData }>(`/machines/${machineId}/summary`)
   return data.data
 }
