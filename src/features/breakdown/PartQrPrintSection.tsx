@@ -1,6 +1,7 @@
-import { useQuery } from '@tanstack/react-query'
+import { useQueries, useQuery } from '@tanstack/react-query'
 import { PrinterIcon } from 'lucide-react'
 import { useMemo, useState } from 'react'
+import { fetchUnitsForPart } from '@/features/part-units/api'
 import { fetchParts } from '@/features/parts/api'
 import { PartQrPrintCard } from '@/features/parts/PartQrPrintCard'
 import { partReplacementStrategyOptions } from '@/features/parts/schema'
@@ -8,6 +9,7 @@ import { fetchCompanySetting } from '@/features/settings/api'
 import { useAuthStore } from '@/stores/auth-store'
 import { useBranchStore } from '@/stores/branch-store'
 import type { Part } from '@/types/inventory'
+import { PartUnitQrLabelCard } from '@/components/PartUnitQrLabelCard'
 import { Button } from '@/components/ui/button'
 import { Checkbox } from '@/components/ui/checkbox'
 import {
@@ -21,6 +23,8 @@ import {
 import { Input } from '@/components/ui/input'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
+import type { PartUnit } from '@/types/relations'
+import { toast } from 'sonner'
 
 interface PrintEntry {
   part: Part
@@ -45,6 +49,7 @@ export function PartQrPrintSection() {
   const [dialogPartIds, setDialogPartIds] = useState<number[]>([])
   const [quantities, setQuantities] = useState<Record<number, string>>({})
   const [printEntries, setPrintEntries] = useState<PrintEntry[] | null>(null)
+  const [printUnits, setPrintUnits] = useState<PartUnit[] | null>(null)
 
   const activeBranchId = useBranchStore((state) => state.activeBranchId)
   const branches = useAuthStore((state) => state.user?.branches ?? [])
@@ -59,6 +64,22 @@ export function PartQrPrintSection() {
     queryKey: ['settings', 'company'],
     queryFn: fetchCompanySetting,
   })
+
+  const dialogParts = parts?.filter((p) => dialogPartIds.includes(p.id)) ?? []
+  const dialogRegularParts = dialogParts.filter((p) => !p.has_passport)
+  const dialogPassportParts = dialogParts.filter((p) => p.has_passport)
+
+  const passportUnitQueries = useQueries({
+    queries: dialogPassportParts.map((part) => ({
+      queryKey: ['part-units', part.id],
+      queryFn: () => fetchUnitsForPart(part.id),
+      enabled: quantityDialogOpen,
+    })),
+  })
+  const passportUnitsByPartId = new Map(
+    dialogPassportParts.map((part, index) => [part.id, passportUnitQueries[index]?.data ?? []]),
+  )
+  const loadingPassportUnits = passportUnitQueries.some((q) => q.isLoading)
 
   const filteredParts = useMemo(
     () =>
@@ -104,20 +125,24 @@ export function PartQrPrintSection() {
   }
 
   function confirmPrint() {
-    const dialogParts = parts?.filter((p) => dialogPartIds.includes(p.id)) ?? []
     const entries: PrintEntry[] = []
-    dialogParts.forEach((part) => {
+    dialogRegularParts.forEach((part) => {
       const qty = Math.max(1, Number(quantities[part.id]) || 1)
       for (let i = 0; i < qty; i++) {
         entries.push({ part, copy: i + 1 })
       }
     })
+    const units = dialogPassportParts.flatMap((part) => passportUnitsByPartId.get(part.id) ?? [])
+    if (entries.length === 0 && units.length === 0) {
+      toast.error('Belum ada unit Passport terdaftar untuk part ini — Stock In dulu sebelum cetak.')
+      return
+    }
     setPrintEntries(entries)
+    setPrintUnits(units)
     setQuantityDialogOpen(false)
     requestAnimationFrame(() => window.print())
   }
 
-  const dialogParts = parts?.filter((p) => dialogPartIds.includes(p.id)) ?? []
   const scanBaseUrl = `${window.location.origin}/breakdown/scan`
 
   return (
@@ -130,8 +155,20 @@ export function PartQrPrintSection() {
             position: absolute;
             inset: 0;
             padding: 8px;
+          }
+          #part-qr-print-area .qr-print-grid + .qr-print-grid {
+            margin-top: 0.3cm;
+          }
+          #part-qr-print-area .qr-print-grid-parts {
             display: grid;
             grid-template-columns: repeat(auto-fill, 8.5cm);
+            gap: 0.3cm;
+            justify-content: start;
+            align-content: start;
+          }
+          #part-qr-print-area .qr-print-grid-units {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
             gap: 0.3cm;
             justify-content: start;
             align-content: start;
@@ -225,13 +262,14 @@ export function PartQrPrintSection() {
       <Dialog open={quantityDialogOpen} onOpenChange={setQuantityDialogOpen}>
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
-            <DialogTitle>Jumlah Cetak per Part</DialogTitle>
+            <DialogTitle>Cetak QR Terpilih</DialogTitle>
             <DialogDescription>
-              Tentukan berapa lembar QR yang mau dicetak untuk tiap part terpilih.
+              Tentukan berapa lembar QR Breakdown yang mau dicetak untuk tiap part biasa. Part Passport
+              otomatis cetak satu label per unit fisik yang sudah terdaftar, lengkap tanggal kedatangan.
             </DialogDescription>
           </DialogHeader>
           <div className="flex max-h-80 flex-col gap-3 overflow-y-auto">
-            {dialogParts.map((part) => (
+            {dialogRegularParts.map((part) => (
               <div key={part.id} className="flex items-center justify-between gap-3">
                 <div className="min-w-0">
                   <p className="truncate text-sm font-medium">{part.name}</p>
@@ -248,27 +286,64 @@ export function PartQrPrintSection() {
                 />
               </div>
             ))}
+            {dialogPassportParts.map((part) => {
+              const units = passportUnitsByPartId.get(part.id) ?? []
+              return (
+                <div
+                  key={part.id}
+                  className="flex items-center justify-between gap-3 rounded-md border border-dashed border-primary/30 bg-primary/5 p-2"
+                >
+                  <div className="min-w-0">
+                    <p className="truncate text-sm font-medium">{part.name}</p>
+                    <p className="font-mono text-xs text-muted-foreground">{part.item_master_no}</p>
+                  </div>
+                  <span className="shrink-0 text-xs text-muted-foreground">
+                    {loadingPassportUnits ? 'Memuat...' : `${units.length} unit Passport`}
+                  </span>
+                </div>
+              )
+            })}
           </div>
           <DialogFooter>
-            <Button onClick={confirmPrint} disabled={!activeBranchId}>
+            <Button onClick={confirmPrint} disabled={!activeBranchId || loadingPassportUnits}>
               Cetak Sekarang
             </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
 
-      {printEntries && activeBranchId && (
+      {(printEntries || printUnits) && activeBranchId && (
         <div id="part-qr-print-area" className="hidden">
-          {printEntries.map((entry, index) => (
-            <PartQrPrintCard
-              key={`${entry.part.id}-${entry.copy}-${index}`}
-              part={entry.part}
-              qrValue={`${scanBaseUrl}/${entry.part.id}/${activeBranchId}`}
-              companyName={companySetting?.name}
-              companyLogoUrl={companySetting?.logo_url}
-              branchLabel={activeBranch?.code}
-            />
-          ))}
+          {printEntries && printEntries.length > 0 && (
+            <div className="qr-print-grid qr-print-grid-parts">
+              {printEntries.map((entry, index) => (
+                <PartQrPrintCard
+                  key={`${entry.part.id}-${entry.copy}-${index}`}
+                  part={entry.part}
+                  qrValue={`${scanBaseUrl}/${entry.part.id}/${activeBranchId}`}
+                  companyName={companySetting?.name}
+                  companyLogoUrl={companySetting?.logo_url}
+                  branchLabel={activeBranch?.code}
+                />
+              ))}
+            </div>
+          )}
+          {printUnits && printUnits.length > 0 && (
+            <div className="qr-print-grid qr-print-grid-units">
+              {printUnits.map((unit) => (
+                <PartUnitQrLabelCard
+                  key={unit.id}
+                  unitId={unit.id}
+                  partName={unit.part_name}
+                  itemMasterNo={unit.item_master_no}
+                  unitCode={unit.unit_code}
+                  arrivedAt={unit.arrived_at}
+                  companyName={companySetting?.name}
+                  companyLogoUrl={companySetting?.logo_url}
+                />
+              ))}
+            </div>
+          )}
         </div>
       )}
     </div>
