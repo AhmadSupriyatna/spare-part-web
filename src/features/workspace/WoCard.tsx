@@ -1,5 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { Printer } from 'lucide-react'
+import { Printer, ScanLine } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router'
 import { toast } from 'sonner'
@@ -12,6 +12,7 @@ import { useHasRole } from '@/stores/use-has-role'
 import { dueDateBadge } from '@/lib/dates'
 import { cn } from '@/lib/utils'
 import type { Task } from '@/types/tasks'
+import { PartUnitQrScanDialog } from '@/components/PartUnitQrScanDialog'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Checkbox } from '@/components/ui/checkbox'
@@ -38,6 +39,10 @@ interface ChecklistRowState {
   qty: string
   oldInstallationId: number | null
   picking: boolean
+  /** "Part Passport" — the unit identified by the QR scan, sent as part_unit_id on completion. */
+  partUnitId: number | null
+  scannedUnitCode: string | null
+  scanningUnit: boolean
 }
 
 interface ChecklistItemRowState {
@@ -53,12 +58,14 @@ interface WoCardProps {
 
 /**
  * One WO as a self-contained card — no more modal for completion. A part
- * check is now just a checkbox (green once ticked) with a quick quantity
- * field, no QR scan: it submits with part_unit_id/old_installation_id both
- * null, so TaskService::completeChecklist() treats it as "new part off the
- * shelf" (only throws if the equipment has more than one active
- * installation of that exact part, since then there's no way to tell which
- * one is coming off without picking one explicitly).
+ * check is a checkbox (green once ticked) with a quick quantity field; it
+ * submits with old_installation_id picked automatically (or via
+ * InstallationSlotPicker when ambiguous) and part_unit_id null, so
+ * TaskService::completeChecklist() treats it as "new part off the shelf" —
+ * UNLESS the part is a "Part Passport" one (`check.has_passport`), in which
+ * case checking the box opens PartUnitQrScanDialog first: the technician
+ * scans the physical unit's QR, and that unit's id becomes part_unit_id,
+ * so completeChecklist() reuses that exact unit instead of auto-picking.
  */
 export function WoCard({ task, invalidateKey }: WoCardProps) {
   const queryClient = useQueryClient()
@@ -109,6 +116,9 @@ export function WoCard({ task, invalidateKey }: WoCardProps) {
         qty: String(check.quantity_used ?? check.quantity_planned),
         oldInstallationId: null,
         picking: false,
+        partUnitId: null,
+        scannedUnitCode: null,
+        scanningUnit: false,
       }
     }
     setRows(next)
@@ -174,6 +184,7 @@ export function WoCard({ task, invalidateKey }: WoCardProps) {
                 quantity_used: checked ? Number(row?.qty || check.quantity_planned) : null,
                 reason: checked ? null : notes,
                 old_installation_id: checked ? (row?.oldInstallationId ?? null) : null,
+                part_unit_id: checked ? (row?.partUnitId ?? null) : null,
               }
             }),
             checklist_items: checklistItems,
@@ -254,8 +265,30 @@ export function WoCard({ task, invalidateKey }: WoCardProps) {
               qty: String(check.quantity_planned),
               oldInstallationId: null,
               picking: false,
+              partUnitId: null,
+              scannedUnitCode: null,
+              scanningUnit: false,
             }
             const activeSamePart = activeInstallationsFor(check)
+
+            function resolveOldInstallation(): number | null {
+              return activeSamePart[0]?.id ?? null
+            }
+
+            function afterOldInstallationResolved(oldInstallationId: number | null) {
+              if (check.has_passport) {
+                setRows((prev) => ({
+                  ...prev,
+                  [check.id]: { ...row, picking: false, oldInstallationId, scanningUnit: true },
+                }))
+                return
+              }
+              setRows((prev) => ({
+                ...prev,
+                [check.id]: { ...row, picking: false, checked: true, oldInstallationId },
+              }))
+            }
+
             return (
               <div
                 key={check.id}
@@ -273,7 +306,15 @@ export function WoCard({ task, invalidateKey }: WoCardProps) {
                         if (value !== true) {
                           setRows((prev) => ({
                             ...prev,
-                            [check.id]: { ...row, checked: false, oldInstallationId: null, picking: false },
+                            [check.id]: {
+                              ...row,
+                              checked: false,
+                              oldInstallationId: null,
+                              picking: false,
+                              partUnitId: null,
+                              scannedUnitCode: null,
+                              scanningUnit: false,
+                            },
                           }))
                           return
                         }
@@ -283,20 +324,19 @@ export function WoCard({ task, invalidateKey }: WoCardProps) {
                           return
                         }
 
-                        setRows((prev) => ({
-                          ...prev,
-                          [check.id]: {
-                            ...row,
-                            checked: true,
-                            oldInstallationId: activeSamePart[0]?.id ?? null,
-                          },
-                        }))
+                        afterOldInstallationResolved(resolveOldInstallation())
                       }}
                     />
                     <span className="min-w-0 truncate">
                       {check.part_name ?? `Part #${check.part_id}`}{' '}
                       <span className="font-mono text-xs text-muted-foreground">({check.item_master_no})</span>
                     </span>
+                    {check.has_passport && (
+                      <Badge variant="outline" className="shrink-0 gap-1 text-[10px]">
+                        <ScanLine className="size-3" />
+                        Passport
+                      </Badge>
+                    )}
                   </label>
                   {row.checked && check.quantity_planned > 1 && (
                     <Input
@@ -316,19 +356,54 @@ export function WoCard({ task, invalidateKey }: WoCardProps) {
                     </p>
                     <InstallationSlotPicker
                       installations={activeSamePart}
-                      onSelect={(installation) =>
+                      onSelect={(installation) => afterOldInstallationResolved(installation.id)}
+                    />
+                  </div>
+                )}
+                {row.checked && check.has_passport && (
+                  <div className="flex items-center justify-between gap-2 pl-6 text-[11px] text-success">
+                    <span>✓ Unit {row.scannedUnitCode} dipindai</span>
+                    {!isDone && (
+                      <button
+                        type="button"
+                        className="text-muted-foreground underline underline-offset-2"
+                        onClick={() => setRows((prev) => ({ ...prev, [check.id]: { ...row, scanningUnit: true } }))}
+                      >
+                        Scan Ulang
+                      </button>
+                    )}
+                  </div>
+                )}
+                {row.scanningUnit && (
+                  <PartUnitQrScanDialog
+                    open
+                    onOpenChange={(nextOpen) => {
+                      if (!nextOpen) {
                         setRows((prev) => ({
                           ...prev,
                           [check.id]: {
                             ...row,
-                            checked: true,
-                            picking: false,
-                            oldInstallationId: installation.id,
+                            scanningUnit: false,
+                            checked: row.partUnitId != null,
                           },
                         }))
                       }
-                    />
-                  </div>
+                    }}
+                    expectedPartId={check.part_id}
+                    partName={check.part_name ?? `Part #${check.part_id}`}
+                    onScanned={(unit) =>
+                      setRows((prev) => ({
+                        ...prev,
+                        [check.id]: {
+                          ...row,
+                          scanningUnit: false,
+                          checked: true,
+                          partUnitId: unit.id,
+                          scannedUnitCode: unit.unit_code,
+                        },
+                      }))
+                    }
+                  />
                 )}
               </div>
             )

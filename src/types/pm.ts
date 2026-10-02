@@ -48,6 +48,8 @@ export interface TaskPartCheck {
   part_installation_id: number | null
   /** Only ever set for a row that was actually replaced — a "not replaced" row never recorded which physical unit/address it was. */
   slot_label?: string | null
+  /** "Part Passport" — when true, WoCard must resolve this row's part_unit_id via a QR camera scan instead of the plain auto-pick checkbox. */
+  has_passport?: boolean
 }
 
 export interface TaskReschedule {
