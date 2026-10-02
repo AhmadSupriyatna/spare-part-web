@@ -4,6 +4,7 @@ import { fetchLocation } from '@/features/locations/api'
 import { AssignPartToLocationDialog } from '@/features/part-stocks/AssignPartToLocationDialog'
 import { fetchPartStocksForLocation } from '@/features/part-stocks/api'
 import { useCanManage } from '@/stores/use-has-role'
+import { EmptyState } from '@/components/EmptyState'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Skeleton } from '@/components/ui/skeleton'
@@ -59,7 +60,7 @@ export function LocationDetailPage() {
         {partStocksLoading ? (
           <Skeleton className="h-24 w-full" />
         ) : partStocks?.length === 0 ? (
-          <p className="text-sm text-muted-foreground">Belum ada part yang ditempatkan di lokasi ini.</p>
+          <EmptyState title="Belum ada part yang ditempatkan di lokasi ini." />
         ) : (
           <Table>
             <TableHeader>

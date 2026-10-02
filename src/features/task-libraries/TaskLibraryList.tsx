@@ -15,6 +15,7 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from '@/components/ui/alert-dialog'
+import { EmptyState } from '@/components/EmptyState'
 import { Button } from '@/components/ui/button'
 import { Skeleton } from '@/components/ui/skeleton'
 
@@ -62,7 +63,7 @@ export function TaskLibraryList({ equipmentId, title = 'Task Library (PM)' }: { 
       {taskLibrariesLoading ? (
         <Skeleton className="h-24 w-full" />
       ) : taskLibraries?.length === 0 ? (
-        <p className="text-sm text-muted-foreground">Belum ada resep kegiatan PM untuk equipment ini.</p>
+        <EmptyState title="Belum ada resep kegiatan PM untuk equipment ini." />
       ) : (
         <div className="flex flex-col gap-3">
           {taskLibraries?.map((library) => {

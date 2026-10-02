@@ -18,6 +18,7 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from '@/components/ui/alert-dialog'
+import { EmptyState } from '@/components/EmptyState'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Skeleton } from '@/components/ui/skeleton'
@@ -76,7 +77,7 @@ export function SupplierDetailPage() {
         {partsLoading ? (
           <Skeleton className="h-24 w-full" />
         ) : partSuppliers?.length === 0 ? (
-          <p className="text-sm text-muted-foreground">Belum ada part yang disuplai oleh supplier ini.</p>
+          <EmptyState title="Belum ada part yang disuplai oleh supplier ini." />
         ) : (
           <Table>
             <TableHeader>

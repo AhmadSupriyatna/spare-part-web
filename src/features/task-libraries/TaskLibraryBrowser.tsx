@@ -166,7 +166,7 @@ function ProductionTaskLibraryBrowser() {
               ))}
             </div>
           ) : machines?.length === 0 ? (
-            <p className="p-2 text-sm text-muted-foreground">Belum ada mesin di line ini.</p>
+            <EmptyState title="Belum ada mesin di line ini." />
           ) : (
             <div className="flex flex-col gap-5">
               {machines?.map((machine, index) => {
@@ -291,7 +291,7 @@ function NonProductionTaskLibraryBrowser() {
               ))}
             </div>
           ) : isEmpty ? (
-            <p className="p-2 text-sm text-muted-foreground">Belum ada mesin atau asset luar line di plant ini.</p>
+            <EmptyState title="Belum ada mesin atau asset luar line di plant ini." />
           ) : (
             <div className="flex flex-col gap-5">
               {outsideLineMachines?.map((machine, index) => {

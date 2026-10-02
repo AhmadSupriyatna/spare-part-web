@@ -23,6 +23,7 @@ import { cn } from '@/lib/utils'
 import type { TaskLibrary } from '@/types/pm'
 import type { Task } from '@/types/tasks'
 import { PageHeader } from '@/components/PageHeader'
+import { EmptyState } from '@/components/EmptyState'
 import { QueryErrorState } from '@/components/QueryErrorState'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -547,7 +548,7 @@ export function MaintenancePage() {
             <div className="flex flex-col gap-2">
               <h2 className="text-sm font-medium">Riwayat Reschedule</h2>
               {!rescheduleHistory || rescheduleHistory.length === 0 ? (
-                <p className="text-sm text-muted-foreground">Belum ada jadwal yang pernah digeser.</p>
+                <EmptyState title="Belum ada jadwal yang pernah digeser." />
               ) : (
                 <div className="max-h-72 overflow-y-auto rounded-md border">
                   <Table>

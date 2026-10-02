@@ -24,6 +24,7 @@ import type { Machine } from '@/types/tasks'
 import type { Part } from '@/types/inventory'
 import { cn } from '@/lib/utils'
 import { DeleteWithPasswordDialog } from '@/components/DeleteWithPasswordDialog'
+import { EmptyState } from '@/components/EmptyState'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Skeleton } from '@/components/ui/skeleton'
@@ -252,6 +253,7 @@ function ProductionLineBrowser({ activeBranchId }: { activeBranchId: number }) {
           isLoading={!!selectedLineId && machinesLoading}
           isEmpty={!selectedLineId || machines?.length === 0}
           emptyMessage={!selectedLineId ? 'Pilih line terlebih dahulu.' : 'Belum ada mesin di line ini.'}
+          isSelectionHint={!selectedLineId}
           addAction={
             canManage &&
             selectedLineId && (
@@ -330,6 +332,7 @@ function ProductionLineBrowser({ activeBranchId }: { activeBranchId: number }) {
           isLoading={!!selectedMachineId && equipmentLoading}
           isEmpty={!selectedMachineId || equipmentList?.length === 0}
           emptyMessage={!selectedMachineId ? 'Pilih mesin terlebih dahulu.' : 'Belum ada equipment di mesin ini.'}
+          isSelectionHint={!selectedMachineId}
           addAction={
             canManage &&
             selectedMachineId && (
@@ -607,6 +610,7 @@ function NonProductionAssetsBrowser({
           isLoading={!!selectedMachine && equipmentLoading}
           isEmpty={!selectedMachine || equipmentList?.length === 0}
           emptyMessage={!selectedMachine ? 'Pilih mesin terlebih dahulu.' : 'Belum ada equipment di mesin ini.'}
+          isSelectionHint={!selectedMachine}
           addAction={
             canManage &&
             selectedMachine && (
@@ -762,7 +766,7 @@ function NonProductionAssetsBrowser({
               ))}
             </div>
           ) : outsideLineEquipment?.length === 0 ? (
-            <p className="p-3 text-sm text-muted-foreground">Belum ada asset tanpa mesin di plant ini.</p>
+            <EmptyState title="Belum ada asset tanpa mesin di plant ini." />
           ) : (
             outsideLineEquipment?.map((equipment) => (
               <ColumnRow
@@ -804,11 +808,13 @@ interface HierarchyColumnProps {
   isLoading: boolean
   isEmpty: boolean | undefined
   emptyMessage: string
+  /** True when `isEmpty` is because nothing's been picked yet in the column to the left ("Pilih X terlebih dahulu") rather than the list genuinely having zero rows — kept as a plain inline hint instead of the full EmptyState treatment, which would misleadingly suggest the data itself is empty. */
+  isSelectionHint?: boolean
   addAction?: React.ReactNode
   children: React.ReactNode
 }
 
-function HierarchyColumn({ title, isLoading, isEmpty, emptyMessage, addAction, children }: HierarchyColumnProps) {
+function HierarchyColumn({ title, isLoading, isEmpty, emptyMessage, isSelectionHint, addAction, children }: HierarchyColumnProps) {
   return (
     <div className="flex flex-col rounded-lg border">
       <div className="flex items-center justify-between gap-2 border-b px-3 py-2">
@@ -823,7 +829,11 @@ function HierarchyColumn({ title, isLoading, isEmpty, emptyMessage, addAction, c
             ))}
           </div>
         ) : isEmpty ? (
-          <p className="p-3 text-sm text-muted-foreground">{emptyMessage}</p>
+          isSelectionHint ? (
+            <p className="p-3 text-sm text-muted-foreground">{emptyMessage}</p>
+          ) : (
+            <EmptyState title={emptyMessage} />
+          )
         ) : (
           children
         )}

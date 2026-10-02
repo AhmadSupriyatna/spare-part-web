@@ -2,6 +2,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { Link, useParams } from 'react-router'
 import { toast } from 'sonner'
 import { Breadcrumb } from '@/components/Breadcrumb'
+import { EmptyState } from '@/components/EmptyState'
 import { fetchEquipment } from '@/features/equipment/api'
 import { PartInstallationFormDialog } from '@/features/part-installations/PartInstallationFormDialog'
 import { fetchPartInstallations, removePartInstallation } from '@/features/part-installations/api'
@@ -70,7 +71,7 @@ export function EquipmentDetailPage() {
         {installationsLoading ? (
           <Skeleton className="h-24 w-full" />
         ) : installations?.length === 0 ? (
-          <p className="text-sm text-muted-foreground">Belum ada part yang tercatat terpasang di equipment ini.</p>
+          <EmptyState title="Belum ada part yang tercatat terpasang di equipment ini." />
         ) : (
           <Table>
             <TableHeader>

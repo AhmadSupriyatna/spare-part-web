@@ -2,6 +2,7 @@ import { useQuery } from '@tanstack/react-query'
 import { Link, useParams } from 'react-router'
 import { fetchPartUnit } from '@/features/part-units/api'
 import { Breadcrumb } from '@/components/Breadcrumb'
+import { EmptyState } from '@/components/EmptyState'
 import { PageHeader } from '@/components/PageHeader'
 import { PartUnitQrPrint } from '@/components/PartUnitQrPrint'
 import { Badge } from '@/components/ui/badge'
@@ -130,7 +131,7 @@ export function PartUnitDetailPage() {
       <div className="flex flex-col gap-3">
         <h2 className="text-lg font-medium">Riwayat Pemasangan</h2>
         {!unit.installations || unit.installations.length === 0 ? (
-          <p className="text-sm text-muted-foreground">Belum pernah dipasang.</p>
+          <EmptyState title="Belum pernah dipasang." />
         ) : (
           <Table>
             <TableHeader>
@@ -177,7 +178,7 @@ export function PartUnitDetailPage() {
       <div className="flex flex-col gap-3">
         <h2 className="text-lg font-medium">Riwayat Perbaikan</h2>
         {!unit.repairs || unit.repairs.length === 0 ? (
-          <p className="text-sm text-muted-foreground">Belum pernah dikirim ke perbaikan.</p>
+          <EmptyState title="Belum pernah dikirim ke perbaikan." />
         ) : (
           <Table>
             <TableHeader>

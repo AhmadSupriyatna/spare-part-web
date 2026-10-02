@@ -3,6 +3,7 @@ import { ArrowLeft, MapPin, PackagePlus, Pencil, SlidersHorizontal, Trash2 } fro
 import { Link, useParams } from 'react-router'
 import { toast } from 'sonner'
 import { Breadcrumb } from '@/components/Breadcrumb'
+import { EmptyState } from '@/components/EmptyState'
 import { fetchInstallationsForPart } from '@/features/part-installations/api'
 import { fetchUnitsForPart } from '@/features/part-units/api'
 import { fetchPart } from '@/features/parts/api'
@@ -367,7 +368,7 @@ export function PartDetailPage() {
           {installationsLoading ? (
             <Skeleton className="h-24 w-full" />
           ) : activeInstallations.length === 0 ? (
-            <p className="text-sm text-muted-foreground">Tidak ada unit yang sedang terpasang saat ini.</p>
+            <EmptyState title="Tidak ada unit yang sedang terpasang saat ini." />
           ) : (
             <Table>
               <TableHeader>
@@ -441,7 +442,7 @@ export function PartDetailPage() {
             ) : reservationsLoading ? (
               <Skeleton className="h-24 w-full" />
             ) : !reservations || reservations.length === 0 ? (
-              <p className="text-sm text-muted-foreground">Tidak ada WO yang akan datang yang mereservasi part ini.</p>
+              <EmptyState title="Tidak ada WO yang akan datang yang mereservasi part ini." />
             ) : (
               <div className="flex flex-col gap-2">
                 {reservations.map((reservation) => (
@@ -473,7 +474,7 @@ export function PartDetailPage() {
             ) : ledgerLoading ? (
               <Skeleton className="h-24 w-full" />
             ) : !ledger || ledger.data.length === 0 ? (
-              <p className="text-sm text-muted-foreground">Belum ada riwayat perubahan stok di plant ini.</p>
+              <EmptyState title="Belum ada riwayat perubahan stok di plant ini." />
             ) : (
               <div className="flex max-h-72 flex-col gap-2 overflow-y-auto">
                 {ledger.data.map((entry) => (
@@ -516,7 +517,7 @@ export function PartDetailPage() {
           {suppliersLoading ? (
             <Skeleton className="h-24 w-full" />
           ) : partSuppliers?.length === 0 ? (
-            <p className="text-sm text-muted-foreground">Belum ada supplier yang disetujui untuk part ini.</p>
+            <EmptyState title="Belum ada supplier yang disetujui untuk part ini." />
           ) : (
             <Table>
               <TableHeader>
@@ -591,9 +592,7 @@ export function PartDetailPage() {
           {unitsLoading ? (
             <Skeleton className="h-24 w-full" />
           ) : units?.length === 0 ? (
-            <p className="text-sm text-muted-foreground">
-              Belum ada unit fisik part ini yang tercatat (dibuat otomatis saat pertama kali dipasang).
-            </p>
+            <EmptyState title="Belum ada unit fisik part ini yang tercatat (dibuat otomatis saat pertama kali dipasang)." />
           ) : (
             <Table>
               <TableHeader>

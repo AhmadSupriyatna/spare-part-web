@@ -3,6 +3,7 @@ import { AlertTriangle, Boxes, CalendarClock, Gauge, TrendingDown } from 'lucide
 import { useParams } from 'react-router'
 import { fetchMachineMonitoring } from '@/features/machines/api'
 import { cn } from '@/lib/utils'
+import { EmptyState } from '@/components/EmptyState'
 import { Badge } from '@/components/ui/badge'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Skeleton } from '@/components/ui/skeleton'
@@ -151,7 +152,7 @@ export function MachineMonitoringPage() {
               </CardHeader>
               <CardContent className="flex flex-col gap-2">
                 {data.upcoming_tasks.length === 0 ? (
-                  <p className="text-sm text-muted-foreground">Tidak ada PM yang sedang terjadwal.</p>
+                  <EmptyState title="Tidak ada PM yang sedang terjadwal." />
                 ) : (
                   data.upcoming_tasks.map((task) => (
                     <div key={task.id} className="flex items-center justify-between gap-2 rounded-md border p-2.5 text-sm">
@@ -183,7 +184,7 @@ export function MachineMonitoringPage() {
               </CardHeader>
               <CardContent className="flex flex-col gap-3">
                 {data.installations.length === 0 ? (
-                  <p className="text-sm text-muted-foreground">Belum ada part yang tercatat terpasang.</p>
+                  <EmptyState title="Belum ada part yang tercatat terpasang." />
                 ) : (
                   data.installations.map((installation) => (
                     <div key={installation.id} className="flex flex-col gap-1.5 rounded-md border p-2.5 text-sm">

@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { useQuery, keepPreviousData } from '@tanstack/react-query'
 import { ChevronLeft, ChevronRight } from 'lucide-react'
 import { fetchLineKwhLogs } from '@/features/lines/api'
+import { EmptyState } from '@/components/EmptyState'
 import { Button } from '@/components/ui/button'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
@@ -28,7 +29,7 @@ export function LineKwhLogTable({ lineId }: { lineId: number }) {
   const logs = data?.data ?? []
 
   if (page === 1 && logs.length === 0) {
-    return <p className="text-sm text-muted-foreground">Belum ada catatan kWh untuk line ini.</p>
+    return <EmptyState title="Belum ada catatan kWh untuk line ini." />
   }
 
   return (
