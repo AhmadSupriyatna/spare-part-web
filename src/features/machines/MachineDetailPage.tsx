@@ -2,7 +2,7 @@ import { useQuery } from '@tanstack/react-query'
 import { ArrowLeft, FileDown, Printer } from 'lucide-react'
 import { useNavigate, useParams } from 'react-router'
 import { fetchMachineSummary } from '@/features/machines/api'
-import { MachineDashboardContent } from '@/features/machines/MachineDashboardContent'
+import { MachineDashboardContent, PassportHistoryCard, UpcomingTasksCard } from '@/features/machines/MachineDashboardContent'
 import { MachineMiniCalendar } from '@/features/machines/MachineMiniCalendar'
 import { MachineReportPrintSection } from '@/features/machines/MachineReportPrintSection'
 import { MachineTaskHistoryTable } from '@/features/machines/MachineTaskHistoryTable'
@@ -168,6 +168,8 @@ export function MachineDetailPage() {
           data={data}
           installedPartValue={data.installed_part_value}
           costByEquipmentThisYear={data.cost_by_equipment_this_year}
+          showUpcomingTasks={false}
+          showPassportHistory={false}
         />
 
         <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
@@ -180,6 +182,10 @@ export function MachineDetailPage() {
             </CardContent>
           </PanelCard>
 
+          <UpcomingTasksCard tasks={data.upcoming_tasks} />
+        </div>
+
+        <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
           <PanelCard>
             <CardHeader>
               <CardTitle className="text-sm font-medium">Riwayat PM</CardTitle>
@@ -188,6 +194,10 @@ export function MachineDetailPage() {
               <MachineTaskHistoryTable machineId={machineId} />
             </CardContent>
           </PanelCard>
+
+          {data.installations.some((installation) => installation.has_passport) && (
+            <PassportHistoryCard history={data.passport_install_history} />
+          )}
         </div>
       </div>
 
