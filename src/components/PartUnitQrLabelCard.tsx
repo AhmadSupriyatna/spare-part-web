@@ -1,4 +1,4 @@
-import { CalendarDays, ScanLine } from 'lucide-react'
+import { ScanLine } from 'lucide-react'
 import { QRCodeSVG } from 'qrcode.react'
 import { STRATEGY_STYLE } from '@/features/parts/PartQrPrintCard'
 import { cn } from '@/lib/utils'
@@ -86,9 +86,8 @@ export function PartUnitQrLabelCard({
               {unitCode}
             </span>
             {arrivedAt && (
-              <span className="flex w-fit items-center gap-0.5 rounded-full border border-neutral-300 bg-neutral-100 px-1.5 py-[1px] text-[7px] leading-tight font-bold tracking-wide text-neutral-600">
-                <CalendarDays className="size-2" />
-                Arr.date: {formatArrivalDate(arrivedAt)}
+              <span className="w-fit rounded-full border border-neutral-300 bg-neutral-100 px-1.5 py-[1px] text-[7px] leading-tight font-bold tracking-wide text-neutral-600">
+                Arr: {formatArrivalDate(arrivedAt)}
               </span>
             )}
           </div>
