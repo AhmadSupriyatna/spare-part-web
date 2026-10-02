@@ -23,6 +23,13 @@ function toFormData(payload: Partial<PartPayload>): FormData {
       if (value instanceof File) formData.append('image', value)
       continue
     }
+    if (typeof value === 'boolean') {
+      // Laravel's `boolean` validation rule only accepts 1/0/"1"/"0" (and
+      // true/false themselves) — NOT the strings "true"/"false" that
+      // String(value) would produce, so this would otherwise 422 silently.
+      formData.append(key, value ? '1' : '0')
+      continue
+    }
     formData.append(key, String(value))
   }
 

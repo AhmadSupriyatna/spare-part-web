@@ -1,5 +1,6 @@
 import { zodResolver } from '@hookform/resolvers/zod'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { ScanLine } from 'lucide-react'
 import { useEffect, useRef, useState } from 'react'
 import { Controller, useForm } from 'react-hook-form'
 import { toast } from 'sonner'
@@ -15,10 +16,10 @@ import { cn } from '@/lib/utils'
 import type { Part } from '@/types/inventory'
 import { FormSheet } from '@/components/FormSheet'
 import { Button } from '@/components/ui/button'
-import { Checkbox } from '@/components/ui/checkbox'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
+import { Switch } from '@/components/ui/switch'
 
 interface PartFormDialogProps {
   part?: Part
@@ -235,22 +236,33 @@ export function PartFormDialog({ part, trigger, open: openProp, onOpenChange: on
           )}
         />
       </div>
-      <div className="flex items-start gap-2.5 rounded-md border p-2.5">
-        <Controller
-          control={control}
-          name="has_passport"
-          render={({ field }) => (
-            <Checkbox id="has_passport" checked={field.value} onCheckedChange={field.onChange} className="mt-0.5" />
-          )}
-        />
-        <Label htmlFor="has_passport" className="flex flex-col items-start gap-0.5 font-normal">
-          <span className="text-sm font-medium">Lacak dengan Part Passport</span>
-          <span className="text-xs text-muted-foreground">
-            Tiap unit fisik dapat QR dan tanggal kedatangan sendiri sejak Stock In — bukan baru saat pertama
-            kali dipasang. Khusus part kritis/bernilai tinggi yang perlu ditelusuri satu per satu.
-          </span>
-        </Label>
-      </div>
+      <Controller
+        control={control}
+        name="has_passport"
+        render={({ field }) => (
+          <div className="flex items-start gap-2.5 rounded-md border p-2.5">
+            <div
+              className={cn(
+                'mt-0.5 flex size-7 shrink-0 items-center justify-center rounded-full transition-colors',
+                field.value ? 'bg-primary/10 text-primary' : 'bg-muted text-muted-foreground',
+              )}
+            >
+              <ScanLine className="size-4" />
+            </div>
+            <Label htmlFor="has_passport" className="flex flex-1 items-start justify-between gap-2 font-normal">
+              <span className="flex flex-col items-start gap-0.5">
+                <span className="text-sm font-medium">Lacak dengan Part Passport</span>
+                <span className="text-xs text-muted-foreground">
+                  Tiap unit fisik dapat QR dan tanggal kedatangan sendiri sejak Stock In — bukan baru saat
+                  pertama kali dipasang. Penggantiannya saat PM juga wajib scan QR, bukan asal ambil stok.
+                  Khusus part kritis/bernilai tinggi yang perlu ditelusuri satu per satu.
+                </span>
+              </span>
+              <Switch id="has_passport" checked={field.value} onCheckedChange={field.onChange} className="mt-0.5 shrink-0" />
+            </Label>
+          </div>
+        )}
+      />
       {replacementStrategy === 'life_based' ? (
         <div className="flex flex-col gap-2">
           <Label htmlFor="estimated_lifetime_hours">Perkiraan Umur Pakai (jam operasional)</Label>
