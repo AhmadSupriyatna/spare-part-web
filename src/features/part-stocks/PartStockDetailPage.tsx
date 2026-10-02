@@ -61,6 +61,7 @@ export function PartStockDetailPage() {
               partId={stock.part_id}
               partName={part?.name}
               itemMasterNo={part?.item_master_no}
+              hasPassport={part?.has_passport}
               partStockId={stock.id}
               branchId={stock.branch_id}
               currentQuantity={stock.quantity_on_hand}

@@ -3,12 +3,14 @@ import { PrinterIcon } from 'lucide-react'
 import { PartUnitQrLabelCard } from '@/components/PartUnitQrLabelCard'
 import { fetchCompanySetting } from '@/features/settings/api'
 import { Button } from '@/components/ui/button'
+import type { PartReplacementStrategy } from '@/types/inventory'
 
 interface PartUnitQrPrintProps {
   unitId: number
   partName: string | null | undefined
   itemMasterNo: string | null | undefined
   unitCode: string | null | undefined
+  replacementStrategy?: PartReplacementStrategy | null
   /** "Part Passport" units only — printed as an extra line when present. */
   arrivedAt?: string | null
   label?: string
@@ -23,7 +25,7 @@ interface PartUnitQrPrintProps {
  * page (the Kanban board) don't collide. The label itself is
  * PartUnitQrLabelCard, shared with PartUnitBulkQrPrint's multi-unit print.
  */
-export function PartUnitQrPrint({ unitId, partName, itemMasterNo, unitCode, arrivedAt, label }: PartUnitQrPrintProps) {
+export function PartUnitQrPrint({ unitId, partName, itemMasterNo, unitCode, replacementStrategy, arrivedAt, label }: PartUnitQrPrintProps) {
   const { data: companySetting } = useQuery({
     queryKey: ['settings', 'company'],
     queryFn: fetchCompanySetting,
@@ -46,6 +48,7 @@ export function PartUnitQrPrint({ unitId, partName, itemMasterNo, unitCode, arri
           partName={partName}
           itemMasterNo={itemMasterNo}
           unitCode={unitCode}
+          replacementStrategy={replacementStrategy}
           arrivedAt={arrivedAt}
           companyName={companySetting?.name}
           companyLogoUrl={companySetting?.logo_url}

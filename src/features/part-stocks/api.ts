@@ -13,6 +13,8 @@ export interface ReceiveStockPayload {
   total_price: number
   supplier_id?: number
   notes?: string
+  /** Part Passport only — defaults to today server-side when omitted; set this to backfill a receipt that actually arrived earlier. */
+  arrived_at?: string
 }
 
 export interface AdjustStockPayload {

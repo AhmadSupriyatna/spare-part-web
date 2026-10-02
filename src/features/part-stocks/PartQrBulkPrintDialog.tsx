@@ -3,6 +3,7 @@ import { Printer } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { toast } from 'sonner'
 import { fetchUnitsForPart } from '@/features/part-units/api'
+import { PassportUnitPicker } from '@/features/part-units/PassportUnitPicker'
 import { PartQrPrintCard } from '@/features/parts/PartQrPrintCard'
 import { fetchCompanySetting } from '@/features/settings/api'
 import { useAuthStore } from '@/stores/auth-store'
@@ -55,6 +56,7 @@ export function PartQrBulkPrintDialog({
   const [quantities, setQuantities] = useState<Record<number, string>>({})
   const [printEntries, setPrintEntries] = useState<{ part: Part; copy: number }[] | null>(null)
   const [printUnits, setPrintUnits] = useState<PartUnit[] | null>(null)
+  const [excludedUnitIds, setExcludedUnitIds] = useState<Set<number>>(new Set())
 
   const branches = useAuthStore((state) => state.user?.branches ?? [])
   const activeBranch = branches.find((b) => b.id === branchId)
@@ -89,8 +91,18 @@ export function PartQrBulkPrintDialog({
       })
       return next
     })
+    setExcludedUnitIds(new Set())
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [quantityDialogOpen, parts])
+
+  function toggleUnit(unitId: number) {
+    setExcludedUnitIds((prev) => {
+      const next = new Set(prev)
+      if (next.has(unitId)) next.delete(unitId)
+      else next.add(unitId)
+      return next
+    })
+  }
 
   function confirmPrint() {
     const entries: { part: Part; copy: number }[] = []
@@ -100,9 +112,14 @@ export function PartQrBulkPrintDialog({
         entries.push({ part, copy: i + 1 })
       }
     })
-    const units = passportParts.flatMap((part) => passportUnitsByPartId.get(part.id) ?? [])
+    const units = passportParts.flatMap(
+      (part) =>
+        (passportUnitsByPartId.get(part.id) ?? []).filter(
+          (u) => u.status !== 'scrapped' && !excludedUnitIds.has(u.id),
+        ),
+    )
     if (entries.length === 0 && units.length === 0) {
-      toast.error('Belum ada unit Passport terdaftar untuk part ini — Stock In dulu sebelum cetak.')
+      toast.error('Belum ada unit Passport yang dipilih untuk dicetak.')
       return
     }
     setPrintEntries(entries)
@@ -123,6 +140,7 @@ export function PartQrBulkPrintDialog({
             position: absolute;
             inset: 0;
             padding: 12px;
+            display: block;
           }
           #inventory-qr-print-area .qr-print-grid + .qr-print-grid {
             margin-top: 0.3cm;
@@ -136,7 +154,7 @@ export function PartQrBulkPrintDialog({
           }
           #inventory-qr-print-area .qr-print-grid-units {
             display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+            grid-template-columns: repeat(auto-fill, 8.5cm);
             gap: 0.3cm;
             justify-content: start;
             align-content: start;
@@ -150,8 +168,8 @@ export function PartQrBulkPrintDialog({
           <DialogHeader>
             <DialogTitle>Cetak QR Terpilih</DialogTitle>
             <DialogDescription>
-              Tentukan berapa lembar QR Breakdown yang mau dicetak untuk tiap part biasa. Part Passport
-              otomatis cetak satu label per unit fisik yang sudah terdaftar, lengkap tanggal kedatangan.
+              Tentukan berapa lembar QR Breakdown yang mau dicetak untuk tiap part biasa. Untuk Part
+              Passport, pilih unit fisik mana saja yang mau dicetak ulang labelnya.
             </DialogDescription>
           </DialogHeader>
           <div className="flex max-h-80 flex-col gap-3 overflow-y-auto">
@@ -175,15 +193,18 @@ export function PartQrBulkPrintDialog({
               return (
                 <div
                   key={part.id}
-                  className="flex items-center justify-between gap-3 rounded-md border border-dashed border-primary/30 bg-primary/5 p-2"
+                  className="flex flex-col gap-2 rounded-md border border-dashed border-primary/30 bg-primary/5 p-2"
                 >
                   <div className="min-w-0">
                     <p className="truncate text-sm font-medium">{part.name}</p>
                     <p className="font-mono text-xs text-muted-foreground">{part.item_master_no}</p>
                   </div>
-                  <span className="shrink-0 text-xs text-muted-foreground">
-                    {loadingPassportUnits ? 'Memuat...' : `${units.length} unit Passport`}
-                  </span>
+                  <PassportUnitPicker
+                    units={units}
+                    loading={loadingPassportUnits}
+                    excludedUnitIds={excludedUnitIds}
+                    onToggleUnit={toggleUnit}
+                  />
                 </div>
               )
             })}
@@ -226,6 +247,7 @@ export function PartQrBulkPrintDialog({
                   partName={unit.part_name}
                   itemMasterNo={unit.item_master_no}
                   unitCode={unit.unit_code}
+                  replacementStrategy={unit.replacement_strategy}
                   arrivedAt={unit.arrived_at}
                   companyName={companySetting?.name}
                   companyLogoUrl={companySetting?.logo_url}

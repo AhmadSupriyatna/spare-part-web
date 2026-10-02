@@ -22,6 +22,8 @@ interface ReceiveStockDialogProps {
   partId: number
   partName?: string
   itemMasterNo?: string
+  /** Part Passport — shows the "Tanggal Kedatangan" field, since that's the only case a received unit's arrival date means anything. */
+  hasPassport?: boolean
   /** An existing part_stocks row — tops it up via POST /part-stocks/{id}/receive. */
   partStockId?: number
   currentQuantity?: number
@@ -42,6 +44,7 @@ export function ReceiveStockDialog({
   partId,
   partName,
   itemMasterNo,
+  hasPassport = false,
   partStockId,
   currentQuantity = 0,
   currentUnitCost = '0',
@@ -94,6 +97,7 @@ export function ReceiveStockDialog({
         total_price: Number(values.total_price),
         supplier_id: values.supplier_id ? Number(values.supplier_id) : undefined,
         notes: values.notes,
+        arrived_at: values.arrived_at || undefined,
       }
       return partStockId
         ? receiveStock(partStockId, payload)
@@ -149,6 +153,15 @@ export function ReceiveStockDialog({
           </p>
           {errors.total_price && <p className="text-sm text-destructive">{errors.total_price.message}</p>}
         </div>
+        {hasPassport && (
+          <div className="flex flex-col gap-2">
+            <Label htmlFor="arrived_at">Tanggal Kedatangan</Label>
+            <Input id="arrived_at" type="date" max={new Date().toISOString().slice(0, 10)} {...register('arrived_at')} />
+            <p className="text-xs text-muted-foreground">
+              Kosongkan untuk pakai hari ini — isi kalau mencatat penerimaan yang sudah lewat.
+            </p>
+          </div>
+        )}
         {showPreview && (
           <div className="rounded-md border bg-muted/40 px-3 py-2 text-sm">
             <p className="text-xs text-muted-foreground">Harga rata-rata baru (setelah digabung dengan stok lama)</p>

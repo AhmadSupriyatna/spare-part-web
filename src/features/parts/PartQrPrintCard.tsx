@@ -18,7 +18,7 @@ interface PartQrPrintCardProps {
  * hardcoded to light/print-safe values since this card only ever renders
  * inside a `print:` area, never on screen in the app's own theme.
  */
-const STRATEGY_STYLE: Record<PartReplacementStrategy, { chip: string; label: string }> = {
+export const STRATEGY_STYLE: Record<PartReplacementStrategy, { chip: string; label: string }> = {
   life_based: { chip: 'border-sky-300 bg-sky-100 text-sky-800', label: 'Life Based' },
   scheduled: { chip: 'border-violet-300 bg-violet-100 text-violet-800', label: 'Maintenance' },
   failure_based: { chip: 'border-rose-300 bg-rose-100 text-rose-800', label: 'Failure Based' },

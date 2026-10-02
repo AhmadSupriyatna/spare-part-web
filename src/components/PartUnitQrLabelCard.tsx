@@ -1,54 +1,104 @@
+import { ScanLine } from 'lucide-react'
 import { QRCodeSVG } from 'qrcode.react'
+import { STRATEGY_STYLE } from '@/features/parts/PartQrPrintCard'
+import { cn } from '@/lib/utils'
+import type { PartReplacementStrategy } from '@/types/inventory'
 
 interface PartUnitQrLabelCardProps {
   unitId: number
   partName: string | null | undefined
   itemMasterNo: string | null | undefined
   unitCode: string | null | undefined
-  /** "Part Passport" units only — rendered as an extra line under the unit code when present. */
+  /** The owning Part's strategy — shown as the same chip a regular part's QR card uses. */
+  replacementStrategy?: PartReplacementStrategy | null
+  /** "Part Passport" units only — rendered next to the Passport badge when present. */
   arrivedAt?: string | null
   companyName?: string | null
   companyLogoUrl?: string | null
 }
 
 /**
- * The printable label itself — same markup `PartUnitQrPrint` used to render
- * inline, pulled out so `PartUnitBulkQrPrint` can lay out several of these
- * in one print area without duplicating the card markup.
+ * The printable label itself — same plant-engineer nameplate language as
+ * PartQrPrintCard (amber hazard stripe, rivet corners, bracket-framed QR,
+ * identical 8.5cm x 3.6cm footprint) so a sheet mixing regular and
+ * Passport parts reads as one design, not two. Differs only where a
+ * Passport unit genuinely differs from a regular part: the QR encodes this
+ * one physical unit's scan URL rather than the part's breakdown-report
+ * URL, there's a bare unit code chip alongside the Item Master chip, and a
+ * Passport badge sits next to the usual strategy chip.
  */
 export function PartUnitQrLabelCard({
   unitId,
   partName,
   itemMasterNo,
   unitCode,
+  replacementStrategy,
   arrivedAt,
   companyName,
   companyLogoUrl,
 }: PartUnitQrLabelCardProps) {
+  const style = replacementStrategy ? STRATEGY_STYLE[replacementStrategy] : null
   const scanUrl = `${window.location.origin}/part-units/${unitId}/scan`
 
   return (
-    <div className="flex w-fit flex-col items-center gap-1 rounded-md border p-2 text-center">
-      <div className="flex w-full items-center justify-center gap-1 border-b pb-1">
-        {companyLogoUrl ? (
-          <img src={companyLogoUrl} alt="" className="h-5 w-auto max-w-6 object-contain" />
-        ) : (
-          <div className="flex size-5 items-center justify-center rounded border border-dashed text-[6px] text-muted-foreground">
-            Logo
+    <div className="relative flex h-[3.6cm] w-[8.5cm] flex-col overflow-hidden rounded-lg border-2 border-neutral-700 bg-white break-inside-avoid">
+      <div className="h-[0.15cm] w-full shrink-0 bg-amber-400" />
+
+      <span className="absolute top-[0.2cm] left-[0.15cm] size-1.5 rounded-full border border-neutral-400 bg-neutral-200" />
+      <span className="absolute top-[0.2cm] right-[0.15cm] size-1.5 rounded-full border border-neutral-400 bg-neutral-200" />
+      <span className="absolute bottom-[0.12cm] left-[0.15cm] size-1.5 rounded-full border border-neutral-400 bg-neutral-200" />
+      <span className="absolute bottom-[0.12cm] right-[0.15cm] size-1.5 rounded-full border border-neutral-400 bg-neutral-200" />
+
+      <div className="flex flex-1 items-center gap-3 px-3 py-2">
+        <div className="relative flex size-[2.3cm] shrink-0 items-center justify-center">
+          <span className="absolute top-0 left-0 h-2 w-2 border-t border-l border-neutral-600" />
+          <span className="absolute top-0 right-0 h-2 w-2 border-t border-r border-neutral-600" />
+          <span className="absolute bottom-0 left-0 h-2 w-2 border-b border-l border-neutral-600" />
+          <span className="absolute bottom-0 right-0 h-2 w-2 border-b border-r border-neutral-600" />
+          <QRCodeSVG value={scanUrl} size={64} style={{ width: '2cm', height: '2cm' }} />
+        </div>
+
+        <div className="flex min-w-0 flex-1 flex-col gap-1">
+          <div className="flex items-center gap-1.5">
+            {companyLogoUrl ? (
+              <img src={companyLogoUrl} alt="" className="h-3.5 w-auto max-w-5 object-contain" />
+            ) : (
+              <div className="flex h-3.5 w-5 items-center justify-center rounded-sm border border-dashed border-neutral-300 text-[5px] text-neutral-400">
+                Logo
+              </div>
+            )}
+            <p className="truncate text-[8px] leading-none text-neutral-500">{companyName ?? 'Nama Perusahaan'}</p>
           </div>
-        )}
-        <p className="text-[9px] font-semibold leading-none">{companyName ?? 'Nama Perusahaan'}</p>
+
+          <p className="truncate text-[12px] leading-tight font-bold text-neutral-900">{partName}</p>
+
+          <div className="flex items-center gap-1">
+            <span className="w-fit rounded border border-neutral-300 bg-neutral-50 px-1.5 py-[1px] font-mono text-[9px] leading-tight tracking-wider text-neutral-700">
+              {itemMasterNo}
+            </span>
+            <span className="w-fit rounded border border-neutral-300 bg-neutral-50 px-1.5 py-[1px] font-mono text-[9px] leading-tight tracking-wider text-neutral-700">
+              {unitCode}
+            </span>
+          </div>
+
+          <div className="flex items-center gap-1.5">
+            {style && (
+              <span className={cn('rounded-full border px-1.5 py-[1px] text-[7px] leading-tight font-bold tracking-wide', style.chip)}>
+                {style.label}
+              </span>
+            )}
+            <span className="flex w-fit items-center gap-0.5 rounded-full border border-amber-300 bg-amber-100 px-1.5 py-[1px] text-[7px] leading-tight font-bold tracking-wide text-amber-800">
+              <ScanLine className="size-2" />
+              Passport
+            </span>
+            {arrivedAt && (
+              <span className="truncate text-[8px] leading-none text-neutral-500">
+                {new Date(arrivedAt).toLocaleDateString('id-ID', { dateStyle: 'medium' })}
+              </span>
+            )}
+          </div>
+        </div>
       </div>
-      <QRCodeSVG value={scanUrl} size={96} />
-      <p className="text-[11px] font-medium leading-tight">{partName}</p>
-      <p className="font-mono text-[10px] text-muted-foreground">
-        {itemMasterNo} · Unit {unitCode}
-      </p>
-      {arrivedAt && (
-        <p className="text-[9px] text-muted-foreground">
-          Tiba: {new Date(arrivedAt).toLocaleDateString('id-ID', { dateStyle: 'medium' })}
-        </p>
-      )}
     </div>
   )
 }

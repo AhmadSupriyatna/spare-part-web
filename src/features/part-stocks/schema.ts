@@ -11,6 +11,7 @@ export const receiveStockSchema = z.object({
     .refine((val) => !Number.isNaN(Number(val)) && Number(val) >= 0, 'Harga total tidak valid'),
   supplier_id: z.string().optional(),
   notes: z.string().optional(),
+  arrived_at: z.string().optional(),
 })
 
 export type ReceiveStockFormValues = z.infer<typeof receiveStockSchema>

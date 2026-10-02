@@ -162,6 +162,7 @@ export function RepairCard({
             partName={repair.part_name}
             itemMasterNo={repair.item_master_no}
             unitCode={repair.unit_code}
+            replacementStrategy={repair.replacement_strategy}
             label="Cetak QR"
           />
         </div>

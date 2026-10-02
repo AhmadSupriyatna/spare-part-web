@@ -1,3 +1,5 @@
+import type { PartReplacementStrategy } from '@/types/inventory'
+
 export interface PartSupplier {
   id: number
   part_id: number
@@ -53,6 +55,7 @@ export interface PartUnit {
   part_id: number
   part_name?: string
   item_master_no?: string
+  replacement_strategy?: PartReplacementStrategy | null
   unit_code: string | null
   status: PartUnitStatus
   /** Only set for a has_passport Part's unit, stamped when it was received into stock — null for a unit that only came into existence at first install. */
@@ -74,6 +77,7 @@ export interface PartRepair {
   unit_code?: string | null
   part_name?: string | null
   item_master_no?: string | null
+  replacement_strategy?: PartReplacementStrategy | null
   part_installation_id: number | null
   equipment_name?: string | null
   machine_name?: string | null

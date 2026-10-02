@@ -82,6 +82,7 @@ export function PartUnitDetailPage() {
                 partName={unit.part_name}
                 itemMasterNo={unit.item_master_no}
                 unitCode={unit.unit_code}
+                replacementStrategy={unit.replacement_strategy}
                 arrivedAt={unit.arrived_at}
               />
             </div>

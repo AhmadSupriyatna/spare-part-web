@@ -4,11 +4,13 @@ import { PartUnitQrLabelCard } from '@/components/PartUnitQrLabelCard'
 import { fetchCompanySetting } from '@/features/settings/api'
 import { Button } from '@/components/ui/button'
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog'
+import type { PartReplacementStrategy } from '@/types/inventory'
 
 export interface NewPartUnit {
   id: number
   part_name?: string
   item_master_no?: string
+  replacement_strategy?: PartReplacementStrategy | null
   unit_code: string | null
   arrived_at: string | null
 }
@@ -51,7 +53,7 @@ export function PartUnitBulkQrPrint({ units, open, onOpenChange }: PartUnitBulkQ
             inset: 0;
             padding: 12px;
             display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+            grid-template-columns: repeat(auto-fill, 8.5cm);
             gap: 0.3cm;
             justify-content: start;
             align-content: start;
@@ -96,6 +98,7 @@ export function PartUnitBulkQrPrint({ units, open, onOpenChange }: PartUnitBulkQ
               unitId={unit.id}
               partName={unit.part_name}
               itemMasterNo={unit.item_master_no}
+              replacementStrategy={unit.replacement_strategy}
               unitCode={unit.unit_code}
               arrivedAt={unit.arrived_at}
               companyName={companySetting?.name}
