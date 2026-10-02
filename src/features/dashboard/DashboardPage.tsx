@@ -6,6 +6,7 @@ import {
   Coins,
   FileWarning,
   Layers,
+  Network,
   Package,
   PackageSearch,
   Scale,
@@ -17,6 +18,7 @@ import {
 import { fetchDashboardAnalytics } from '@/features/dashboard/api'
 import { BudgetProjectionChart } from '@/features/dashboard/BudgetProjectionChart'
 import { FailureReplacementTrendChart } from '@/features/dashboard/FailureReplacementTrendChart'
+import { HierarchicalSunburst } from '@/features/dashboard/HierarchicalSunburst'
 import { InventoryHealthBar } from '@/features/dashboard/InventoryHealthBar'
 import { LifeBasedList } from '@/features/dashboard/LifeBasedList'
 import { MaintenancePerformanceChart } from '@/features/dashboard/MaintenancePerformanceChart'
@@ -223,6 +225,74 @@ export function DashboardPage() {
 
           {canViewCost && (
             <>
+              {/* Sunburst mapping + tren, dipindah dari section grid di bawah supaya langsung terlihat di atas, tepat di bawah Inventory Health/Maintenance Performance. */}
+              <div className="grid grid-cols-1 gap-3 lg:grid-cols-4">
+                <PanelCard size="sm" className="lg:col-span-1">
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2 text-base">
+                      <Layers className="size-4" />
+                      Mapping Part
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    {analyticsLoading ? (
+                      <Skeleton className="h-52 w-full" />
+                    ) : (
+                      <HierarchicalSunburst
+                        data={(analytics?.installation_sunburst ?? []).map((row) => ({ ...row, value: row.count }))}
+                        centerLabel="Terpasang"
+                        emptyMessage="Belum ada part terpasang di plant ini."
+                        formatValue={(v) => `${v}`}
+                        ariaLabel="Sunburst instalasi part per Line, Mesin, Equipment, dan Part"
+                      />
+                    )}
+                  </CardContent>
+                </PanelCard>
+
+                <PanelCard size="sm" className="lg:col-span-1">
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2 text-base">
+                      <ArrowLeftRight className="size-4" />
+                      Tren Keluar-Masuk Stok
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    {analyticsLoading ? <Skeleton className="h-32 w-full" /> : <StockMovementTrendChart data={analytics?.stock_movement_trend ?? []} />}
+                  </CardContent>
+                </PanelCard>
+
+                <PanelCard size="sm" className="lg:col-span-1">
+                  <CardHeader>
+                    <CardTitle className="text-base">Tren Replacement & Failure</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    {analyticsLoading ? <Skeleton className="h-32 w-full" /> : <FailureReplacementTrendChart data={analytics?.failure_trend ?? []} />}
+                  </CardContent>
+                </PanelCard>
+
+                <PanelCard size="sm" className="lg:col-span-1">
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2 text-base">
+                      <Network className="size-4" />
+                      Cost per Line & Equipment
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    {analyticsLoading ? (
+                      <Skeleton className="h-52 w-full" />
+                    ) : (
+                      <HierarchicalSunburst
+                        data={(analytics?.cost_sunburst ?? []).map((row) => ({ ...row, value: Number(row.cost) }))}
+                        centerLabel="Biaya"
+                        emptyMessage="Belum ada biaya tercatat dalam 12 bulan terakhir."
+                        formatValue={(v) => compactRupiah(v)}
+                        ariaLabel="Sunburst biaya per Line, Mesin, Equipment, dan Part"
+                      />
+                    )}
+                  </CardContent>
+                </PanelCard>
+              </div>
+
               <PanelCard size="sm">
                 <CardHeader>
                   <CardTitle className="flex items-center gap-2 text-base">
@@ -235,7 +305,7 @@ export function DashboardPage() {
                 </CardContent>
               </PanelCard>
 
-              <div className="grid grid-cols-1 gap-3 lg:grid-cols-4">
+              <div className="grid grid-cols-1 gap-3 lg:grid-cols-3">
                 <PanelCard size="sm" className="lg:col-span-1">
                   <CardHeader>
                     <CardTitle className="flex items-center gap-2 text-base">
@@ -254,15 +324,6 @@ export function DashboardPage() {
                         ariaLabel="Peta radial instalasi part per Line dan Mesin"
                       />
                     )}
-                  </CardContent>
-                </PanelCard>
-
-                <PanelCard size="sm" className="lg:col-span-1">
-                  <CardHeader>
-                    <CardTitle className="text-base">Tren Replacement & Failure</CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    {analyticsLoading ? <Skeleton className="h-32 w-full" /> : <FailureReplacementTrendChart data={analytics?.failure_trend ?? []} />}
                   </CardContent>
                 </PanelCard>
 
@@ -313,8 +374,8 @@ export function DashboardPage() {
                 </CardContent>
               </PanelCard>
 
-              <div className="grid grid-cols-1 gap-3 lg:grid-cols-4">
-                <PanelCard size="sm" className="lg:col-span-1">
+              <div className="grid grid-cols-1 gap-3 lg:grid-cols-2">
+                <PanelCard size="sm">
                   <CardHeader>
                     <CardTitle className="flex items-center gap-2 text-base">
                       <Scale className="size-4" />
@@ -333,19 +394,7 @@ export function DashboardPage() {
                   </CardContent>
                 </PanelCard>
 
-                <PanelCard size="sm" className="lg:col-span-2">
-                  <CardHeader>
-                    <CardTitle className="flex items-center gap-2 text-base">
-                      <ArrowLeftRight className="size-4" />
-                      Tren Keluar-Masuk Stok (12 Bulan Terakhir)
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    {analyticsLoading ? <Skeleton className="h-32 w-full" /> : <StockMovementTrendChart data={analytics?.stock_movement_trend ?? []} />}
-                  </CardContent>
-                </PanelCard>
-
-                <PanelCard size="sm" className="lg:col-span-1">
+                <PanelCard size="sm">
                   <CardHeader>
                     <CardTitle className="flex items-center gap-2 text-base">
                       <Coins className="size-4" />

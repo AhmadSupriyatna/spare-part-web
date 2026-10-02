@@ -96,6 +96,24 @@ export interface StockMovementTrendPoint {
   out_qty: number
 }
 
+/** One leaf of the Line > Machine > Equipment > Part hierarchy — see HierarchicalSunburst. */
+export interface InstallationSunburstRow {
+  line_name: string
+  machine_name: string
+  equipment_name: string
+  part_name: string
+  count: number
+}
+
+/** Same hierarchy as InstallationSunburstRow, cost instead of count. */
+export interface CostSunburstRow {
+  line_name: string
+  machine_name: string
+  equipment_name: string
+  part_name: string
+  cost: string
+}
+
 export interface DashboardAnalytics {
   failure_trend: MonthlyTrendPoint[]
   cost_heatmap: CostHeatmapCell[]
@@ -111,6 +129,8 @@ export interface DashboardAnalytics {
   technician_workload: TechnicianWorkloadRow[]
   part_movement: PartMovement
   stock_movement_trend: StockMovementTrendPoint[]
+  installation_sunburst: InstallationSunburstRow[]
+  cost_sunburst: CostSunburstRow[]
 }
 
 export async function fetchDashboardAnalytics(branchId: number): Promise<DashboardAnalytics> {
