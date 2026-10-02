@@ -13,7 +13,7 @@ export function StockLedgerPage() {
   return (
     <div className="flex flex-col gap-4">
       <PageHeader
-        title="Ledger Keluar-Masuk"
+        title="Transaksi Stok"
         description="Riwayat pergerakan stok — penerimaan, pemakaian, dan penyesuaian di plant yang sedang aktif."
       />
       <StockLedgerTab branchId={activeBranchId} />

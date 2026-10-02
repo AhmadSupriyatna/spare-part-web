@@ -47,11 +47,16 @@ export interface StockLedgerReportEntry {
   channel: string
   quantity_change: number
   balance_after: number
+  /** Per-transaction cost snapshot (e.g. a receiving batch's own unit cost) — distinct from PartStock's live weighted-average unit_cost. */
+  unit_cost: string | null
+  total_cost: string | null
   notes: string | null
   user_name: string | null
   line_id: number | null
   line_name: string | null
   equipment_name: string | null
+  /** True only for the single most recent receiving (Stock In) entry of its part_stock — see StockLedgerController. */
+  is_editable: boolean
 }
 
 export interface StockLedgerReportFilters {
@@ -74,6 +79,24 @@ export async function fetchStockLedgerReport(
 export async function receiveStock(id: number, payload: ReceiveStockPayload): Promise<ReceiveStockResult> {
   const { data } = await apiClient.post<{ data: PartStock; new_units: NewPartUnit[] }>(`/part-stocks/${id}/receive`, payload)
   return { partStock: data.data, newUnits: data.new_units }
+}
+
+export interface UpdateStockLedgerReceivingPayload {
+  quantity: number
+  total_price: number
+  supplier_id?: number
+  notes?: string
+  occurred_at?: string
+}
+
+/** Only allowed on the single most recent receiving entry of its part_stock — see StockLedgerController. */
+export async function updateStockLedgerReceiving(id: number, payload: UpdateStockLedgerReceivingPayload): Promise<PartStock> {
+  const { data } = await apiClient.put<{ data: PartStock }>(`/stock-ledger/${id}/receiving`, payload)
+  return data.data
+}
+
+export async function deleteStockLedgerReceiving(id: number): Promise<void> {
+  await apiClient.delete(`/stock-ledger/${id}/receiving`)
 }
 
 export interface CreatePartStockPayload extends ReceiveStockPayload {

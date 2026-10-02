@@ -70,7 +70,7 @@ const navSections: NavSection[] = [
     icon: Warehouse,
     items: [
       { to: '/stock', label: 'Stok & Part', icon: Boxes },
-      { to: '/stock/ledger', label: 'Ledger Stok', icon: ArrowLeftRight },
+      { to: '/stock/ledger', label: 'Transaksi Stok', icon: ArrowLeftRight },
       { to: '/suppliers', label: 'Supplier', icon: Truck },
       { to: '/locations', label: 'Lokasi', icon: MapPin },
     ],
@@ -237,7 +237,7 @@ export function AppLayout() {
   }
 
   /**
-   * Longest-prefix-wins within a group: without this, "Ledger Stok"
+   * Longest-prefix-wins within a group: without this, "Transaksi Stok"
    * (/stock/ledger) also lit up "Stok & Part" (/stock) since the latter is
    * a plain prefix of the former's path — both used to show active at once.
    */

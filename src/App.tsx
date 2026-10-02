@@ -27,6 +27,7 @@ import { MaintenanceReportScanPage } from '@/features/pm/MaintenanceReportScanPa
 import { PartDetailPage } from '@/features/parts/PartDetailPage'
 import { KelolaStokPage } from '@/features/part-stocks/KelolaStokPage'
 import { PartStockDetailPage } from '@/features/part-stocks/PartStockDetailPage'
+import { PrintStockTransactionReportPage } from '@/features/part-stocks/PrintStockTransactionReportPage'
 import { StockLedgerPage } from '@/features/part-stocks/StockLedgerPage'
 import { PartUnitScanPage } from '@/features/part-unit-actions/PartUnitScanPage'
 import { PartUnitDetailPage } from '@/features/part-units/PartUnitDetailPage'
@@ -80,6 +81,7 @@ function App() {
             <Route path="parts/:id" element={<PartDetailPage />} />
             <Route path="stock" element={<KelolaStokPage />} />
             <Route path="stock/ledger" element={<StockLedgerPage />} />
+            <Route path="stock/transaction/print" element={<PrintStockTransactionReportPage />} />
             <Route path="stock/:id" element={<PartStockDetailPage />} />
             <Route path="branches" element={<BranchesPage />} />
             <Route path="suppliers" element={<SuppliersPage />} />

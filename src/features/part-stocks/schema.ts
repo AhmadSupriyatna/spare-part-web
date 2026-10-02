@@ -16,6 +16,22 @@ export const receiveStockSchema = z.object({
 
 export type ReceiveStockFormValues = z.infer<typeof receiveStockSchema>
 
+export const editStockInSchema = z.object({
+  quantity: z
+    .string()
+    .min(1, 'Jumlah wajib diisi')
+    .refine((val) => Number.isInteger(Number(val)) && Number(val) >= 1, 'Jumlah minimal 1'),
+  total_price: z
+    .string()
+    .min(1, 'Harga total wajib diisi')
+    .refine((val) => !Number.isNaN(Number(val)) && Number(val) >= 0, 'Harga total tidak valid'),
+  supplier_id: z.string().optional(),
+  notes: z.string().optional(),
+  occurred_at: z.string().optional(),
+})
+
+export type EditStockInFormValues = z.infer<typeof editStockInSchema>
+
 export const adjustStockSchema = z.object({
   quantity_change: z
     .string()
