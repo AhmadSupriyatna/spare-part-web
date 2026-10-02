@@ -126,6 +126,8 @@ export interface Task {
   id: number
   work_order_id: number | null
   task_library_id: number | null
+  /** The originating Task Library's own registered estimate — not computed from started_at/completed_at. */
+  estimated_duration_minutes?: number | null
   equipment_id: number
   equipment_name?: string
   machine_name?: string

@@ -34,6 +34,14 @@ const sourceDotClass: Record<ReturnType<typeof taskSource>, string> = {
   breakdown: 'bg-destructive',
 }
 
+/** Task Library's own registered estimate — never derived from started_at/completed_at. */
+function formatDuration(minutes: number): string {
+  if (minutes < 60) return `${minutes} menit`
+  const hours = Math.floor(minutes / 60)
+  const rest = minutes % 60
+  return rest > 0 ? `${hours} jam ${rest} menit` : `${hours} jam`
+}
+
 interface ChecklistRowState {
   checked: boolean
   qty: string
@@ -249,6 +257,7 @@ export function WoCard({ task, invalidateKey }: WoCardProps) {
 
       <div className="flex flex-wrap items-center gap-x-4 gap-y-1.5 text-xs text-muted-foreground">
         <span>Dikerjakan oleh: {task.assignee_name ?? 'Belum dikerjakan'}</span>
+        {!!task.estimated_duration_minutes && <span>Durasi: {formatDuration(task.estimated_duration_minutes)}</span>}
         {isDone ? (
           <span>Jatuh tempo: {task.due_date ? new Date(task.due_date).toLocaleDateString('id-ID') : '-'}</span>
         ) : (
