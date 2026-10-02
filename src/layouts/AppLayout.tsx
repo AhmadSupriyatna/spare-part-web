@@ -15,6 +15,7 @@ import {
   LayoutDashboard,
   List,
   MapPin,
+  MoreHorizontal,
   NotebookPen,
   QrCode,
   Ruler,
@@ -156,6 +157,18 @@ const navSections: NavSection[] = [
   },
 ]
 
+/**
+ * The desktop icon rail disappears below `sm` entirely (`hidden sm:flex`) —
+ * there was no mobile nav fallback of any kind (GlobalSearch only searches
+ * records, not pages), so a phone-width user had no way to move between
+ * sections at all. A bottom tab bar, not a hamburger drawer, per explicit
+ * request ("seperti app native mobile pada umumnya") — these 3 plus
+ * Dashboard are the sections the earlier Fase 1 audit already identified as
+ * the most-used operational screens (same reasoning QueryErrorState's
+ * rollout used); everything else lives behind "Lainnya".
+ */
+const MOBILE_PRIMARY_LABELS = ['Kelola Stok', 'Workspace', 'Maintenance']
+
 const navIconButtonClass = 'relative flex size-11 shrink-0 items-center justify-center rounded-lg transition-colors'
 /** The left accent bar reads like a control-panel indicator lamp next to whichever icon is "on". */
 const navIconButtonActiveClass =
@@ -171,6 +184,7 @@ export function AppLayout() {
   const userRoles = useAuthStore((state) => state.user?.roles ?? [])
   const [openGroup, setOpenGroup] = useState<string | null>(null)
   const [profileDialogOpen, setProfileDialogOpen] = useState(false)
+  const [mobileMoreOpen, setMobileMoreOpen] = useState(false)
 
   const { data: companySetting } = useQuery({
     queryKey: ['settings', 'company'],
@@ -191,6 +205,18 @@ export function AppLayout() {
         }))
         .filter((section) => section.items.length > 0),
     [userRoles],
+  )
+
+  const mobilePrimarySections = useMemo(
+    () =>
+      visibleNavSections.filter(
+        (section) => section.items[0]?.to === '/' || MOBILE_PRIMARY_LABELS.includes(section.label ?? ''),
+      ),
+    [visibleNavSections],
+  )
+  const mobileOtherSections = useMemo(
+    () => visibleNavSections.filter((section) => !mobilePrimarySections.includes(section)),
+    [visibleNavSections, mobilePrimarySections],
   )
 
   const mutation = useMutation({
@@ -218,6 +244,10 @@ export function AppLayout() {
   function isItemActive(item: NavItem, siblings: NavItem[]) {
     if (!pathMatches(item)) return false
     return !siblings.some((other) => other !== item && pathMatches(other) && other.to.length > item.to.length)
+  }
+
+  function isSectionActive(section: NavSection) {
+    return section.items.some((item) => isItemActive(item, section.items))
   }
 
   return (
@@ -271,7 +301,7 @@ export function AppLayout() {
             }
 
             const SectionIcon = section.icon ?? section.items[0].icon
-            const isGroupActive = section.items.some((item) => isItemActive(item, section.items))
+            const isGroupActive = isSectionActive(section)
 
             return (
               <Popover
@@ -368,13 +398,86 @@ export function AppLayout() {
         </header>
         <main
           className={cn(
-            'flex-1 overflow-y-auto p-6 transition-[margin-right] duration-300',
+            'flex-1 overflow-y-auto p-6 pb-24 transition-[margin-right] duration-300 sm:pb-6',
             sheetOpenCount > 0 && 'mr-96',
           )}
         >
           <Outlet />
         </main>
       </div>
+
+      {/* Bottom tab bar — the mobile nav fallback the sidebar has none of
+          below `sm`. A fixed bar of a few primary destinations plus
+          "Lainnya" for everything else, not a hamburger drawer, per
+          explicit request to match a native mobile app's own convention. */}
+      <nav className="fixed inset-x-0 bottom-0 z-40 flex h-16 items-stretch border-t bg-sidebar pb-[env(safe-area-inset-bottom)] text-sidebar-foreground sm:hidden">
+        {mobilePrimarySections.map((section) => {
+          const item = section.items[0]
+          const Icon = section.icon ?? item.icon
+          const label = section.label ?? item.label
+          const active = isSectionActive(section)
+          return (
+            <NavLink
+              key={section.label ?? item.to}
+              to={item.to}
+              end={item.end}
+              className={cn(
+                'flex flex-1 flex-col items-center justify-center gap-0.5 text-[10px] font-medium',
+                active ? 'text-sidebar-primary' : 'text-sidebar-foreground/70',
+              )}
+            >
+              <Icon className="size-5" />
+              {label}
+            </NavLink>
+          )
+        })}
+        <Popover open={mobileMoreOpen} onOpenChange={setMobileMoreOpen}>
+          <PopoverTrigger
+            render={
+              <button
+                type="button"
+                className={cn(
+                  'flex flex-1 flex-col items-center justify-center gap-0.5 text-[10px] font-medium',
+                  mobileOtherSections.some(isSectionActive) ? 'text-sidebar-primary' : 'text-sidebar-foreground/70',
+                )}
+              />
+            }
+          >
+            <MoreHorizontal className="size-5" />
+            Lainnya
+          </PopoverTrigger>
+          <PopoverContent side="top" align="end" sideOffset={12} className="max-h-[70svh] w-64 overflow-y-auto">
+            <div className="flex flex-col gap-2.5">
+              {mobileOtherSections.map((section) => (
+                <div key={section.label ?? section.items[0].to} className="flex flex-col gap-0.5">
+                  {section.label && section.items.length > 1 && (
+                    <p className="px-2 text-xs font-medium tracking-wide text-muted-foreground uppercase">
+                      {section.label}
+                    </p>
+                  )}
+                  {section.items.map((item) => (
+                    <NavLink
+                      key={item.to}
+                      to={item.to}
+                      end={item.end}
+                      onClick={() => setMobileMoreOpen(false)}
+                      className={cn(
+                        'flex items-center gap-2.5 rounded-md px-2 py-2 text-sm font-medium transition-colors',
+                        isItemActive(item, section.items)
+                          ? 'bg-sidebar-primary/10 text-sidebar-primary'
+                          : 'text-foreground/80 hover:bg-accent hover:text-accent-foreground',
+                      )}
+                    >
+                      <item.icon className="size-4 shrink-0" />
+                      {item.label}
+                    </NavLink>
+                  ))}
+                </div>
+              ))}
+            </div>
+          </PopoverContent>
+        </Popover>
+      </nav>
     </div>
   )
 }
