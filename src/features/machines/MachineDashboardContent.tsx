@@ -1,6 +1,6 @@
 import { AlertTriangle, Boxes, CalendarClock, Gauge, TrendingDown, Wallet } from 'lucide-react'
 import { Link } from 'react-router'
-import type { MachineMonitoringData } from '@/features/machines/api'
+import type { CostByEquipment, MachineMonitoringData } from '@/features/machines/api'
 import { cn } from '@/lib/utils'
 import { EmptyState } from '@/components/EmptyState'
 import { Nameplate } from '@/components/Nameplate'
@@ -80,10 +80,16 @@ function percentUsedClass(percent: number): string {
   return 'bg-success'
 }
 
+function installDateLabel(installedAt: string): string {
+  return new Date(installedAt).toLocaleDateString('id-ID', { dateStyle: 'medium' })
+}
+
 interface MachineDashboardContentProps {
   data: MachineMonitoringData
   /** Gates the one cost-bearing tile (Nilai Part Terpasang) — the consumption chart/top-parts list render identically either way, just without a cost figure to show. */
   installedPartValue?: string
+  /** Cost-gated like installedPartValue — when present, adds the "Konsumsi Biaya per Equipment" card. */
+  costByEquipmentThisYear?: CostByEquipment[]
 }
 
 /**
@@ -95,7 +101,7 @@ interface MachineDashboardContentProps {
  * equipment_id/equipment_name per row, so no separate endpoint/shape was
  * needed just to group it by equipment instead of by part.
  */
-export function MachineDashboardContent({ data, installedPartValue }: MachineDashboardContentProps) {
+export function MachineDashboardContent({ data, installedPartValue, costByEquipmentThisYear }: MachineDashboardContentProps) {
   const installationsByEquipment = new Map<number, { name: string; installations: typeof data.installations }>()
   for (const installation of data.installations) {
     const key = installation.equipment_id
@@ -104,6 +110,8 @@ export function MachineDashboardContent({ data, installedPartValue }: MachineDas
     }
     installationsByEquipment.get(key)!.installations.push(installation)
   }
+
+  const historicalLifetimeByPartId = new Map(data.historical_part_lifetime.map((row) => [row.part_id, row]))
 
   return (
     <div className="flex flex-col gap-4">
@@ -198,17 +206,30 @@ export function MachineDashboardContent({ data, installedPartValue }: MachineDas
                   <Link to={`/equipment/${equipmentId}`} className="text-sm font-medium hover:underline">
                     {group.name}
                   </Link>
-                  <div className="flex flex-col gap-1 pl-3">
-                    {group.installations.map((installation) => (
-                      <div key={installation.id} className="flex items-center justify-between gap-2 text-xs">
-                        <span className="min-w-0 truncate text-muted-foreground">{installation.part_name}</span>
-                        {installation.percent_used != null && (
-                          <span className="shrink-0 tabular-nums text-muted-foreground">
-                            {Math.round(installation.percent_used)}% terpakai
-                          </span>
-                        )}
-                      </div>
-                    ))}
+                  <div className="flex flex-col gap-1.5 pl-3">
+                    {group.installations.map((installation) => {
+                      const history = historicalLifetimeByPartId.get(installation.part_id)
+                      return (
+                        <div key={installation.id} className="flex items-center justify-between gap-2 text-xs">
+                          <span className="min-w-0 truncate text-muted-foreground">{installation.part_name}</span>
+                          <div className="shrink-0 text-right text-muted-foreground">
+                            {installation.percent_used != null ? (
+                              <span className="tabular-nums">{Math.round(installation.percent_used)}% terpakai</span>
+                            ) : (
+                              <span className="tabular-nums">
+                                Pasang {installDateLabel(installation.installed_at)} · {installation.age_in_days} hari
+                                {installation.age_in_runtime_hours != null && ` · ${installation.age_in_runtime_hours} jam mesin`}
+                              </span>
+                            )}
+                            {history && (
+                              <p className="tabular-nums">
+                                Riwayat: rata-rata {history.average_runtime_hours} jam ({history.sample_count}x ganti)
+                              </p>
+                            )}
+                          </div>
+                        </div>
+                      )
+                    })}
                   </div>
                 </div>
               ))}
@@ -216,6 +237,30 @@ export function MachineDashboardContent({ data, installedPartValue }: MachineDas
           )}
         </CardContent>
       </PanelCard>
+
+      {costByEquipmentThisYear && (
+        <PanelCard>
+          <CardHeader>
+            <CardTitle className="text-sm font-medium">Konsumsi Biaya per Equipment (Tahun Ini)</CardTitle>
+          </CardHeader>
+          <CardContent>
+            {costByEquipmentThisYear.length === 0 ? (
+              <EmptyState title="Belum ada konsumsi part tercatat tahun ini." />
+            ) : (
+              <div className="flex flex-col gap-1.5">
+                {costByEquipmentThisYear.map((row) => (
+                  <div key={row.equipment_id} className="flex items-center justify-between gap-2 rounded-md border p-2 text-sm">
+                    <Link to={`/equipment/${row.equipment_id}`} className="min-w-0 truncate font-medium hover:underline">
+                      {row.equipment_name}
+                    </Link>
+                    <p className="shrink-0 font-medium tabular-nums">{currencyFormatter.format(Number(row.cost))}</p>
+                  </div>
+                ))}
+              </div>
+            )}
+          </CardContent>
+        </PanelCard>
+      )}
 
       <PanelCard>
         <CardHeader>
@@ -281,7 +326,8 @@ export function MachineDashboardContent({ data, installedPartValue }: MachineDas
                   </div>
                 )}
                 <p className="text-xs text-muted-foreground">
-                  Usia {installation.age_in_days} hari
+                  Pasang {installDateLabel(installation.installed_at)} · {installation.age_in_days} hari
+                  {installation.age_in_runtime_hours != null && ` · ${installation.age_in_runtime_hours} jam mesin`}
                   {installation.remaining_hours != null && ` · Sisa ${installation.remaining_hours} jam`}
                 </p>
               </div>

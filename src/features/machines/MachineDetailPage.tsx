@@ -3,9 +3,12 @@ import { ArrowLeft, FileDown, Printer } from 'lucide-react'
 import { useNavigate, useParams } from 'react-router'
 import { fetchMachineSummary } from '@/features/machines/api'
 import { MachineDashboardContent } from '@/features/machines/MachineDashboardContent'
+import { MachineTaskHistoryTable } from '@/features/machines/MachineTaskHistoryTable'
 import { PageHeader } from '@/components/PageHeader'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
+import { CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { PanelCard } from '@/components/PanelCard'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 
@@ -56,13 +59,22 @@ export function MachineDetailPage() {
         currencyFormatter.format(Number(row.cost ?? 0)),
       ]),
       [],
+      ['Konsumsi Biaya per Equipment (Tahun Ini)'],
+      ['Equipment', 'Nilai'],
+      ...data.cost_by_equipment_this_year.map((row) => [row.equipment_name, currencyFormatter.format(Number(row.cost))]),
+      [],
       ['Part per Equipment'],
-      ['Equipment', 'Part', 'Sisa Umur Pakai (%)'],
-      ...data.installations.map((installation) => [
-        installation.equipment_name ?? '-',
-        installation.part_name ?? '-',
-        installation.percent_used != null ? `${Math.round(100 - installation.percent_used)}%` : '-',
-      ]),
+      ['Equipment', 'Part', 'Sisa Umur Pakai', 'Tanggal Pasang', 'Rata-rata Umur Historis (jam)'],
+      ...data.installations.map((installation) => {
+        const history = data.historical_part_lifetime.find((row) => row.part_id === installation.part_id)
+        return [
+          installation.equipment_name ?? '-',
+          installation.part_name ?? '-',
+          installation.percent_used != null ? `${Math.round(100 - installation.percent_used)}%` : '-',
+          new Date(installation.installed_at).toLocaleDateString('id-ID'),
+          history ? String(history.average_runtime_hours) : '-',
+        ]
+      }),
     ]
 
     const csv = rows.map((row) => row.map((cell) => toCsvValue(cell)).join(',')).join('\r\n')
@@ -127,8 +139,21 @@ export function MachineDetailPage() {
         }
       />
 
-      <div className="print:hidden">
-        <MachineDashboardContent data={data} installedPartValue={data.installed_part_value} />
+      <div className="flex flex-col gap-4 print:hidden">
+        <MachineDashboardContent
+          data={data}
+          installedPartValue={data.installed_part_value}
+          costByEquipmentThisYear={data.cost_by_equipment_this_year}
+        />
+
+        <PanelCard>
+          <CardHeader>
+            <CardTitle className="text-sm font-medium">Riwayat PM</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <MachineTaskHistoryTable machineId={machineId} />
+          </CardContent>
+        </PanelCard>
       </div>
 
       <div id="machine-report-print-area" className="hidden">
@@ -185,25 +210,50 @@ export function MachineDetailPage() {
           </TableBody>
         </Table>
 
+        <h2 className="mb-2 font-semibold">Konsumsi Biaya per Equipment (Tahun Ini)</h2>
+        <Table className="mb-4">
+          <TableHeader>
+            <TableRow>
+              <TableHead>Equipment</TableHead>
+              <TableHead className="text-right">Nilai</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {data.cost_by_equipment_this_year.map((row) => (
+              <TableRow key={row.equipment_id}>
+                <TableCell>{row.equipment_name}</TableCell>
+                <TableCell className="text-right">{currencyFormatter.format(Number(row.cost))}</TableCell>
+              </TableRow>
+            ))}
+          </TableBody>
+        </Table>
+
         <h2 className="mb-2 font-semibold">Part per Equipment</h2>
         <Table>
           <TableHeader>
             <TableRow>
               <TableHead>Equipment</TableHead>
               <TableHead>Part</TableHead>
+              <TableHead>Tanggal Pasang</TableHead>
               <TableHead className="text-right">Sisa Umur Pakai</TableHead>
+              <TableHead className="text-right">Rata-rata Historis (jam)</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
-            {data.installations.map((installation) => (
-              <TableRow key={installation.id}>
-                <TableCell>{installation.equipment_name ?? '-'}</TableCell>
-                <TableCell>{installation.part_name ?? '-'}</TableCell>
-                <TableCell className="text-right">
-                  {installation.percent_used != null ? `${Math.round(100 - installation.percent_used)}%` : '-'}
-                </TableCell>
-              </TableRow>
-            ))}
+            {data.installations.map((installation) => {
+              const history = data.historical_part_lifetime.find((row) => row.part_id === installation.part_id)
+              return (
+                <TableRow key={installation.id}>
+                  <TableCell>{installation.equipment_name ?? '-'}</TableCell>
+                  <TableCell>{installation.part_name ?? '-'}</TableCell>
+                  <TableCell>{new Date(installation.installed_at).toLocaleDateString('id-ID')}</TableCell>
+                  <TableCell className="text-right">
+                    {installation.percent_used != null ? `${Math.round(100 - installation.percent_used)}%` : '-'}
+                  </TableCell>
+                  <TableCell className="text-right">{history ? history.average_runtime_hours : '-'}</TableCell>
+                </TableRow>
+              )
+            })}
           </TableBody>
         </Table>
       </div>
