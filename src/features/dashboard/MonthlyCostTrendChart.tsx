@@ -20,12 +20,12 @@ function compactRupiah(value: number): string {
  * cost_by_part), one bar per month instead of overlaying a line on top of
  * an unrelated qty scale.
  */
-export function MonthlyCostTrendChart({ data }: { data: MonthlyTrendPoint[] }) {
+export function MonthlyCostTrendChart({ data, year }: { data: MonthlyTrendPoint[]; year: number }) {
   const maxCost = Math.max(1, ...data.map((d) => Number(d.replacement_cost)))
   const totalCost = data.reduce((sum, d) => sum + Number(d.replacement_cost), 0)
 
   if (totalCost === 0) {
-    return <p className="text-sm text-muted-foreground">Belum ada biaya tercatat dalam 12 bulan terakhir.</p>
+    return <p className="text-sm text-muted-foreground">Belum ada biaya tercatat tahun {year}.</p>
   }
 
   return (

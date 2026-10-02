@@ -14,12 +14,12 @@ function monthLabel(month: string): string {
  * part installed from an approved breakdown/QR replacement request — see
  * DashboardAnalyticsController::scheduledVsFailureTrend().
  */
-export function ScheduledVsFailureTrendChart({ data }: { data: ScheduledVsFailureTrendPoint[] }) {
+export function ScheduledVsFailureTrendChart({ data, year }: { data: ScheduledVsFailureTrendPoint[]; year: number }) {
   const maxQty = Math.max(1, ...data.map((d) => Math.max(d.scheduled_count, d.failure_count)))
   const totalQty = data.reduce((sum, d) => sum + d.scheduled_count + d.failure_count, 0)
 
   if (totalQty === 0) {
-    return <p className="text-sm text-muted-foreground">Belum ada penggantian part tercatat dalam 12 bulan terakhir.</p>
+    return <p className="text-sm text-muted-foreground">Belum ada penggantian part tercatat tahun {year}.</p>
   }
 
   return (

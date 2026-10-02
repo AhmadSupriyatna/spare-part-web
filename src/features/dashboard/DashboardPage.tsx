@@ -15,6 +15,7 @@ import {
   Users,
   Wallet,
 } from 'lucide-react'
+import { useState } from 'react'
 import { fetchDashboardAnalytics } from '@/features/dashboard/api'
 import { BudgetProjectionChart } from '@/features/dashboard/BudgetProjectionChart'
 import { HierarchicalSunburst } from '@/features/dashboard/HierarchicalSunburst'
@@ -37,6 +38,7 @@ import { useBranchStore } from '@/stores/branch-store'
 import { useHasRole } from '@/stores/use-has-role'
 import { QueryErrorState } from '@/components/QueryErrorState'
 import { CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Skeleton } from '@/components/ui/skeleton'
 
 function compactRupiah(value: number): string {
@@ -45,9 +47,13 @@ function compactRupiah(value: number): string {
   return `Rp ${value.toLocaleString('id-ID')}`
 }
 
+const CURRENT_YEAR = new Date().getFullYear()
+const YEAR_OPTIONS = Array.from({ length: 5 }, (_, i) => CURRENT_YEAR - i)
+
 export function DashboardPage() {
   const activeBranchId = useBranchStore((state) => state.activeBranchId)
   const canViewCost = useHasRole(['admin_spare_part', 'supervisor', 'superadmin'])
+  const [year, setYear] = useState(CURRENT_YEAR)
 
   const {
     data: parts,
@@ -98,8 +104,8 @@ export function DashboardPage() {
     isError: analyticsError,
     refetch: refetchAnalytics,
   } = useQuery({
-    queryKey: ['dashboard-analytics', activeBranchId],
-    queryFn: () => fetchDashboardAnalytics(activeBranchId!),
+    queryKey: ['dashboard-analytics', activeBranchId, year],
+    queryFn: () => fetchDashboardAnalytics(activeBranchId!, year),
     enabled: !!activeBranchId && canViewCost,
   })
 
@@ -145,6 +151,24 @@ export function DashboardPage() {
         <QueryErrorState onRetry={retryAll} title="Gagal memuat data Dashboard" />
       ) : (
         <>
+          {canViewCost && (
+            <div className="flex items-center justify-end gap-2">
+              <span className="text-xs text-muted-foreground">Tahun</span>
+              <Select value={String(year)} onValueChange={(value) => setYear(Number(value))}>
+                <SelectTrigger className="w-24" size="sm">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {YEAR_OPTIONS.map((y) => (
+                    <SelectItem key={y} value={String(y)}>
+                      {y}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          )}
+
           <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-3 lg:grid-cols-6">
             {canViewCost && (
               <Nameplate
@@ -219,6 +243,7 @@ export function DashboardPage() {
                 <MaintenancePerformanceChart
                   on_time_count={analytics?.maintenance_performance.on_time_count ?? 0}
                   late_count={analytics?.maintenance_performance.late_count ?? 0}
+                  year={year}
                 />
               ))}
           </div>
@@ -257,7 +282,11 @@ export function DashboardPage() {
                     </CardTitle>
                   </CardHeader>
                   <CardContent>
-                    {analyticsLoading ? <Skeleton className="h-60 w-full" /> : <StockMovementTrendChart data={analytics?.stock_movement_trend ?? []} />}
+                    {analyticsLoading ? (
+                      <Skeleton className="h-60 w-full" />
+                    ) : (
+                      <StockMovementTrendChart data={analytics?.stock_movement_trend ?? []} year={year} />
+                    )}
                   </CardContent>
                 </PanelCard>
 
@@ -269,7 +298,7 @@ export function DashboardPage() {
                     {analyticsLoading ? (
                       <Skeleton className="h-60 w-full" />
                     ) : (
-                      <ScheduledVsFailureTrendChart data={analytics?.scheduled_vs_failure_trend ?? []} />
+                      <ScheduledVsFailureTrendChart data={analytics?.scheduled_vs_failure_trend ?? []} year={year} />
                     )}
                   </CardContent>
                 </PanelCard>
@@ -278,7 +307,7 @@ export function DashboardPage() {
                   <CardHeader>
                     <CardTitle className="flex items-center gap-2 text-base">
                       <Network className="size-4" />
-                      Cost per Line & Equipment ({new Date().getFullYear()})
+                      Cost per Line & Equipment ({year})
                     </CardTitle>
                   </CardHeader>
                   <CardContent>
@@ -288,7 +317,7 @@ export function DashboardPage() {
                       <HierarchicalSunburst
                         data={(analytics?.cost_sunburst ?? []).map((row) => ({ ...row, value: Number(row.cost) }))}
                         centerLabel="Biaya"
-                        emptyMessage="Belum ada biaya tercatat tahun ini."
+                        emptyMessage={`Belum ada biaya tercatat tahun ${year}.`}
                         formatValue={(v) => compactRupiah(v)}
                         ariaLabel="Sunburst biaya per Line, Mesin, Equipment, dan Part"
                       />
@@ -336,7 +365,7 @@ export function DashboardPage() {
                     <CardTitle className="text-base">Tren Biaya Bulanan</CardTitle>
                   </CardHeader>
                   <CardContent>
-                    {analyticsLoading ? <Skeleton className="h-32 w-full" /> : <MonthlyCostTrendChart data={analytics?.failure_trend ?? []} />}
+                    {analyticsLoading ? <Skeleton className="h-32 w-full" /> : <MonthlyCostTrendChart data={analytics?.failure_trend ?? []} year={year} />}
                   </CardContent>
                 </PanelCard>
 
@@ -351,7 +380,7 @@ export function DashboardPage() {
                       <RadialMapChart
                         data={analytics?.failure_radial ?? []}
                         centerLabel="Kejadian"
-                        emptyMessage="Belum ada failure/breakdown tercatat dalam 12 bulan terakhir."
+                        emptyMessage={`Belum ada failure/breakdown tercatat tahun ${year}.`}
                         ariaLabel="Peta radial failure per Line dan Mesin"
                       />
                     )}
@@ -363,7 +392,7 @@ export function DashboardPage() {
                 <CardHeader>
                   <CardTitle className="flex items-center gap-2 text-base">
                     <Wallet className="size-4" />
-                    Proyeksi Biaya vs Realisasi ({analytics?.budget_projection.year ?? new Date().getFullYear()})
+                    Proyeksi Biaya vs Realisasi ({analytics?.budget_projection.year ?? year})
                   </CardTitle>
                 </CardHeader>
                 <CardContent>
@@ -393,6 +422,7 @@ export function DashboardPage() {
                       <PmVsFailureCostChart
                         pm_cost={analytics?.pm_vs_failure_cost.pm_cost ?? '0.00'}
                         failure_cost={analytics?.pm_vs_failure_cost.failure_cost ?? '0.00'}
+                        year={year}
                       />
                     )}
                   </CardContent>
@@ -416,7 +446,7 @@ export function DashboardPage() {
                           value: Number(row.cost),
                         }))}
                         formatValue={(v) => compactRupiah(v)}
-                        emptyMessage="Belum ada biaya part tercatat dalam 12 bulan terakhir."
+                        emptyMessage={`Belum ada biaya part tercatat tahun ${year}.`}
                       />
                     )}
                   </CardContent>
@@ -464,7 +494,7 @@ export function DashboardPage() {
                               sublabel: row.item_master_no,
                               value: row.qty_issued ?? 0,
                             }))}
-                            emptyMessage="Belum ada part keluar dalam 12 bulan terakhir."
+                            emptyMessage={`Belum ada part keluar tahun ${year}.`}
                             barColorClass="bg-success"
                           />
                         </div>

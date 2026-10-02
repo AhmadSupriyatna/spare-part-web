@@ -13,12 +13,12 @@ function monthLabel(month: string): string {
  * of each bar instead of relying on hover/title — reads at a glance even in
  * a compact 1/4-width card.
  */
-export function StockMovementTrendChart({ data }: { data: StockMovementTrendPoint[] }) {
+export function StockMovementTrendChart({ data, year }: { data: StockMovementTrendPoint[]; year: number }) {
   const maxQty = Math.max(1, ...data.map((d) => Math.max(d.in_qty, d.out_qty)))
   const totalQty = data.reduce((sum, d) => sum + d.in_qty + d.out_qty, 0)
 
   if (totalQty === 0) {
-    return <p className="text-sm text-muted-foreground">Belum ada pergerakan stok tercatat dalam 12 bulan terakhir.</p>
+    return <p className="text-sm text-muted-foreground">Belum ada pergerakan stok tercatat tahun {year}.</p>
   }
 
   return (

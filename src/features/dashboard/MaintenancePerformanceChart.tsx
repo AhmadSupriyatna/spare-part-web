@@ -1,8 +1,8 @@
 import { InlineSignalStrip } from '@/features/dashboard/InlineSignalStrip'
 import type { MaintenancePerformance } from '@/features/dashboard/api'
 
-/** "% WO selesai tepat waktu vs terlambat" (6 bulan terakhir) — same thin inline strip as Inventory Health. */
-export function MaintenancePerformanceChart({ on_time_count, late_count }: MaintenancePerformance) {
+/** "% WO selesai tepat waktu vs terlambat" (tahun yang dipilih di dashboard) — same thin inline strip as Inventory Health. */
+export function MaintenancePerformanceChart({ on_time_count, late_count, year }: MaintenancePerformance & { year: number }) {
   const total = on_time_count + late_count
   const onTimePercent = total > 0 ? Math.round((on_time_count / total) * 100) : 0
 
@@ -15,7 +15,7 @@ export function MaintenancePerformanceChart({ on_time_count, late_count }: Maint
       ]}
       primaryValue={`${onTimePercent}%`}
       primarySuffix="tepat waktu"
-      emptyMessage="Belum ada WO selesai dalam 6 bulan terakhir."
+      emptyMessage={`Belum ada WO selesai tahun ${year}.`}
     />
   )
 }

@@ -122,6 +122,8 @@ export interface ScheduledVsFailureTrendPoint {
 }
 
 export interface DashboardAnalytics {
+  /** The calendar year every time-windowed chart below is scoped to — echoes back the `year` query param (defaults to the current year). */
+  year: number
   failure_trend: MonthlyTrendPoint[]
   cost_heatmap: CostHeatmapCell[]
   budget_projection: BudgetProjection
@@ -141,7 +143,7 @@ export interface DashboardAnalytics {
   scheduled_vs_failure_trend: ScheduledVsFailureTrendPoint[]
 }
 
-export async function fetchDashboardAnalytics(branchId: number): Promise<DashboardAnalytics> {
-  const { data } = await apiClient.get<{ data: DashboardAnalytics }>(`/branches/${branchId}/dashboard-analytics`)
+export async function fetchDashboardAnalytics(branchId: number, year: number): Promise<DashboardAnalytics> {
+  const { data } = await apiClient.get<{ data: DashboardAnalytics }>(`/branches/${branchId}/dashboard-analytics`, { params: { year } })
   return data.data
 }

@@ -4,19 +4,19 @@ import type { PmVsFailureCost } from '@/features/dashboard/api'
 const currencyFormatter = new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', maximumFractionDigits: 0 })
 
 /**
- * "Sebaran Cost PM vs Failure" (12 bulan terakhir) — same semicircle gauge
- * as Inventory Health/Maintenance Performance. PM=success, Failure=
- * destructive follows Gauge's own "status color" convention (the same
- * good/bad mapping Maintenance Performance uses for on-time/late) — more
- * spend on planned work vs reactive failure is the healthier pattern.
+ * "Sebaran Cost PM vs Failure" (tahun yang dipilih di dashboard) — same
+ * semicircle gauge as Inventory Health/Maintenance Performance. PM=success,
+ * Failure=destructive follows Gauge's own "status color" convention (the
+ * same good/bad mapping Maintenance Performance uses for on-time/late) —
+ * more spend on planned work vs reactive failure is the healthier pattern.
  */
-export function PmVsFailureCostChart({ pm_cost, failure_cost }: PmVsFailureCost) {
+export function PmVsFailureCostChart({ pm_cost, failure_cost, year }: PmVsFailureCost & { year: number }) {
   const pmCost = Number(pm_cost)
   const failureCost = Number(failure_cost)
   const total = pmCost + failureCost
 
   if (total === 0) {
-    return <p className="text-sm text-muted-foreground">Belum ada biaya PM atau failure tercatat dalam 12 bulan terakhir.</p>
+    return <p className="text-sm text-muted-foreground">Belum ada biaya PM atau failure tercatat tahun {year}.</p>
   }
 
   const pmPercent = Math.round((pmCost / total) * 100)
@@ -35,7 +35,7 @@ export function PmVsFailureCostChart({ pm_cost, failure_cost }: PmVsFailureCost)
             {s.label} <span className="font-medium text-foreground">{currencyFormatter.format(s.value)}</span>
           </span>
         ))}
-        <span className="basis-full text-center text-xs text-muted-foreground">Biaya part keluar, 12 bulan terakhir</span>
+        <span className="basis-full text-center text-xs text-muted-foreground">Biaya part keluar, tahun {year}</span>
       </div>
     </div>
   )
