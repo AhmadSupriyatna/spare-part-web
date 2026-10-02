@@ -1,3 +1,4 @@
+import { ChevronRight } from 'lucide-react'
 import { useState } from 'react'
 
 export interface SunburstLeaf {
@@ -16,6 +17,7 @@ interface ArcSegment {
   end: number
   color: string
   depth: number
+  hasChildren: boolean
 }
 
 interface TreeNode {
@@ -59,6 +61,14 @@ function buildTree(rows: SunburstLeaf[], depth = 0): TreeNode[] {
   }))
 }
 
+/** Walks `path` down from `nodes`, returning the children of the node it lands on — falls back to `nodes` itself if a segment along the way no longer exists (e.g. data refetched and that branch disappeared). */
+function childrenAtPath(nodes: TreeNode[], path: string[]): TreeNode[] {
+  if (path.length === 0) return nodes
+  const [head, ...rest] = path
+  const match = nodes.find((n) => n.name === head)
+  return match ? childrenAtPath(match.children, rest) : nodes
+}
+
 function layoutTree(nodes: TreeNode[], start: number, end: number, depth: number, color: string | null, parentPath: string[]): ArcSegment[] {
   const total = nodes.reduce((sum, n) => sum + n.value, 0)
   const span = end - start
@@ -73,7 +83,16 @@ function layoutTree(nodes: TreeNode[], start: number, end: number, depth: number
     const segColor = depth === 0 ? hueFor(index) : color ?? hueFor(index)
     const path = [...parentPath, node.name]
 
-    segments.push({ key: path.join('|'), path, value: node.value, start: segStart, end: segEnd, color: segColor, depth })
+    segments.push({
+      key: path.join('|'),
+      path,
+      value: node.value,
+      start: segStart,
+      end: segEnd,
+      color: segColor,
+      depth,
+      hasChildren: node.children.length > 0,
+    })
 
     if (node.children.length > 0 && segEnd > segStart) {
       segments.push(...layoutTree(node.children, segStart, segEnd, depth + 1, segColor, path))
@@ -107,11 +126,16 @@ function ringSegmentPath(rInner: number, rOuter: number, startAngle: number, end
 }
 
 /**
- * Four-ring interactive sunburst: Line > Machine (or "Luar Line") > Equipment
- * > Part, each ring sized by `value` within its parent's angular span. Same
- * arc-math approach as RadialMapChart, extended from 2 to 4 levels and with
- * a hover readout instead of a static bottom legend — a legend doesn't
- * scale to a 4-level hierarchy, and hover is the requested interaction.
+ * Four-ring zoomable sunburst: Line > Machine (or "Luar Line") > Equipment >
+ * Part, each ring sized by `value` within its parent's angular span. Same
+ * arc-math approach as RadialMapChart, extended from 2 to 4 levels.
+ *
+ * Clicking a segment that has children drills into it — that node's children
+ * are re-laid-out from ring 0 so the drilled-into branch always fills the
+ * whole circle with whatever depth it still has left, same idea as a d3
+ * zoomable icicle/sunburst. The center circle (or the breadcrumb) zooms back
+ * out. A leaf segment (no children, e.g. Part) is hover-only, no further
+ * drill — cursor stays default there instead of pointer.
  */
 export function HierarchicalSunburst({
   data,
@@ -127,17 +151,43 @@ export function HierarchicalSunburst({
   ariaLabel: string
 }) {
   const [hoveredKey, setHoveredKey] = useState<string | null>(null)
+  const [focusPath, setFocusPath] = useState<string[]>([])
   const total = data.reduce((sum, d) => sum + d.value, 0)
 
   if (total === 0) {
     return <p className="text-sm text-muted-foreground">{emptyMessage}</p>
   }
 
-  const segments = layoutTree(buildTree(data), 0, 360, 0, null, [])
+  const tree = buildTree(data)
+  const focusedChildren = childrenAtPath(tree, focusPath)
+  const focusedTotal = focusedChildren.reduce((sum, n) => sum + n.value, 0)
+  const segments = layoutTree(focusedChildren, 0, 360, 0, null, focusPath)
   const hovered = segments.find((s) => s.key === hoveredKey) ?? null
+  const isZoomed = focusPath.length > 0
+
+  function zoomOut() {
+    setFocusPath((p) => p.slice(0, -1))
+    setHoveredKey(null)
+  }
 
   return (
-    <div className="flex flex-col items-center gap-2">
+    <div className="flex flex-col items-center gap-1.5">
+      {isZoomed && (
+        <div className="flex w-full items-center gap-1 overflow-x-auto text-[10px] text-muted-foreground">
+          <button type="button" onClick={() => setFocusPath([])} className="shrink-0 hover:text-foreground hover:underline">
+            Semua
+          </button>
+          {focusPath.map((name, i) => (
+            <span key={i} className="flex shrink-0 items-center gap-1">
+              <ChevronRight className="size-3 shrink-0" />
+              <button type="button" onClick={() => setFocusPath(focusPath.slice(0, i + 1))} className="max-w-20 truncate hover:text-foreground hover:underline">
+                {name}
+              </button>
+            </span>
+          ))}
+        </div>
+      )}
+
       <svg width={SIZE} height={SIZE} viewBox={`0 0 ${SIZE} ${SIZE}`} role="img" aria-label={ariaLabel}>
         {segments.map((seg) => {
           const ring = RINGS[seg.depth]
@@ -148,18 +198,30 @@ export function HierarchicalSunburst({
               d={ringSegmentPath(ring.r0, ring.r1, seg.start, seg.end)}
               fill={seg.color}
               opacity={hoveredKey === seg.key ? 1 : RING_OPACITY[seg.depth]}
-              className="cursor-pointer transition-opacity"
+              className={seg.hasChildren ? 'cursor-pointer transition-opacity' : 'transition-opacity'}
               onMouseEnter={() => setHoveredKey(seg.key)}
               onMouseLeave={() => setHoveredKey((current) => (current === seg.key ? null : current))}
-            />
+              onClick={() => {
+                if (seg.hasChildren) {
+                  setFocusPath(seg.path)
+                  setHoveredKey(null)
+                }
+              }}
+            >
+              <title>
+                {seg.path.join(' → ')}: {formatValue(seg.value)}
+              </title>
+            </path>
           )
         })}
-        <text x={CENTER} y={CENTER - 4} textAnchor="middle" className="fill-foreground text-base font-semibold">
-          {formatValue(total)}
-        </text>
-        <text x={CENTER} y={CENTER + 12} textAnchor="middle" className="fill-muted-foreground text-[10px]">
-          {centerLabel}
-        </text>
+        <g onClick={isZoomed ? zoomOut : undefined} className={isZoomed ? 'cursor-pointer' : undefined}>
+          <text x={CENTER} y={CENTER - 4} textAnchor="middle" className="fill-foreground text-base font-semibold">
+            {formatValue(focusedTotal)}
+          </text>
+          <text x={CENTER} y={CENTER + 12} textAnchor="middle" className="fill-muted-foreground text-[10px]">
+            {isZoomed ? '← kembali' : centerLabel}
+          </text>
+        </g>
       </svg>
 
       <div className="flex h-8 flex-col items-center justify-center text-center text-xs leading-tight">
@@ -169,7 +231,7 @@ export function HierarchicalSunburst({
             <p className="font-medium tabular-nums">{formatValue(hovered.value)}</p>
           </>
         ) : (
-          <p className="text-muted-foreground">Arahkan kursor ke lapisan untuk detail</p>
+          <p className="text-muted-foreground">Klik lapisan untuk masuk lebih dalam</p>
         )}
       </div>
     </div>
