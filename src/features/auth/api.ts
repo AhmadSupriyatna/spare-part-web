@@ -14,3 +14,15 @@ export async function fetchCurrentUser(): Promise<AuthUser> {
   const { data } = await apiClient.get<AuthUser>('/user')
   return data
 }
+
+export interface UpdateProfilePayload {
+  name?: string
+  current_password?: string
+  password?: string
+}
+
+/** Self-service "Edit Profil" — PUT /user, distinct from the superadmin-only updateUser() in features/users/api.ts. */
+export async function updateProfile(payload: UpdateProfilePayload): Promise<AuthUser> {
+  const { data } = await apiClient.put<AuthUser>('/user', payload)
+  return data
+}

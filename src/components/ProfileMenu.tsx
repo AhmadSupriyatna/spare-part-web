@@ -13,6 +13,7 @@ interface ProfileMenuProps {
   name: string | undefined
   email: string | undefined
   avatarUrl?: string | null
+  onEditProfile: () => void
   onLogout: () => void
   isLoggingOut?: boolean
 }
@@ -27,7 +28,7 @@ function initials(name: string | undefined): string {
     .join('')
 }
 
-export function ProfileMenu({ name, email, avatarUrl, onLogout, isLoggingOut }: ProfileMenuProps) {
+export function ProfileMenu({ name, email, avatarUrl, onEditProfile, onLogout, isLoggingOut }: ProfileMenuProps) {
   return (
     <DropdownMenu>
       <DropdownMenuTrigger
@@ -56,11 +57,11 @@ export function ProfileMenu({ name, email, avatarUrl, onLogout, isLoggingOut }: 
           </DropdownMenuLabel>
         </DropdownMenuGroup>
         <DropdownMenuSeparator />
-        <DropdownMenuItem disabled title="Segera hadir">
+        <DropdownMenuItem onClick={onEditProfile}>
           <UserRound />
           Ubah Nama
         </DropdownMenuItem>
-        <DropdownMenuItem disabled title="Segera hadir">
+        <DropdownMenuItem onClick={onEditProfile}>
           <KeyRound />
           Ubah Password
         </DropdownMenuItem>

@@ -31,6 +31,7 @@ import { NavLink, Outlet, useLocation, useNavigate } from 'react-router'
 import { toast } from 'sonner'
 import { BranchSelector } from '@/components/BranchSelector'
 import { GlobalSearch } from '@/components/GlobalSearch'
+import { ProfileFormDialog } from '@/components/ProfileFormDialog'
 import { ProfileMenu } from '@/components/ProfileMenu'
 import { ThemeToggle } from '@/components/ThemeToggle'
 import { logout as logoutRequest } from '@/features/auth/api'
@@ -169,6 +170,7 @@ export function AppLayout() {
   const sheetOpenCount = useSheetStackStore((state) => state.openCount)
   const userRoles = useAuthStore((state) => state.user?.roles ?? [])
   const [openGroup, setOpenGroup] = useState<string | null>(null)
+  const [profileDialogOpen, setProfileDialogOpen] = useState(false)
 
   const { data: companySetting } = useQuery({
     queryKey: ['settings', 'company'],
@@ -357,9 +359,11 @@ export function AppLayout() {
               name={user?.name}
               email={user?.email}
               avatarUrl={user?.avatar_url}
+              onEditProfile={() => setProfileDialogOpen(true)}
               onLogout={() => mutation.mutate()}
               isLoggingOut={mutation.isPending}
             />
+            <ProfileFormDialog open={profileDialogOpen} onOpenChange={setProfileDialogOpen} />
           </div>
         </header>
         <main
