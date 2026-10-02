@@ -1,4 +1,4 @@
-import { AmbientSignalBar } from '@/features/dashboard/AmbientSignalBar'
+import { InlineSignalStrip } from '@/features/dashboard/InlineSignalStrip'
 
 interface InventoryHealthBarProps {
   critical: number
@@ -6,27 +6,21 @@ interface InventoryHealthBarProps {
   normal: number
 }
 
-/**
- * "Inventory Health" — carries the Normal/Peringatan/Kritis breakdown by
- * itself now that those used to also have their own separate top-row
- * Nameplate cards (removed as redundant — this bar is the one place for
- * that detail going forward).
- */
+/** "Inventory Health" — Normal/Peringatan/Kritis as one thin inline strip, no card frame of its own. */
 export function InventoryHealthBar({ critical, warning, normal }: InventoryHealthBarProps) {
   const total = critical + warning + normal
   const healthyPercent = total > 0 ? Math.round((normal / total) * 100) : 0
-  const glowColorVar = critical > 0 ? 'var(--destructive)' : warning > 0 ? 'var(--warning)' : 'var(--success)'
 
   return (
-    <AmbientSignalBar
+    <InlineSignalStrip
+      label="Inventory Health"
       segments={[
-        { key: 'normal', label: 'Normal', value: normal, colorVar: 'var(--success)' },
-        { key: 'warning', label: 'Peringatan', value: warning, colorVar: 'var(--warning)' },
-        { key: 'critical', label: 'Kritis', value: critical, colorVar: 'var(--destructive)' },
+        { key: 'Normal', value: normal, colorVar: 'var(--success)' },
+        { key: 'Peringatan', value: warning, colorVar: 'var(--warning)' },
+        { key: 'Kritis', value: critical, colorVar: 'var(--destructive)' },
       ]}
       primaryValue={`${healthyPercent}%`}
-      primaryLabel="sehat"
-      glowColorVar={glowColorVar}
+      primarySuffix="sehat"
       emptyMessage="Belum ada part dengan stok di plant ini."
     />
   )

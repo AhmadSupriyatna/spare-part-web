@@ -11,7 +11,6 @@ import {
   Scale,
   ShieldAlert,
   Sparkles,
-  Target,
   Users,
   Wallet,
 } from 'lucide-react'
@@ -203,53 +202,23 @@ export function DashboardPage() {
             )}
           </div>
 
-          {/* Inventory Health + Maintenance Performance right under the nameplate row — both already a single compact AmbientSignalBar, so side by side here reads at a glance instead of being split apart by Life Based Part Performance's longer list. */}
-          <div className="grid grid-cols-1 gap-3 lg:grid-cols-2">
-            <PanelCard size="sm" className={!canViewCost ? 'lg:col-span-2' : undefined}>
-              <CardHeader>
-                <CardTitle className="text-base">Inventory Health</CardTitle>
-              </CardHeader>
-              <CardContent className="flex flex-col gap-4">
-                {stocksLoading ? (
-                  <Skeleton className="h-32 w-full" />
-                ) : (
-                  <>
-                    <InventoryHealthBar critical={criticalCount} warning={warningCount} normal={normalCount} />
-                    {criticalCount > 0 && (
-                      <div className="flex flex-col gap-1 border-t pt-3">
-                        <p className="text-xs font-medium text-muted-foreground">Part Kritis</p>
-                        {criticalStocks.slice(0, 4).map((s) => (
-                          <p key={s.id} className="truncate text-xs">
-                            {s.part_name}
-                          </p>
-                        ))}
-                      </div>
-                    )}
-                  </>
-                )}
-              </CardContent>
-            </PanelCard>
-
-            {canViewCost && (
-              <PanelCard size="sm">
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2 text-base">
-                    <Target className="size-4" />
-                    Maintenance Performance
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  {analyticsLoading ? (
-                    <Skeleton className="h-32 w-full" />
-                  ) : (
-                    <MaintenancePerformanceChart
-                      on_time_count={analytics?.maintenance_performance.on_time_count ?? 0}
-                      late_count={analytics?.maintenance_performance.late_count ?? 0}
-                    />
-                  )}
-                </CardContent>
-              </PanelCard>
+          {/* Inventory Health + Maintenance Performance right under the nameplate row — same Nameplate shell/height/font as the stat tiles above, just a bar instead of a single number. */}
+          <div className="grid grid-cols-1 gap-2.5 sm:grid-cols-2">
+            {stocksLoading ? (
+              <Skeleton className="h-[52px] w-full" />
+            ) : (
+              <InventoryHealthBar critical={criticalCount} warning={warningCount} normal={normalCount} />
             )}
+
+            {canViewCost &&
+              (analyticsLoading ? (
+                <Skeleton className="h-[52px] w-full" />
+              ) : (
+                <MaintenancePerformanceChart
+                  on_time_count={analytics?.maintenance_performance.on_time_count ?? 0}
+                  late_count={analytics?.maintenance_performance.late_count ?? 0}
+                />
+              ))}
           </div>
 
           {canViewCost && (
