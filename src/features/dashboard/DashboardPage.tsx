@@ -1,13 +1,32 @@
 import { useQuery } from '@tanstack/react-query'
-import { AlertTriangle, CalendarClock, FileWarning, Layers, Package, Sparkles, Target, Wallet } from 'lucide-react'
+import {
+  AlertTriangle,
+  ArrowLeftRight,
+  CalendarCheck,
+  CalendarClock,
+  Coins,
+  FileWarning,
+  Layers,
+  Package,
+  PackageSearch,
+  Scale,
+  ShieldAlert,
+  Sparkles,
+  Target,
+  Users,
+  Wallet,
+} from 'lucide-react'
 import { fetchDashboardAnalytics } from '@/features/dashboard/api'
 import { BudgetProjectionChart } from '@/features/dashboard/BudgetProjectionChart'
 import { InventoryHealthGauge } from '@/features/dashboard/InventoryHealthGauge'
 import { LifeBasedRadialChart } from '@/features/dashboard/LifeBasedRadialChart'
 import { MaintenancePerformanceChart } from '@/features/dashboard/MaintenancePerformanceChart'
 import { Nameplate } from '@/features/dashboard/Nameplate'
+import { PmVsFailureCostChart } from '@/features/dashboard/PmVsFailureCostChart'
 import { RadialMapChart } from '@/features/dashboard/RadialMapChart'
+import { RankedBarList } from '@/features/dashboard/RankedBarList'
 import { ReplacementCostTrendChart } from '@/features/dashboard/ReplacementCostTrendChart'
+import { StockMovementTrendChart } from '@/features/dashboard/StockMovementTrendChart'
 import { fetchFp3RequestsForBranch } from '@/features/fp3/api'
 import { fetchParts } from '@/features/parts/api'
 import { fetchPartStocksForBranch } from '@/features/part-stocks/api'
@@ -19,6 +38,12 @@ import { PageHeader } from '@/components/PageHeader'
 import { QueryErrorState } from '@/components/QueryErrorState'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Skeleton } from '@/components/ui/skeleton'
+
+function compactRupiah(value: number): string {
+  if (value >= 1_000_000) return `Rp ${(value / 1_000_000).toLocaleString('id-ID', { maximumFractionDigits: 1 })}jt`
+  if (value >= 1_000) return `Rp ${(value / 1_000).toLocaleString('id-ID', { maximumFractionDigits: 0 })}rb`
+  return `Rp ${value.toLocaleString('id-ID')}`
+}
 
 export function DashboardPage() {
   const user = useAuthStore((state) => state.user)
@@ -97,6 +122,17 @@ export function DashboardPage() {
   const openPmTasks = pmTasks?.filter((t) => t.status === 'pending' || t.status === 'in_progress') ?? []
   const overduePmCount = openPmTasks.filter((t) => t.is_overdue).length
 
+  // Client-computed from the already-fetched pmTasks — operational, not
+  // financial, so this stays visible to every role (unlike everything else
+  // new on this page, which reuses the existing canViewCost gate).
+  const today = new Date()
+  const in7Days = new Date(today.getTime() + 7 * 24 * 60 * 60 * 1000)
+  const in30Days = new Date(today.getTime() + 30 * 24 * 60 * 60 * 1000)
+  const dueWithin = (days: Date) =>
+    openPmTasks.filter((t) => t.due_date && new Date(t.due_date) >= today && new Date(t.due_date) <= days).length
+  const pmDueIn7Days = dueWithin(in7Days)
+  const pmDueIn30Days = dueWithin(in30Days)
+
   const openRequests = fp3Requests?.filter((r) => r.status === 'pending' || r.status === 'in_progress') ?? []
   const overdueRequestCount = openRequests.filter((r) => r.is_overdue).length
 
@@ -112,7 +148,17 @@ export function DashboardPage() {
         <QueryErrorState onRetry={retryAll} title="Gagal memuat data Dashboard" />
       ) : (
         <>
-          <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-3 lg:grid-cols-5">
+          <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-3 lg:grid-cols-4">
+            {canViewCost && (
+              <Nameplate
+                label="Nilai Total Stok"
+                value={compactRupiah(Number(analytics?.stock_value ?? 0))}
+                sub="Total nilai stok di plant ini"
+                icon={Wallet}
+                href="/stock"
+                loading={analyticsLoading}
+              />
+            )}
             <Nameplate
               label="Total Part"
               value={parts?.length ?? 0}
@@ -149,6 +195,15 @@ export function DashboardPage() {
               loading={pmTasksLoading}
             />
             <Nameplate
+              label="PM Jatuh Tempo (7 Hari)"
+              value={pmDueIn7Days}
+              sub={`${pmDueIn30Days} dalam 30 hari`}
+              icon={CalendarCheck}
+              href="/pm/calendar?tab=list"
+              tone={pmDueIn7Days > 0 ? 'warning' : 'default'}
+              loading={pmTasksLoading}
+            />
+            <Nameplate
               label="Request Open"
               value={openRequests.length}
               sub={overdueRequestCount > 0 ? `${overdueRequestCount} terlambat` : 'FP3 belum selesai'}
@@ -157,6 +212,17 @@ export function DashboardPage() {
               tone={overdueRequestCount > 0 ? 'destructive' : openRequests.length > 0 ? 'warning' : 'default'}
               loading={fp3Loading}
             />
+            {canViewCost && (
+              <Nameplate
+                label="Equipment Tanpa PM"
+                value={analytics?.equipment_coverage.without_library ?? 0}
+                sub={`dari ${analytics?.equipment_coverage.total_equipment ?? 0} equipment belum ada Task Library`}
+                icon={ShieldAlert}
+                href="/task-libraries"
+                tone={(analytics?.equipment_coverage.without_library ?? 0) > 0 ? 'warning' : 'default'}
+                loading={analyticsLoading}
+              />
+            )}
           </div>
 
           <div className="grid grid-cols-1 gap-4 lg:grid-cols-4">
@@ -291,6 +357,126 @@ export function DashboardPage() {
                   )}
                 </CardContent>
               </Card>
+
+              <div className="grid grid-cols-1 gap-4 lg:grid-cols-4">
+                <Card className="lg:col-span-1">
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2 text-base">
+                      <Scale className="size-4" />
+                      Sebaran Cost PM vs Failure
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    {analyticsLoading ? (
+                      <Skeleton className="h-40 w-full" />
+                    ) : (
+                      <PmVsFailureCostChart
+                        pm_cost={analytics?.pm_vs_failure_cost.pm_cost ?? '0.00'}
+                        failure_cost={analytics?.pm_vs_failure_cost.failure_cost ?? '0.00'}
+                      />
+                    )}
+                  </CardContent>
+                </Card>
+
+                <Card className="lg:col-span-2">
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2 text-base">
+                      <ArrowLeftRight className="size-4" />
+                      Tren Keluar-Masuk Stok (12 Bulan Terakhir)
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    {analyticsLoading ? <Skeleton className="h-32 w-full" /> : <StockMovementTrendChart data={analytics?.stock_movement_trend ?? []} />}
+                  </CardContent>
+                </Card>
+
+                <Card className="lg:col-span-1">
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2 text-base">
+                      <Coins className="size-4" />
+                      Part Cost Tertinggi
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    {analyticsLoading ? (
+                      <Skeleton className="h-40 w-full" />
+                    ) : (
+                      <RankedBarList
+                        items={(analytics?.cost_by_part ?? []).map((row) => ({
+                          label: row.part_name,
+                          sublabel: row.item_master_no,
+                          value: Number(row.cost),
+                        }))}
+                        formatValue={(v) => compactRupiah(v)}
+                        emptyMessage="Belum ada biaya part tercatat dalam 12 bulan terakhir."
+                      />
+                    )}
+                  </CardContent>
+                </Card>
+              </div>
+
+              <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2 text-base">
+                      <Users className="size-4" />
+                      Beban Kerja per Teknisi
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    {analyticsLoading ? (
+                      <Skeleton className="h-32 w-full" />
+                    ) : (
+                      <RankedBarList
+                        items={(analytics?.technician_workload ?? []).map((row) => ({ label: row.name, value: row.open_count }))}
+                        emptyMessage="Tidak ada WO yang sedang diklaim siapa pun."
+                        barColorClass="bg-primary"
+                      />
+                    )}
+                  </CardContent>
+                </Card>
+
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2 text-base">
+                      <PackageSearch className="size-4" />
+                      Fast vs Slow Moving Parts
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent className="flex flex-col gap-4">
+                    {analyticsLoading ? (
+                      <Skeleton className="h-32 w-full" />
+                    ) : (
+                      <>
+                        <div className="flex flex-col gap-1.5">
+                          <p className="text-xs font-medium tracking-wide text-muted-foreground uppercase">Paling Sering Keluar</p>
+                          <RankedBarList
+                            items={(analytics?.part_movement.fast_moving ?? []).map((row) => ({
+                              label: row.part_name,
+                              sublabel: row.item_master_no,
+                              value: row.qty_issued ?? 0,
+                            }))}
+                            emptyMessage="Belum ada part keluar dalam 12 bulan terakhir."
+                            barColorClass="bg-success"
+                          />
+                        </div>
+                        <div className="flex flex-col gap-1.5 border-t pt-3">
+                          <p className="text-xs font-medium tracking-wide text-muted-foreground uppercase">Jarang Bergerak</p>
+                          <RankedBarList
+                            items={(analytics?.part_movement.slow_moving ?? []).map((row) => ({
+                              label: row.part_name,
+                              sublabel: row.item_master_no,
+                              value: row.quantity_on_hand ?? 0,
+                            }))}
+                            emptyMessage="Tidak ada part yang menumpuk tanpa pergerakan."
+                            barColorClass="bg-warning"
+                          />
+                        </div>
+                      </>
+                    )}
+                  </CardContent>
+                </Card>
+              </div>
             </>
           )}
         </>

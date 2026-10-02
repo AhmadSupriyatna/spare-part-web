@@ -61,6 +61,41 @@ export interface CostByPartRow {
   cost: string
 }
 
+export interface PmVsFailureCost {
+  pm_cost: string
+  failure_cost: string
+}
+
+export interface EquipmentCoverage {
+  total_equipment: number
+  without_library: number
+}
+
+export interface TechnicianWorkloadRow {
+  name: string
+  open_count: number
+}
+
+export interface PartMovementRow {
+  part_name: string
+  item_master_no: string
+  /** Present on fast_moving rows. */
+  qty_issued?: number
+  /** Present on slow_moving rows. */
+  quantity_on_hand?: number
+}
+
+export interface PartMovement {
+  fast_moving: PartMovementRow[]
+  slow_moving: PartMovementRow[]
+}
+
+export interface StockMovementTrendPoint {
+  month: string
+  in_qty: number
+  out_qty: number
+}
+
 export interface DashboardAnalytics {
   failure_trend: MonthlyTrendPoint[]
   cost_heatmap: CostHeatmapCell[]
@@ -70,6 +105,12 @@ export interface DashboardAnalytics {
   at_risk_parts: AtRiskPart[]
   installation_map: InstallationMapCell[]
   cost_by_part: CostByPartRow[]
+  stock_value: string
+  pm_vs_failure_cost: PmVsFailureCost
+  equipment_coverage: EquipmentCoverage
+  technician_workload: TechnicianWorkloadRow[]
+  part_movement: PartMovement
+  stock_movement_trend: StockMovementTrendPoint[]
 }
 
 export async function fetchDashboardAnalytics(branchId: number): Promise<DashboardAnalytics> {

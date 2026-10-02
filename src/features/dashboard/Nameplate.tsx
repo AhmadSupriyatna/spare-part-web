@@ -4,7 +4,8 @@ import type { LucideIcon } from 'lucide-react'
 
 interface NameplateProps {
   label: string
-  value: number
+  /** Pre-format money/other non-plain-integer values yourself (e.g. "Rp 1,2jt") — this just interpolates whatever is passed. */
+  value: number | string
   sub: string
   icon: LucideIcon
   href: string
