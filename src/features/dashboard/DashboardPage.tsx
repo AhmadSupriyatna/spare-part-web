@@ -17,24 +17,23 @@ import {
 } from 'lucide-react'
 import { fetchDashboardAnalytics } from '@/features/dashboard/api'
 import { BudgetProjectionChart } from '@/features/dashboard/BudgetProjectionChart'
+import { FailureReplacementTrendChart } from '@/features/dashboard/FailureReplacementTrendChart'
 import { InventoryHealthBar } from '@/features/dashboard/InventoryHealthBar'
 import { LifeBasedList } from '@/features/dashboard/LifeBasedList'
 import { MaintenancePerformanceChart } from '@/features/dashboard/MaintenancePerformanceChart'
+import { MonthlyCostTrendChart } from '@/features/dashboard/MonthlyCostTrendChart'
 import { Nameplate } from '@/features/dashboard/Nameplate'
 import { PanelCard } from '@/features/dashboard/PanelCard'
 import { PmVsFailureCostChart } from '@/features/dashboard/PmVsFailureCostChart'
 import { RadialMapChart } from '@/features/dashboard/RadialMapChart'
 import { RankedBarList } from '@/features/dashboard/RankedBarList'
-import { ReplacementCostTrendChart } from '@/features/dashboard/ReplacementCostTrendChart'
 import { StockMovementTrendChart } from '@/features/dashboard/StockMovementTrendChart'
 import { fetchFp3RequestsForBranch } from '@/features/fp3/api'
 import { fetchParts } from '@/features/parts/api'
 import { fetchPartStocksForBranch } from '@/features/part-stocks/api'
 import { fetchPmTasksForBranch } from '@/features/tasks/api'
-import { useAuthStore } from '@/stores/auth-store'
 import { useBranchStore } from '@/stores/branch-store'
 import { useHasRole } from '@/stores/use-has-role'
-import { PageHeader } from '@/components/PageHeader'
 import { QueryErrorState } from '@/components/QueryErrorState'
 import { CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Skeleton } from '@/components/ui/skeleton'
@@ -46,7 +45,6 @@ function compactRupiah(value: number): string {
 }
 
 export function DashboardPage() {
-  const user = useAuthStore((state) => state.user)
   const activeBranchId = useBranchStore((state) => state.activeBranchId)
   const canViewCost = useHasRole(['admin_spare_part', 'supervisor', 'superadmin'])
 
@@ -137,9 +135,7 @@ export function DashboardPage() {
   const overdueRequestCount = openRequests.filter((r) => r.is_overdue).length
 
   return (
-    <div className="flex flex-col gap-6">
-      <PageHeader title={`Halo, ${user?.name?.split(' ')[0] ?? 'kamu'}`} />
-
+    <div className="flex flex-col gap-4">
       {!activeBranchId ? (
         <p className="text-sm text-muted-foreground">
           Pilih plant di header untuk melihat ringkasan stok & breakdown plant tersebut.
@@ -207,8 +203,8 @@ export function DashboardPage() {
             )}
           </div>
 
-          <div className="grid grid-cols-1 gap-4 lg:grid-cols-4">
-            <PanelCard className="lg:col-span-1">
+          <div className="grid grid-cols-1 gap-3 lg:grid-cols-4">
+            <PanelCard size="sm" className="lg:col-span-1">
               <CardHeader>
                 <CardTitle className="text-base">Inventory Health</CardTitle>
               </CardHeader>
@@ -235,7 +231,7 @@ export function DashboardPage() {
 
             {canViewCost && (
               <>
-                <PanelCard className="lg:col-span-2">
+                <PanelCard size="sm" className="lg:col-span-2">
                   <CardHeader>
                     <CardTitle className="flex items-center gap-2 text-base">
                       <Sparkles className="size-4" />
@@ -247,7 +243,7 @@ export function DashboardPage() {
                   </CardContent>
                 </PanelCard>
 
-                <PanelCard className="lg:col-span-1">
+                <PanelCard size="sm" className="lg:col-span-1">
                   <CardHeader>
                     <CardTitle className="flex items-center gap-2 text-base">
                       <Target className="size-4" />
@@ -271,8 +267,8 @@ export function DashboardPage() {
 
           {canViewCost && (
             <>
-              <div className="grid grid-cols-1 gap-4 lg:grid-cols-4">
-                <PanelCard className="lg:col-span-1">
+              <div className="grid grid-cols-1 gap-3 lg:grid-cols-4">
+                <PanelCard size="sm" className="lg:col-span-1">
                   <CardHeader>
                     <CardTitle className="flex items-center gap-2 text-base">
                       <Layers className="size-4" />
@@ -293,16 +289,25 @@ export function DashboardPage() {
                   </CardContent>
                 </PanelCard>
 
-                <PanelCard className="lg:col-span-2">
+                <PanelCard size="sm" className="lg:col-span-1">
                   <CardHeader>
-                    <CardTitle className="text-base">Tren Replacement & Failure (12 Bulan Terakhir)</CardTitle>
+                    <CardTitle className="text-base">Tren Replacement & Failure</CardTitle>
                   </CardHeader>
                   <CardContent>
-                    {analyticsLoading ? <Skeleton className="h-32 w-full" /> : <ReplacementCostTrendChart data={analytics?.failure_trend ?? []} />}
+                    {analyticsLoading ? <Skeleton className="h-32 w-full" /> : <FailureReplacementTrendChart data={analytics?.failure_trend ?? []} />}
                   </CardContent>
                 </PanelCard>
 
-                <PanelCard className="lg:col-span-1">
+                <PanelCard size="sm" className="lg:col-span-1">
+                  <CardHeader>
+                    <CardTitle className="text-base">Tren Biaya Bulanan</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    {analyticsLoading ? <Skeleton className="h-32 w-full" /> : <MonthlyCostTrendChart data={analytics?.failure_trend ?? []} />}
+                  </CardContent>
+                </PanelCard>
+
+                <PanelCard size="sm" className="lg:col-span-1">
                   <CardHeader>
                     <CardTitle className="text-base">Radial Map Failure</CardTitle>
                   </CardHeader>
@@ -321,7 +326,7 @@ export function DashboardPage() {
                 </PanelCard>
               </div>
 
-              <PanelCard>
+              <PanelCard size="sm">
                 <CardHeader>
                   <CardTitle className="flex items-center gap-2 text-base">
                     <Wallet className="size-4" />
@@ -340,8 +345,8 @@ export function DashboardPage() {
                 </CardContent>
               </PanelCard>
 
-              <div className="grid grid-cols-1 gap-4 lg:grid-cols-4">
-                <PanelCard className="lg:col-span-1">
+              <div className="grid grid-cols-1 gap-3 lg:grid-cols-4">
+                <PanelCard size="sm" className="lg:col-span-1">
                   <CardHeader>
                     <CardTitle className="flex items-center gap-2 text-base">
                       <Scale className="size-4" />
@@ -360,7 +365,7 @@ export function DashboardPage() {
                   </CardContent>
                 </PanelCard>
 
-                <PanelCard className="lg:col-span-2">
+                <PanelCard size="sm" className="lg:col-span-2">
                   <CardHeader>
                     <CardTitle className="flex items-center gap-2 text-base">
                       <ArrowLeftRight className="size-4" />
@@ -372,7 +377,7 @@ export function DashboardPage() {
                   </CardContent>
                 </PanelCard>
 
-                <PanelCard className="lg:col-span-1">
+                <PanelCard size="sm" className="lg:col-span-1">
                   <CardHeader>
                     <CardTitle className="flex items-center gap-2 text-base">
                       <Coins className="size-4" />
@@ -397,8 +402,8 @@ export function DashboardPage() {
                 </PanelCard>
               </div>
 
-              <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
-                <PanelCard>
+              <div className="grid grid-cols-1 gap-3 lg:grid-cols-2">
+                <PanelCard size="sm">
                   <CardHeader>
                     <CardTitle className="flex items-center gap-2 text-base">
                       <Users className="size-4" />
@@ -418,7 +423,7 @@ export function DashboardPage() {
                   </CardContent>
                 </PanelCard>
 
-                <PanelCard>
+                <PanelCard size="sm">
                   <CardHeader>
                     <CardTitle className="flex items-center gap-2 text-base">
                       <PackageSearch className="size-4" />
