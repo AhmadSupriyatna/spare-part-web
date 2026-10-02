@@ -114,6 +114,13 @@ export interface CostSunburstRow {
   cost: string
 }
 
+/** scheduled_count = installed by a PM Task; failure_count = installed from an approved breakdown/QR replacement request. */
+export interface ScheduledVsFailureTrendPoint {
+  month: string
+  scheduled_count: number
+  failure_count: number
+}
+
 export interface DashboardAnalytics {
   failure_trend: MonthlyTrendPoint[]
   cost_heatmap: CostHeatmapCell[]
@@ -131,6 +138,7 @@ export interface DashboardAnalytics {
   stock_movement_trend: StockMovementTrendPoint[]
   installation_sunburst: InstallationSunburstRow[]
   cost_sunburst: CostSunburstRow[]
+  scheduled_vs_failure_trend: ScheduledVsFailureTrendPoint[]
 }
 
 export async function fetchDashboardAnalytics(branchId: number): Promise<DashboardAnalytics> {

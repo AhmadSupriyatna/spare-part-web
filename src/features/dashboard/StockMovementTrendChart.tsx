@@ -1,7 +1,6 @@
 import type { StockMovementTrendPoint } from '@/features/dashboard/api'
 
 const MONTH_LABELS = ['Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun', 'Jul', 'Agu', 'Sep', 'Okt', 'Nov', 'Des']
-const CHART_HEIGHT = 96
 
 function monthLabel(month: string): string {
   const [, m] = month.split('-')
@@ -9,10 +8,10 @@ function monthLabel(month: string): string {
 }
 
 /**
- * "Tren Keluar-Masuk Stok" — two bar series per month (in_qty success,
- * out_qty destructive), same hand-rolled div-bar approach as
- * ReplacementCostTrendChart, just without its cost-line overlay since both
- * series here share the same quantity scale.
+ * "Tren Keluar-Masuk Stok" — horizontal grouped bars (in_qty success,
+ * out_qty destructive), one row per month, value printed right at the end
+ * of each bar instead of relying on hover/title — reads at a glance even in
+ * a compact 1/4-width card.
  */
 export function StockMovementTrendChart({ data }: { data: StockMovementTrendPoint[] }) {
   const maxQty = Math.max(1, ...data.map((d) => Math.max(d.in_qty, d.out_qty)))
@@ -33,32 +32,31 @@ export function StockMovementTrendChart({ data }: { data: StockMovementTrendPoin
         </span>
       </div>
 
-      <div className="flex items-end gap-2" style={{ height: CHART_HEIGHT }}>
+      <div className="flex flex-col gap-1">
         {data.map((d) => (
-          <div key={d.month} className="flex h-full flex-1 items-end justify-center gap-0.5">
-            <div className="flex h-full w-2 flex-col justify-end">
-              <div
-                className="w-full rounded-t bg-success"
-                style={{ height: `${d.in_qty > 0 ? Math.max((d.in_qty / maxQty) * 100, 4) : 0}%` }}
-                title={`${monthLabel(d.month)} — Masuk: ${d.in_qty}`}
-              />
-            </div>
-            <div className="flex h-full w-2 flex-col justify-end">
-              <div
-                className="w-full rounded-t bg-destructive"
-                style={{ height: `${d.out_qty > 0 ? Math.max((d.out_qty / maxQty) * 100, 4) : 0}%` }}
-                title={`${monthLabel(d.month)} — Keluar: ${d.out_qty}`}
-              />
+          <div key={d.month} className="flex items-center gap-1.5">
+            <span className="w-6 shrink-0 text-right text-[9px] text-muted-foreground">{monthLabel(d.month)}</span>
+            <div className="flex min-w-0 flex-1 flex-col gap-0.5">
+              <div className="flex items-center gap-1.5">
+                <div className="h-1.5 flex-1 overflow-hidden rounded-full bg-muted">
+                  <div
+                    className="h-full rounded-full bg-success"
+                    style={{ width: `${d.in_qty > 0 ? Math.max((d.in_qty / maxQty) * 100, 4) : 0}%` }}
+                  />
+                </div>
+                <span className="w-7 shrink-0 text-right text-[9px] tabular-nums text-muted-foreground">{d.in_qty}</span>
+              </div>
+              <div className="flex items-center gap-1.5">
+                <div className="h-1.5 flex-1 overflow-hidden rounded-full bg-muted">
+                  <div
+                    className="h-full rounded-full bg-destructive"
+                    style={{ width: `${d.out_qty > 0 ? Math.max((d.out_qty / maxQty) * 100, 4) : 0}%` }}
+                  />
+                </div>
+                <span className="w-7 shrink-0 text-right text-[9px] tabular-nums text-muted-foreground">{d.out_qty}</span>
+              </div>
             </div>
           </div>
-        ))}
-      </div>
-
-      <div className="flex gap-2">
-        {data.map((d) => (
-          <span key={d.month} className="flex-1 text-center text-[9px] text-muted-foreground">
-            {monthLabel(d.month)}
-          </span>
         ))}
       </div>
     </div>

@@ -17,7 +17,6 @@ import {
 } from 'lucide-react'
 import { fetchDashboardAnalytics } from '@/features/dashboard/api'
 import { BudgetProjectionChart } from '@/features/dashboard/BudgetProjectionChart'
-import { FailureReplacementTrendChart } from '@/features/dashboard/FailureReplacementTrendChart'
 import { HierarchicalSunburst } from '@/features/dashboard/HierarchicalSunburst'
 import { InventoryHealthBar } from '@/features/dashboard/InventoryHealthBar'
 import { LifeBasedList } from '@/features/dashboard/LifeBasedList'
@@ -28,6 +27,7 @@ import { PanelCard } from '@/components/PanelCard'
 import { PmVsFailureCostChart } from '@/features/dashboard/PmVsFailureCostChart'
 import { RadialMapChart } from '@/features/dashboard/RadialMapChart'
 import { RankedBarList } from '@/features/dashboard/RankedBarList'
+import { ScheduledVsFailureTrendChart } from '@/features/dashboard/ScheduledVsFailureTrendChart'
 import { StockMovementTrendChart } from '@/features/dashboard/StockMovementTrendChart'
 import { fetchFp3RequestsForBranch } from '@/features/fp3/api'
 import { fetchParts } from '@/features/parts/api'
@@ -257,16 +257,20 @@ export function DashboardPage() {
                     </CardTitle>
                   </CardHeader>
                   <CardContent>
-                    {analyticsLoading ? <Skeleton className="h-32 w-full" /> : <StockMovementTrendChart data={analytics?.stock_movement_trend ?? []} />}
+                    {analyticsLoading ? <Skeleton className="h-64 w-full" /> : <StockMovementTrendChart data={analytics?.stock_movement_trend ?? []} />}
                   </CardContent>
                 </PanelCard>
 
                 <PanelCard size="sm" className="lg:col-span-1">
                   <CardHeader>
-                    <CardTitle className="text-base">Tren Replacement & Failure</CardTitle>
+                    <CardTitle className="text-base">Tren Scheduled vs Failure</CardTitle>
                   </CardHeader>
                   <CardContent>
-                    {analyticsLoading ? <Skeleton className="h-32 w-full" /> : <FailureReplacementTrendChart data={analytics?.failure_trend ?? []} />}
+                    {analyticsLoading ? (
+                      <Skeleton className="h-64 w-full" />
+                    ) : (
+                      <ScheduledVsFailureTrendChart data={analytics?.scheduled_vs_failure_trend ?? []} />
+                    )}
                   </CardContent>
                 </PanelCard>
 
@@ -274,7 +278,7 @@ export function DashboardPage() {
                   <CardHeader>
                     <CardTitle className="flex items-center gap-2 text-base">
                       <Network className="size-4" />
-                      Cost per Line & Equipment
+                      Cost per Line & Equipment ({new Date().getFullYear()})
                     </CardTitle>
                   </CardHeader>
                   <CardContent>
@@ -284,7 +288,7 @@ export function DashboardPage() {
                       <HierarchicalSunburst
                         data={(analytics?.cost_sunburst ?? []).map((row) => ({ ...row, value: Number(row.cost) }))}
                         centerLabel="Biaya"
-                        emptyMessage="Belum ada biaya tercatat dalam 12 bulan terakhir."
+                        emptyMessage="Belum ada biaya tercatat tahun ini."
                         formatValue={(v) => compactRupiah(v)}
                         ariaLabel="Sunburst biaya per Line, Mesin, Equipment, dan Part"
                       />
