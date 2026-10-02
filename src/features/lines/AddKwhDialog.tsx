@@ -18,6 +18,13 @@ const kwhSchema = z.object({
     .string()
     .min(1, 'Wajib diisi')
     .refine((val) => Number.isInteger(Number(val)) && Number(val) >= 0, 'Harus angka bulat, minimal 0'),
+  // Optional — kVA is cumulative just like kWh, but a row can still be
+  // logged with kWh alone. PF is never a form field; the server derives it
+  // from this and `value`.
+  kva_value: z
+    .string()
+    .optional()
+    .refine((val) => !val || (Number.isInteger(Number(val)) && Number(val) >= 0), 'Harus angka bulat, minimal 0'),
   notes: z.string().optional(),
 })
 
@@ -55,11 +62,11 @@ export function AddKwhDialog({ lineId }: AddKwhDialogProps) {
     formState: { errors, isDirty },
   } = useForm<KwhFormValues>({
     resolver: zodResolver(kwhSchema),
-    defaultValues: { for_date: todayIso(), value: '' },
+    defaultValues: { for_date: todayIso(), value: '', kva_value: '' },
   })
 
   useEffect(() => {
-    if (open) reset({ for_date: todayIso(), value: '' })
+    if (open) reset({ for_date: todayIso(), value: '', kva_value: '' })
   }, [open, reset])
 
   const mutation = useMutation({
@@ -67,6 +74,7 @@ export function AddKwhDialog({ lineId }: AddKwhDialogProps) {
       addLineKwh(lineId, {
         for_date: values.for_date,
         value: Number(values.value),
+        kva_value: values.kva_value ? Number(values.kva_value) : undefined,
         notes: values.notes || undefined,
       }),
     onSuccess: () => {
@@ -112,6 +120,14 @@ export function AddKwhDialog({ lineId }: AddKwhDialogProps) {
         <Label htmlFor="kwh-value">{mode === 'reading' ? 'Reading Meteran kWh Saat Ini' : 'Pemakaian Minggu Ini (kWh)'}</Label>
         <Input id="kwh-value" type="number" min={0} {...register('value')} />
         {errors.value && <p className="text-sm text-destructive">{errors.value.message}</p>}
+      </div>
+      <div className="flex flex-col gap-2">
+        <Label htmlFor="kwh-kva-value">
+          {mode === 'reading' ? 'Reading Meteran kVA Saat Ini (opsional)' : 'Pemakaian Minggu Ini (kVA, opsional)'}
+        </Label>
+        <Input id="kwh-kva-value" type="number" min={0} {...register('kva_value')} />
+        <p className="text-xs text-muted-foreground">Diisi kalau ada — PF (Power Factor) dihitung otomatis dari kWh dan kVA ini.</p>
+        {errors.kva_value && <p className="text-sm text-destructive">{errors.kva_value.message}</p>}
       </div>
       <div className="flex flex-col gap-2">
         <Label htmlFor="kwh-notes">Catatan (opsional)</Label>

@@ -92,6 +92,8 @@ export interface AddLineKwhPayload {
   for_date: string
   /** Meter reading in 'reading' mode, that week's usage directly in 'direct' mode — see CompanySetting.kwh_input_mode. */
   value: number
+  /** Optional — same reading/direct duality as `value`, but for kVA. Omit to log kWh alone; PF is derived server-side from this and never sent. */
+  kva_value?: number
   notes?: string
 }
 

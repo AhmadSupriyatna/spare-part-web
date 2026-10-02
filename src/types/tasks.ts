@@ -39,6 +39,12 @@ export interface LineKwhLog {
   previous_reading: number | null
   new_reading: number | null
   kwh_used: number
+  /** kVA is optional on every entry — all three stay null when it wasn't submitted. Only previous/new_kva_reading are reading-mode-only, same as their kWh counterparts. */
+  previous_kva_reading: number | null
+  new_kva_reading: number | null
+  kva_used: number | null
+  /** Power Factor = kwh_used / kva_used, derived server-side — never an input field. Null whenever kva_used is null or 0. */
+  pf: number | null
   recorded_by_name: string | null
   notes: string | null
   created_at: string

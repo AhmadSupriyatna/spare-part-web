@@ -42,6 +42,8 @@ export function LineKwhLogTable({ lineId }: { lineId: number }) {
               <TableHead className="text-right">Reading Sebelumnya</TableHead>
               <TableHead className="text-right">Reading Baru</TableHead>
               <TableHead className="text-right">Pemakaian (kWh)</TableHead>
+              <TableHead className="text-right">kVA</TableHead>
+              <TableHead className="text-right">PF</TableHead>
               <TableHead>Dicatat oleh</TableHead>
               <TableHead>Catatan</TableHead>
             </TableRow>
@@ -57,6 +59,8 @@ export function LineKwhLogTable({ lineId }: { lineId: number }) {
                   {log.new_reading ?? '-'}
                 </TableCell>
                 <TableCell className="text-right font-medium tabular-nums text-success">{log.kwh_used}</TableCell>
+                <TableCell className="text-right tabular-nums text-muted-foreground">{log.kva_used ?? '-'}</TableCell>
+                <TableCell className="text-right tabular-nums text-muted-foreground">{log.pf != null ? log.pf.toFixed(2) : '-'}</TableCell>
                 <TableCell className="text-muted-foreground">{log.recorded_by_name ?? '-'}</TableCell>
                 <TableCell className="max-w-[220px] truncate text-muted-foreground" title={log.notes ?? ''}>
                   {log.notes ?? '-'}
