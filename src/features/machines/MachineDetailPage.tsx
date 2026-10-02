@@ -3,14 +3,16 @@ import { ArrowLeft, FileDown, Printer } from 'lucide-react'
 import { useNavigate, useParams } from 'react-router'
 import { fetchMachineSummary } from '@/features/machines/api'
 import { MachineDashboardContent } from '@/features/machines/MachineDashboardContent'
+import { MachineMiniCalendar } from '@/features/machines/MachineMiniCalendar'
+import { MachineReportPrintSection } from '@/features/machines/MachineReportPrintSection'
 import { MachineTaskHistoryTable } from '@/features/machines/MachineTaskHistoryTable'
+import { fetchCompanySetting } from '@/features/settings/api'
 import { PageHeader } from '@/components/PageHeader'
+import { PanelCard } from '@/components/PanelCard'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { PanelCard } from '@/components/PanelCard'
 import { Skeleton } from '@/components/ui/skeleton'
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 
 const currencyFormatter = new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR' })
 
@@ -22,9 +24,9 @@ function toCsvValue(value: string): string {
  * Machine Detail — the authenticated, cost-aware twin of
  * MachineMonitoringPage (the public QR-scan landing page). Same
  * MachineDashboardContent, same data shape (MachineSummaryData extends
- * MachineMonitoringData), plus the one cost tile and this page's own
- * Export Excel/Print — neither exists on the public page, by request
- * (cost and export both stay behind login).
+ * MachineMonitoringData), plus cost tiles/charts and this page's own
+ * Export Excel/Print, the mini calendar and paginated PM history — none of
+ * which exist on the public page, by request.
  */
 export function MachineDetailPage() {
   const { id } = useParams<{ id: string }>()
@@ -37,6 +39,11 @@ export function MachineDetailPage() {
     enabled: Number.isFinite(machineId),
   })
 
+  const { data: companySetting } = useQuery({
+    queryKey: ['settings', 'company'],
+    queryFn: fetchCompanySetting,
+  })
+
   function handleExportCsv() {
     if (!data) return
 
@@ -44,6 +51,7 @@ export function MachineDetailPage() {
       ['Mesin', data.machine.name],
       ['Kode', data.machine.code],
       ['Line / Plant', data.machine.line_id != null ? (data.machine.line_name ?? '-') : (data.machine.branch_name ?? '-')],
+      ['Running Hours (Line)', data.line_runtime_hours != null ? String(data.line_runtime_hours) : '-'],
       ['Equipment', String(data.equipment_count)],
       ['PM Terjadwal', String(data.upcoming_tasks.length)],
       ['PM Terlambat', String(data.overdue_task_count)],
@@ -64,17 +72,33 @@ export function MachineDetailPage() {
       ...data.cost_by_equipment_this_year.map((row) => [row.equipment_name, currencyFormatter.format(Number(row.cost))]),
       [],
       ['Part per Equipment'],
-      ['Equipment', 'Part', 'Sisa Umur Pakai', 'Tanggal Pasang', 'Rata-rata Umur Historis (jam)'],
+      ['Equipment', 'Part', 'Passport', 'Bekas Repair', 'Tanggal Pasang', 'Life Time', 'Rata-rata Historis (jam)'],
       ...data.installations.map((installation) => {
         const history = data.historical_part_lifetime.find((row) => row.part_id === installation.part_id)
         return [
           installation.equipment_name ?? '-',
           installation.part_name ?? '-',
-          installation.percent_used != null ? `${Math.round(100 - installation.percent_used)}%` : '-',
+          installation.has_passport ? 'Ya' : '-',
+          installation.was_repaired ? 'Ya' : '-',
           new Date(installation.installed_at).toLocaleDateString('id-ID'),
+          installation.percent_used != null
+            ? `Sisa ${Math.max(0, 100 - Math.round(installation.percent_used))}%`
+            : installation.age_in_runtime_hours != null
+              ? `${installation.age_in_runtime_hours} jam`
+              : '-',
           history ? String(history.average_runtime_hours) : '-',
         ]
       }),
+      [],
+      ['Riwayat Part Passport Terpasang'],
+      ['Equipment', 'Part', 'Unit', 'Pasang', 'Lepas'],
+      ...data.passport_install_history.map((row) => [
+        row.equipment_name ?? '-',
+        row.part_name ?? '-',
+        row.unit_code ?? '-',
+        new Date(row.installed_at).toLocaleDateString('id-ID'),
+        row.is_active ? 'Masih terpasang' : row.removed_at ? new Date(row.removed_at).toLocaleDateString('id-ID') : '-',
+      ]),
     ]
 
     const csv = rows.map((row) => row.map((cell) => toCsvValue(cell)).join(',')).join('\r\n')
@@ -146,116 +170,29 @@ export function MachineDetailPage() {
           costByEquipmentThisYear={data.cost_by_equipment_this_year}
         />
 
-        <PanelCard>
-          <CardHeader>
-            <CardTitle className="text-sm font-medium">Riwayat PM</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <MachineTaskHistoryTable machineId={machineId} />
-          </CardContent>
-        </PanelCard>
+        <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+          <PanelCard>
+            <CardHeader>
+              <CardTitle className="text-sm font-medium">Kalender PM &amp; Failure</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <MachineMiniCalendar machineId={machineId} />
+            </CardContent>
+          </PanelCard>
+
+          <PanelCard>
+            <CardHeader>
+              <CardTitle className="text-sm font-medium">Riwayat PM</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <MachineTaskHistoryTable machineId={machineId} />
+            </CardContent>
+          </PanelCard>
+        </div>
       </div>
 
       <div id="machine-report-print-area" className="hidden">
-        <h1 className="text-lg font-bold">Laporan Mesin — {data.machine.name}</h1>
-        <p className="font-mono text-sm">{data.machine.code}</p>
-        <p className="mb-4 text-sm">
-          {data.machine.line_id != null ? `Line ${data.machine.line_name ?? '-'}` : `Luar Line — ${data.machine.branch_name ?? '-'}`}
-        </p>
-
-        <table className="mb-4 text-sm">
-          <tbody>
-            <tr>
-              <td className="pr-4 font-medium">Equipment</td>
-              <td>{data.equipment_count}</td>
-            </tr>
-            <tr>
-              <td className="pr-4 font-medium">PM Terjadwal</td>
-              <td>{data.upcoming_tasks.length}</td>
-            </tr>
-            <tr>
-              <td className="pr-4 font-medium">PM Terlambat</td>
-              <td>{data.overdue_task_count}</td>
-            </tr>
-            <tr>
-              <td className="pr-4 font-medium">Rata-rata Umur Pakai</td>
-              <td>{data.average_lifetime_hours != null ? `${data.average_lifetime_hours} jam` : '-'}</td>
-            </tr>
-            <tr>
-              <td className="pr-4 font-medium">Nilai Part Terpasang</td>
-              <td>{currencyFormatter.format(Number(data.installed_part_value))}</td>
-            </tr>
-          </tbody>
-        </table>
-
-        <h2 className="mb-2 font-semibold">Top Part Terpakai (12 Bulan Terakhir)</h2>
-        <Table className="mb-4">
-          <TableHeader>
-            <TableRow>
-              <TableHead>Part</TableHead>
-              <TableHead>Item Master</TableHead>
-              <TableHead className="text-right">Qty</TableHead>
-              <TableHead className="text-right">Nilai</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {data.top_parts_consumed.map((row) => (
-              <TableRow key={row.part_id}>
-                <TableCell>{row.part_name}</TableCell>
-                <TableCell className="font-mono">{row.item_master_no}</TableCell>
-                <TableCell className="text-right">{row.quantity}</TableCell>
-                <TableCell className="text-right">{currencyFormatter.format(Number(row.cost ?? 0))}</TableCell>
-              </TableRow>
-            ))}
-          </TableBody>
-        </Table>
-
-        <h2 className="mb-2 font-semibold">Konsumsi Biaya per Equipment (Tahun Ini)</h2>
-        <Table className="mb-4">
-          <TableHeader>
-            <TableRow>
-              <TableHead>Equipment</TableHead>
-              <TableHead className="text-right">Nilai</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {data.cost_by_equipment_this_year.map((row) => (
-              <TableRow key={row.equipment_id}>
-                <TableCell>{row.equipment_name}</TableCell>
-                <TableCell className="text-right">{currencyFormatter.format(Number(row.cost))}</TableCell>
-              </TableRow>
-            ))}
-          </TableBody>
-        </Table>
-
-        <h2 className="mb-2 font-semibold">Part per Equipment</h2>
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead>Equipment</TableHead>
-              <TableHead>Part</TableHead>
-              <TableHead>Tanggal Pasang</TableHead>
-              <TableHead className="text-right">Sisa Umur Pakai</TableHead>
-              <TableHead className="text-right">Rata-rata Historis (jam)</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {data.installations.map((installation) => {
-              const history = data.historical_part_lifetime.find((row) => row.part_id === installation.part_id)
-              return (
-                <TableRow key={installation.id}>
-                  <TableCell>{installation.equipment_name ?? '-'}</TableCell>
-                  <TableCell>{installation.part_name ?? '-'}</TableCell>
-                  <TableCell>{new Date(installation.installed_at).toLocaleDateString('id-ID')}</TableCell>
-                  <TableCell className="text-right">
-                    {installation.percent_used != null ? `${Math.round(100 - installation.percent_used)}%` : '-'}
-                  </TableCell>
-                  <TableCell className="text-right">{history ? history.average_runtime_hours : '-'}</TableCell>
-                </TableRow>
-              )
-            })}
-          </TableBody>
-        </Table>
+        <MachineReportPrintSection data={data} companySetting={companySetting} />
       </div>
     </div>
   )

@@ -88,6 +88,17 @@ export interface HistoricalPartLifetime {
   sample_count: number
 }
 
+export interface PassportInstallHistoryItem {
+  id: number
+  equipment_id: number
+  equipment_name: string | null
+  part_name: string | null
+  unit_code: string | null
+  installed_at: string
+  removed_at: string | null
+  is_active: boolean
+}
+
 export interface MachineMonitoringData {
   machine: Machine
   equipment_count: number
@@ -100,6 +111,9 @@ export interface MachineMonitoringData {
   top_parts_consumed: TopPartConsumed[]
   /** Not cost data — how many runtime hours a part TYPE has historically lasted before replacement, from completed install cycles. */
   historical_part_lifetime: HistoricalPartLifetime[]
+  /** The Line's own running hours — null for an outside-line Machine, which has no Line. */
+  line_runtime_hours: number | null
+  passport_install_history: PassportInstallHistoryItem[]
 }
 
 /** Unauthenticated — see PublicMachineMonitoringController. Reached by scanning a Machine's printed QR, no login. */
@@ -138,4 +152,23 @@ export async function fetchMachineTaskHistory(machineId: number, page = 1): Prom
     params: { page },
   })
   return data
+}
+
+export interface MachineCalendarDay {
+  pm?: { id: number; title: string; status: string }[]
+  failure_count?: number
+}
+
+export interface MachineCalendarData {
+  month: string
+  /** Keyed by "YYYY-MM-DD". */
+  days: Record<string, MachineCalendarDay>
+}
+
+/** Machine Detail's mini calendar — one month's PM schedule (any status) plus failure/breakdown events. See MachineController::calendar(). */
+export async function fetchMachineCalendar(machineId: number, month: string): Promise<MachineCalendarData> {
+  const { data } = await apiClient.get<{ data: MachineCalendarData }>(`/machines/${machineId}/calendar`, {
+    params: { month },
+  })
+  return data.data
 }

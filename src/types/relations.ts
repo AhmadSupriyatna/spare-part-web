@@ -26,8 +26,11 @@ export interface PartInstallation {
   part_id: number
   part_name: string
   item_master_no: string
+  has_passport?: boolean
   part_unit_id: number | null
   unit_code?: string | null
+  /** True when the currently-mounted PartUnit has a completed repair cycle — a refurbished unit, not factory-new. */
+  was_repaired?: boolean
   slot_label: string | null
   estimated_lifetime_hours?: number | null
   installed_at: string
