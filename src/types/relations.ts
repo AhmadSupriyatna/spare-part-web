@@ -81,6 +81,7 @@ export interface PartRepair {
   part_name?: string | null
   item_master_no?: string | null
   replacement_strategy?: PartReplacementStrategy | null
+  has_passport?: boolean
   part_installation_id: number | null
   equipment_name?: string | null
   machine_name?: string | null

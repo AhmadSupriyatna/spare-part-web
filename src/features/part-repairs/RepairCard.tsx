@@ -1,6 +1,7 @@
-import { AlertTriangle, Pencil, Trash2 } from 'lucide-react'
+import { AlertTriangle, Pencil, ScanLine, Trash2 } from 'lucide-react'
 import { Link } from 'react-router'
 import { PartUnitQrPrint } from '@/components/PartUnitQrPrint'
+import { partReplacementStrategyOptions } from '@/features/parts/schema'
 import { cn } from '@/lib/utils'
 import type { PartRepair } from '@/types/relations'
 import {
@@ -18,6 +19,7 @@ import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 
 const currencyFormatter = new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR' })
+const strategyMeta = Object.fromEntries(partReplacementStrategyOptions.map((o) => [o.value, o]))
 
 interface RepairCardProps {
   repair: PartRepair
@@ -109,6 +111,26 @@ export function RepairCard({
           )}
         </div>
       </div>
+
+      {(repair.replacement_strategy || repair.has_passport) && (
+        <div className="flex flex-wrap items-center gap-1">
+          {repair.replacement_strategy && (
+            <Badge variant="outline" className="gap-1 text-[10px]">
+              {(() => {
+                const Icon = strategyMeta[repair.replacement_strategy].icon
+                return <Icon className="size-3" />
+              })()}
+              {strategyMeta[repair.replacement_strategy].label}
+            </Badge>
+          )}
+          {repair.has_passport && (
+            <Badge variant="outline" className="gap-1 border-primary/30 bg-primary/5 text-[10px] text-primary">
+              <ScanLine className="size-3" />
+              Passport
+            </Badge>
+          )}
+        </div>
+      )}
 
       <p className="text-xs text-muted-foreground">
         Unit {repair.unit_code}
