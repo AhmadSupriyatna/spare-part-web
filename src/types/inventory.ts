@@ -20,6 +20,8 @@ export interface Part {
   minimum_stock_strategy: PartMinimumStockStrategy
   image_url: string | null
   is_active: boolean
+  /** "Part Passport" — Stock In for this Part immediately creates one tracked PartUnit (QR + arrival date) per quantity received, instead of only at first install. */
+  has_passport: boolean
   stocks?: PartStock[]
   created_at: string
   updated_at: string

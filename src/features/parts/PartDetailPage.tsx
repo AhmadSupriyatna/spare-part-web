@@ -592,7 +592,7 @@ export function PartDetailPage() {
           {unitsLoading ? (
             <Skeleton className="h-24 w-full" />
           ) : units?.length === 0 ? (
-            <EmptyState title="Belum ada unit fisik part ini yang tercatat (dibuat otomatis saat pertama kali dipasang)." />
+            <EmptyState title="Belum ada unit fisik part ini yang tercatat (dibuat otomatis saat pertama kali dipasang, atau sejak kedatangan untuk part ber-Passport)." />
           ) : (
             <Table>
               <TableHeader>

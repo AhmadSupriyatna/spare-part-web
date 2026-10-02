@@ -7,6 +7,7 @@ import { createPartStock, receiveStock } from '@/features/part-stocks/api'
 import { receiveStockSchema, type ReceiveStockFormValues } from '@/features/part-stocks/schema'
 import { fetchPartSuppliers } from '@/features/part-suppliers/api'
 import { FormSheet } from '@/components/FormSheet'
+import { PartUnitBulkQrPrint, type NewPartUnit } from '@/components/PartUnitBulkQrPrint'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -51,6 +52,10 @@ export function ReceiveStockDialog({
   const [internalOpen, setInternalOpen] = useState(false)
   const open = openProp ?? internalOpen
   const setOpen = onOpenChangeProp ?? setInternalOpen
+  // "Part Passport" — populated from the receive response when the Part
+  // has_passport, prompting a bulk QR print right after a successful Stock
+  // In instead of leaving the new units to be found/printed later.
+  const [newUnits, setNewUnits] = useState<NewPartUnit[]>([])
   const queryClient = useQueryClient()
 
   const { data: partSuppliers } = useQuery({
@@ -80,9 +85,7 @@ export function ReceiveStockDialog({
   const oldUnitCost = Number(currentUnitCost)
   const newQuantity = currentQuantity + (Number.isFinite(quantity) && quantity > 0 ? quantity : 0)
   const showPreview = quantity > 0 && totalPrice >= 0 && !Number.isNaN(totalPrice)
-  const newAverageCost = showPreview
-    ? (oldUnitCost * currentQuantity + totalPrice) / newQuantity
-    : null
+  const newAverageCost = showPreview ? (oldUnitCost * currentQuantity + totalPrice) / newQuantity : null
 
   const mutation = useMutation({
     mutationFn: (values: ReceiveStockFormValues) => {
@@ -96,7 +99,7 @@ export function ReceiveStockDialog({
         ? receiveStock(partStockId, payload)
         : createPartStock(branchId, { ...payload, part_id: partId })
     },
-    onSuccess: () => {
+    onSuccess: (result) => {
       if (partStockId) {
         queryClient.invalidateQueries({ queryKey: ['part-stock', partStockId] })
         queryClient.invalidateQueries({ queryKey: ['part-stock-ledger', partStockId] })
@@ -105,78 +108,83 @@ export function ReceiveStockDialog({
       toast.success('Barang berhasil diterima.')
       reset()
       setOpen(false)
+      if (result.newUnits.length > 0) setNewUnits(result.newUnits)
     },
     onError: () => toast.error('Gagal mencatat penerimaan barang.'),
   })
 
   return (
-    <FormSheet
-      trigger={trigger ?? <Button>Stock In</Button>}
-      title="Stock In"
-      open={open}
-      onOpenChange={setOpen}
-      isDirty={isDirty}
-      onSubmit={handleSubmit((values) => mutation.mutate(values))}
-      submitLabel="Simpan"
-      isSubmitting={mutation.isPending}
-    >
-      {(partName || itemMasterNo) && (
-        <div className="rounded-md border bg-muted/40 px-3 py-2">
-          {partName && <p className="text-sm font-medium">{partName}</p>}
-          {itemMasterNo && <p className="font-mono text-xs text-muted-foreground">{itemMasterNo}</p>}
-        </div>
-      )}
-      <p className="text-xs text-muted-foreground">
-        Stok saat ini: <span className="font-medium text-foreground">{currentQuantity} unit</span> @{' '}
-        <span className="font-medium text-foreground">{currencyFormatter.format(oldUnitCost)}</span>
-        /unit
-      </p>
-      <div className="flex flex-col gap-2">
-        <Label htmlFor="quantity">Jumlah Diterima</Label>
-        <Input id="quantity" type="number" min={1} {...register('quantity')} />
-        {errors.quantity && <p className="text-sm text-destructive">{errors.quantity.message}</p>}
-      </div>
-      <div className="flex flex-col gap-2">
-        <Label htmlFor="total_price">Harga Total Pembelian</Label>
-        <Input id="total_price" type="number" min={0} step="0.01" {...register('total_price')} />
-        <p className="text-xs text-muted-foreground">
-          Total harga untuk seluruh jumlah yang diterima kali ini, bukan harga per unit.
-        </p>
-        {errors.total_price && <p className="text-sm text-destructive">{errors.total_price.message}</p>}
-      </div>
-      {showPreview && (
-        <div className="rounded-md border bg-muted/40 px-3 py-2 text-sm">
-          <p className="text-xs text-muted-foreground">Harga rata-rata baru (setelah digabung dengan stok lama)</p>
-          <p className="font-medium">
-            {currencyFormatter.format(newAverageCost ?? 0)} /unit &middot; {newQuantity} unit
-          </p>
-        </div>
-      )}
-      <div className="flex flex-col gap-2">
-        <Label>Supplier (opsional)</Label>
-        <Select onValueChange={(value) => setValue('supplier_id', value as string)}>
-          <SelectTrigger>
-            <SelectValue placeholder="Pilih supplier" />
-          </SelectTrigger>
-          <SelectContent>
-            {suppliers?.map((ps) => (
-              <SelectItem key={ps.supplier_id} value={String(ps.supplier_id)}>
-                {ps.supplier_name}
-                {ps.is_preferred && ' (Utama)'}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-        {suppliers?.length === 0 && (
-          <p className="text-xs text-muted-foreground">
-            Belum ada supplier terdaftar untuk part ini — atur lewat "Pilih Supplier" di Kelola Stok.
-          </p>
+    <>
+      <FormSheet
+        trigger={trigger ?? <Button>Stock In</Button>}
+        title="Stock In"
+        open={open}
+        onOpenChange={setOpen}
+        isDirty={isDirty}
+        onSubmit={handleSubmit((values) => mutation.mutate(values))}
+        submitLabel="Simpan"
+        isSubmitting={mutation.isPending}
+      >
+        {(partName || itemMasterNo) && (
+          <div className="rounded-md border bg-muted/40 px-3 py-2">
+            {partName && <p className="text-sm font-medium">{partName}</p>}
+            {itemMasterNo && <p className="font-mono text-xs text-muted-foreground">{itemMasterNo}</p>}
+          </div>
         )}
-      </div>
-      <div className="flex flex-col gap-2">
-        <Label htmlFor="notes">Catatan</Label>
-        <Textarea id="notes" placeholder="Misal: No. PO" {...register('notes')} />
-      </div>
-    </FormSheet>
+        <p className="text-xs text-muted-foreground">
+          Stok saat ini: <span className="font-medium text-foreground">{currentQuantity} unit</span> @{' '}
+          <span className="font-medium text-foreground">{currencyFormatter.format(oldUnitCost)}</span>
+          /unit
+        </p>
+        <div className="flex flex-col gap-2">
+          <Label htmlFor="quantity">Jumlah Diterima</Label>
+          <Input id="quantity" type="number" min={1} {...register('quantity')} />
+          {errors.quantity && <p className="text-sm text-destructive">{errors.quantity.message}</p>}
+        </div>
+        <div className="flex flex-col gap-2">
+          <Label htmlFor="total_price">Harga Total Pembelian</Label>
+          <Input id="total_price" type="number" min={0} step="0.01" {...register('total_price')} />
+          <p className="text-xs text-muted-foreground">
+            Total harga untuk seluruh jumlah yang diterima kali ini, bukan harga per unit.
+          </p>
+          {errors.total_price && <p className="text-sm text-destructive">{errors.total_price.message}</p>}
+        </div>
+        {showPreview && (
+          <div className="rounded-md border bg-muted/40 px-3 py-2 text-sm">
+            <p className="text-xs text-muted-foreground">Harga rata-rata baru (setelah digabung dengan stok lama)</p>
+            <p className="font-medium">
+              {currencyFormatter.format(newAverageCost ?? 0)} /unit &middot; {newQuantity} unit
+            </p>
+          </div>
+        )}
+        <div className="flex flex-col gap-2">
+          <Label>Supplier (opsional)</Label>
+          <Select onValueChange={(value) => setValue('supplier_id', value as string)}>
+            <SelectTrigger>
+              <SelectValue placeholder="Pilih supplier" />
+            </SelectTrigger>
+            <SelectContent>
+              {suppliers?.map((ps) => (
+                <SelectItem key={ps.supplier_id} value={String(ps.supplier_id)}>
+                  {ps.supplier_name}
+                  {ps.is_preferred && ' (Utama)'}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          {suppliers?.length === 0 && (
+            <p className="text-xs text-muted-foreground">
+              Belum ada supplier terdaftar untuk part ini — atur lewat "Pilih Supplier" di Kelola Stok.
+            </p>
+          )}
+        </div>
+        <div className="flex flex-col gap-2">
+          <Label htmlFor="notes">Catatan</Label>
+          <Textarea id="notes" placeholder="Misal: No. PO" {...register('notes')} />
+        </div>
+      </FormSheet>
+
+      <PartUnitBulkQrPrint units={newUnits} open={newUnits.length > 0} onOpenChange={(next) => !next && setNewUnits([])} />
+    </>
   )
 }

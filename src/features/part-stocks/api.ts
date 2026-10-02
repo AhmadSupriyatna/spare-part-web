@@ -1,5 +1,12 @@
 import { apiClient } from '@/lib/api-client'
+import type { NewPartUnit } from '@/components/PartUnitBulkQrPrint'
 import type { PaginatedResponse, PartStock, StockLedgerEntry } from '@/types/inventory'
+
+export interface ReceiveStockResult {
+  partStock: PartStock
+  /** Non-empty only when the received Part has_passport — see PartLifecycleService::receiveUnits(). */
+  newUnits: NewPartUnit[]
+}
 
 export interface ReceiveStockPayload {
   quantity: number
@@ -62,9 +69,9 @@ export async function fetchStockLedgerReport(
   return data.data
 }
 
-export async function receiveStock(id: number, payload: ReceiveStockPayload): Promise<PartStock> {
-  const { data } = await apiClient.post<{ data: PartStock }>(`/part-stocks/${id}/receive`, payload)
-  return data.data
+export async function receiveStock(id: number, payload: ReceiveStockPayload): Promise<ReceiveStockResult> {
+  const { data } = await apiClient.post<{ data: PartStock; new_units: NewPartUnit[] }>(`/part-stocks/${id}/receive`, payload)
+  return { partStock: data.data, newUnits: data.new_units }
 }
 
 export interface CreatePartStockPayload extends ReceiveStockPayload {
@@ -72,9 +79,9 @@ export interface CreatePartStockPayload extends ReceiveStockPayload {
 }
 
 /** Receives a part into a branch's stock for the first time — creates the part_stocks row if it doesn't exist yet (or tops it up if it does). */
-export async function createPartStock(branchId: number, payload: CreatePartStockPayload): Promise<PartStock> {
-  const { data } = await apiClient.post<{ data: PartStock }>(`/branches/${branchId}/part-stocks`, payload)
-  return data.data
+export async function createPartStock(branchId: number, payload: CreatePartStockPayload): Promise<ReceiveStockResult> {
+  const { data } = await apiClient.post<{ data: PartStock; new_units: NewPartUnit[] }>(`/branches/${branchId}/part-stocks`, payload)
+  return { partStock: data.data, newUnits: data.new_units }
 }
 
 export async function adjustStock(id: number, payload: AdjustStockPayload): Promise<PartStock> {

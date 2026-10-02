@@ -15,6 +15,7 @@ import { cn } from '@/lib/utils'
 import type { Part } from '@/types/inventory'
 import { FormSheet } from '@/components/FormSheet'
 import { Button } from '@/components/ui/button'
+import { Checkbox } from '@/components/ui/checkbox'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
@@ -62,6 +63,7 @@ export function PartFormDialog({ part, trigger, open: openProp, onOpenChange: on
       replacement_strategy: part?.replacement_strategy,
       // Unlike replacement_strategy, this one has a safe default.
       minimum_stock_strategy: part?.minimum_stock_strategy ?? 'standard',
+      has_passport: part?.has_passport ?? false,
     },
   })
 
@@ -77,6 +79,7 @@ export function PartFormDialog({ part, trigger, open: openProp, onOpenChange: on
         estimated_lifetime_hours: part?.estimated_lifetime_hours ? String(part.estimated_lifetime_hours) : '',
         replacement_strategy: part?.replacement_strategy,
         minimum_stock_strategy: part?.minimum_stock_strategy ?? 'standard',
+        has_passport: part?.has_passport ?? false,
       })
       setImageFile(null)
       setImagePreview(part?.image_url ?? null)
@@ -231,6 +234,22 @@ export function PartFormDialog({ part, trigger, open: openProp, onOpenChange: on
             </div>
           )}
         />
+      </div>
+      <div className="flex items-start gap-2.5 rounded-md border p-2.5">
+        <Controller
+          control={control}
+          name="has_passport"
+          render={({ field }) => (
+            <Checkbox id="has_passport" checked={field.value} onCheckedChange={field.onChange} className="mt-0.5" />
+          )}
+        />
+        <Label htmlFor="has_passport" className="flex flex-col items-start gap-0.5 font-normal">
+          <span className="text-sm font-medium">Lacak dengan Part Passport</span>
+          <span className="text-xs text-muted-foreground">
+            Tiap unit fisik dapat QR dan tanggal kedatangan sendiri sejak Stock In — bukan baru saat pertama
+            kali dipasang. Khusus part kritis/bernilai tinggi yang perlu ditelusuri satu per satu.
+          </span>
+        </Label>
       </div>
       {replacementStrategy === 'life_based' ? (
         <div className="flex flex-col gap-2">

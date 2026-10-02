@@ -11,6 +11,7 @@ export interface PartPayload {
   minimum_stock_strategy?: PartMinimumStockStrategy
   image?: File | null
   is_active?: boolean
+  has_passport?: boolean
 }
 
 function toFormData(payload: Partial<PartPayload>): FormData {

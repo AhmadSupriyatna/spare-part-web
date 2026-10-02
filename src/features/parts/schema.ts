@@ -61,6 +61,7 @@ export const partSchema = z.object({
     .refine((v) => !v || (Number.isInteger(Number(v)) && Number(v) >= 1), 'Harus angka lebih dari 0'),
   replacement_strategy: z.enum(['life_based', 'failure_based', 'scheduled']),
   minimum_stock_strategy: z.enum(['installed', 'standard']),
+  has_passport: z.boolean(),
 })
 
 export type PartFormValues = z.infer<typeof partSchema>

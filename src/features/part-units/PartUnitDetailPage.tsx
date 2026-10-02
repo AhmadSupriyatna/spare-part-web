@@ -71,12 +71,18 @@ export function PartUnitDetailPage() {
           description={`${unit.part_name} (${unit.item_master_no})`}
           action={
             <div className="flex items-center gap-2">
+              {unit.arrived_at && (
+                <span className="text-xs text-muted-foreground">
+                  Tiba: {new Date(unit.arrived_at).toLocaleDateString('id-ID', { dateStyle: 'medium' })}
+                </span>
+              )}
               <Badge variant={statusVariants[unit.status]}>{statusLabels[unit.status]}</Badge>
               <PartUnitQrPrint
                 unitId={unit.id}
                 partName={unit.part_name}
                 itemMasterNo={unit.item_master_no}
                 unitCode={unit.unit_code}
+                arrivedAt={unit.arrived_at}
               />
             </div>
           }

@@ -189,7 +189,9 @@ export function PartPickerSheet({
                         <SelectItem value={NEW_PART_VALUE}>Part Baru</SelectItem>
                         {availableUnits?.map((unit) => (
                           <SelectItem key={unit.id} value={String(unit.id)}>
-                            Part Bekas — Unit {unit.unit_code} (sudah dipakai {unit.percent_used ?? 0}%)
+                            {unit.install_count === 0
+                              ? `Part Baru Terdaftar — Unit ${unit.unit_code}`
+                              : `Part Bekas — Unit ${unit.unit_code} (sudah dipakai ${unit.percent_used ?? 0}%)`}
                           </SelectItem>
                         ))}
                       </SelectContent>

@@ -55,6 +55,8 @@ export interface PartUnit {
   item_master_no?: string
   unit_code: string | null
   status: PartUnitStatus
+  /** Only set for a has_passport Part's unit, stamped when it was received into stock — null for a unit that only came into existence at first install. */
+  arrived_at: string | null
   total_runtime_hours_used: number
   estimated_lifetime_hours: number | null
   percent_used: number | null
