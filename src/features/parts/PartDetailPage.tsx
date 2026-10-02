@@ -1,9 +1,23 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { ArrowLeft, MapPin, PackagePlus, Pencil, SlidersHorizontal, Trash2 } from 'lucide-react'
+import {
+  AlertTriangle,
+  ArrowLeft,
+  MapPin,
+  Package,
+  PackagePlus,
+  Pencil,
+  ScanLine,
+  SlidersHorizontal,
+  Trash2,
+  Wallet,
+  Wrench,
+} from 'lucide-react'
 import { Link, useNavigate, useParams } from 'react-router'
 import { toast } from 'sonner'
 import { Breadcrumb } from '@/components/Breadcrumb'
 import { EmptyState } from '@/components/EmptyState'
+import { Nameplate } from '@/components/Nameplate'
+import { PanelCard } from '@/components/PanelCard'
 import { fetchInstallationsForPart } from '@/features/part-installations/api'
 import { fetchUnitsForPart } from '@/features/part-units/api'
 import { fetchPart } from '@/features/parts/api'
@@ -17,6 +31,7 @@ import { fetchPartSuppliers, removePartSupplier } from '@/features/part-supplier
 import { useBranchStore } from '@/stores/branch-store'
 import { useCanManage } from '@/stores/use-has-role'
 import { cn } from '@/lib/utils'
+import type { PartUnitStatus } from '@/types/relations'
 import {
   AlertDialog,
   AlertDialogAction,
@@ -30,7 +45,7 @@ import {
 } from '@/components/ui/alert-dialog'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 
@@ -144,18 +159,20 @@ function LineMachineHeatmap({ data }: { data: { line_name: string; machine_name:
   )
 }
 
-function StatTile({ label, value, sub }: { label: string; value: string; sub?: string }) {
-  return (
-    <Card>
-      <CardHeader className="pb-2">
-        <CardTitle className="text-sm font-normal text-muted-foreground">{label}</CardTitle>
-      </CardHeader>
-      <CardContent>
-        <p className="text-2xl font-semibold">{value}</p>
-        {sub && <p className="text-xs text-muted-foreground">{sub}</p>}
-      </CardContent>
-    </Card>
-  )
+const unitStatusLabels: Record<PartUnitStatus, string> = {
+  in_service: 'Terpasang',
+  pending_repair: 'Menunggu Keputusan',
+  in_repair: 'Sedang Diperbaiki',
+  available: 'Siap Dipasang',
+  scrapped: 'Dibuang',
+}
+
+const unitStatusBadgeVariant: Record<PartUnitStatus, 'success' | 'destructive' | 'secondary' | 'warning'> = {
+  in_service: 'success',
+  pending_repair: 'warning',
+  in_repair: 'warning',
+  available: 'secondary',
+  scrapped: 'destructive',
 }
 
 export function PartDetailPage() {
@@ -220,6 +237,14 @@ export function PartDetailPage() {
 
   const activeInstallations = installations?.filter((installation) => installation.is_active) ?? []
 
+  const unitStatusCounts = (units ?? []).reduce(
+    (acc, unit) => {
+      acc[unit.status] = (acc[unit.status] ?? 0) + 1
+      return acc
+    },
+    {} as Partial<Record<PartUnitStatus, number>>,
+  )
+
   return (
     <div className="flex flex-col gap-6">
       <button
@@ -253,23 +278,74 @@ export function PartDetailPage() {
               })()}
               {strategyMeta[part.replacement_strategy].label}
             </Badge>
+            {part.has_passport && (
+              <Badge variant="outline" className="gap-1 border-primary/30 bg-primary/5 text-primary">
+                <ScanLine className="size-3" />
+                Passport
+              </Badge>
+            )}
           </div>
           {part.description && <p className="mt-2 text-muted-foreground">{part.description}</p>}
         </div>
       </div>
+
+      {part.stocks && part.stocks.length > 0 && (
+        <div className="flex flex-wrap items-center gap-1.5 text-xs">
+          <span className="text-muted-foreground">Stok di semua plant:</span>
+          {part.stocks.map((stock) => (
+            <Badge
+              key={stock.id}
+              variant={stock.branch_id === activeBranchId ? 'default' : 'outline'}
+              className="font-normal"
+            >
+              {stock.branch_name}: {stock.quantity_on_hand}
+            </Badge>
+          ))}
+        </div>
+      )}
 
       {!activeStock ? (
         <p className="text-sm text-muted-foreground">
           Part ini belum punya stok di plant yang sedang aktif — pilih plant lain untuk melihat data selengkapnya.
         </p>
       ) : (
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
-          <StatTile label="Qty Saat Ini" value={String(activeStock.quantity_on_hand)} sub={`Tersedia: ${activeStock.available_quantity}`} />
-          <StatTile label="Harga Modal" value={currencyFormatter.format(Number(activeStock.unit_cost))} />
-          <StatTile label="Lokasi" value={activeStock.location_code ?? 'Belum ditempatkan'} />
-          <StatTile
+        <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-3 lg:grid-cols-6">
+          <Nameplate
+            label="Qty Saat Ini"
+            value={activeStock.quantity_on_hand}
+            sub={`Tersedia: ${activeStock.available_quantity}`}
+            icon={Package}
+          />
+          <Nameplate
+            label="Harga Modal"
+            value={currencyFormatter.format(Number(activeStock.unit_cost))}
+            sub="Harga modal rata-rata per unit"
+            icon={Wallet}
+          />
+          <Nameplate
+            label="Stok Minimum"
+            value={activeStock.minimum_stock}
+            sub="Ambang kritis/peringatan"
+            icon={SlidersHorizontal}
+          />
+          <Nameplate
+            label="Lokasi"
+            value={activeStock.location_code ?? '-'}
+            sub={activeStock.location_code ? 'Lokasi penyimpanan' : 'Belum ditempatkan'}
+            icon={MapPin}
+          />
+          <Nameplate
             label="Status"
             value={activeStock.is_critical ? 'Kritis' : activeStock.is_warning ? 'Peringatan' : 'Normal'}
+            sub="Dibanding stok minimum"
+            icon={AlertTriangle}
+            tone={activeStock.is_critical ? 'destructive' : activeStock.is_warning ? 'warning' : 'default'}
+          />
+          <Nameplate
+            label="Terpasang"
+            value={activeStock.active_installation_count}
+            sub="Equipment yang pakai part ini"
+            icon={Wrench}
           />
         </div>
       )}
@@ -319,33 +395,35 @@ export function PartDetailPage() {
 
       {activeStock && (
         <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
-          <Card>
+          <PanelCard>
             <CardHeader>
               <CardTitle className="text-sm font-medium">Pemakaian per Bulan (12 Bulan Terakhir)</CardTitle>
             </CardHeader>
             <CardContent>
               {analyticsLoading ? <Skeleton className="h-28 w-full" /> : <MonthlyUsageChart data={analytics?.monthly_usage ?? []} />}
             </CardContent>
-          </Card>
+          </PanelCard>
 
-          <Card>
+          <PanelCard>
             <CardHeader>
               <CardTitle className="text-sm font-medium">Sebaran Pemakaian — Line &times; Mesin</CardTitle>
             </CardHeader>
             <CardContent>
               {analyticsLoading ? <Skeleton className="h-28 w-full" /> : <LineMachineHeatmap data={analytics?.line_machine_heatmap ?? []} />}
             </CardContent>
-          </Card>
+          </PanelCard>
         </div>
       )}
 
       {activeStock && (
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-          <StatTile
-            label="Rata-rata Umur Pakai (jam)"
-            value={analytics?.average_lifetime_hours != null ? String(analytics.average_lifetime_hours) : '-'}
+        <div className="grid grid-cols-2 gap-2.5">
+          <Nameplate
+            label="Rata-rata Umur Pakai"
+            value={analytics?.average_lifetime_hours != null ? `${analytics.average_lifetime_hours} jam` : '-'}
+            icon={Wrench}
+            loading={analyticsLoading}
             sub={(() => {
-              if (!analytics) return undefined
+              if (!analytics) return ''
               const base = `Dari ${analytics.installations_sampled} pemasangan tercatat`
               if (
                 part.replacement_strategy === 'life_based' &&
@@ -358,15 +436,48 @@ export function PartDetailPage() {
               return base
             })()}
           />
-          <StatTile
+          <Nameplate
             label="Failure / Breakdown"
-            value={analytics ? String(analytics.failure_breakdown_count) : '-'}
+            value={analytics?.failure_breakdown_count ?? '-'}
             sub="Total laporan di plant ini"
+            icon={AlertTriangle}
+            loading={analyticsLoading}
+            tone={(analytics?.failure_breakdown_count ?? 0) > 0 ? 'warning' : 'default'}
           />
         </div>
       )}
 
-      <Card>
+      {part.has_passport && (
+        <PanelCard>
+          <CardHeader>
+            <CardTitle className="text-sm font-medium">Ringkasan Unit Passport</CardTitle>
+          </CardHeader>
+          <CardContent>
+            {unitsLoading ? (
+              <Skeleton className="h-10 w-full" />
+            ) : !units || units.length === 0 ? (
+              <EmptyState title="Belum ada unit Passport terdaftar — Stock In dulu." />
+            ) : (
+              <div className="flex flex-wrap items-center gap-2">
+                <Badge variant="outline" className="font-normal">
+                  Total: {units.length} unit
+                </Badge>
+                {(Object.keys(unitStatusLabels) as PartUnitStatus[]).map((status) => {
+                  const count = unitStatusCounts[status] ?? 0
+                  if (count === 0) return null
+                  return (
+                    <Badge key={status} variant={unitStatusBadgeVariant[status]}>
+                      {count} {unitStatusLabels[status]}
+                    </Badge>
+                  )
+                })}
+              </div>
+            )}
+          </CardContent>
+        </PanelCard>
+      )}
+
+      <PanelCard>
         <CardHeader>
           <CardTitle className="text-sm font-medium">Part Terpasang &amp; Sisa Umur Pakai</CardTitle>
         </CardHeader>
@@ -435,10 +546,10 @@ export function PartDetailPage() {
             </Table>
           )}
         </CardContent>
-      </Card>
+      </PanelCard>
 
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
-        <Card>
+        <PanelCard>
           <CardHeader>
             <CardTitle className="text-sm font-medium">Reservasi PM yang Akan Datang</CardTitle>
           </CardHeader>
@@ -468,9 +579,9 @@ export function PartDetailPage() {
               </div>
             )}
           </CardContent>
-        </Card>
+        </PanelCard>
 
-        <Card>
+        <PanelCard>
           <CardHeader>
             <CardTitle className="text-sm font-medium">Riwayat Stok</CardTitle>
           </CardHeader>
@@ -505,10 +616,10 @@ export function PartDetailPage() {
               </div>
             )}
           </CardContent>
-        </Card>
+        </PanelCard>
       </div>
 
-      <Card>
+      <PanelCard>
         <CardHeader className="flex flex-row items-center justify-between">
           <CardTitle className="text-sm font-medium">Supplier</CardTitle>
           {canManage && (
@@ -588,9 +699,9 @@ export function PartDetailPage() {
             </Table>
           )}
         </CardContent>
-      </Card>
+      </PanelCard>
 
-      <Card>
+      <PanelCard>
         <CardHeader>
           <CardTitle className="text-sm font-medium">Unit Part</CardTitle>
         </CardHeader>
@@ -618,27 +729,7 @@ export function PartDetailPage() {
                       </Link>
                     </TableCell>
                     <TableCell>
-                      <Badge
-                        variant={
-                          unit.status === 'in_service'
-                            ? 'success'
-                            : unit.status === 'scrapped'
-                              ? 'destructive'
-                              : unit.status === 'available'
-                                ? 'secondary'
-                                : 'warning'
-                        }
-                      >
-                        {
-                          {
-                            in_service: 'Terpasang',
-                            pending_repair: 'Menunggu Keputusan',
-                            in_repair: 'Sedang Diperbaiki',
-                            available: 'Siap Dipasang',
-                            scrapped: 'Dibuang',
-                          }[unit.status]
-                        }
-                      </Badge>
+                      <Badge variant={unitStatusBadgeVariant[unit.status]}>{unitStatusLabels[unit.status]}</Badge>
                     </TableCell>
                     <TableCell className="text-right">{unit.percent_used != null ? `${100 - unit.percent_used}%` : '-'}</TableCell>
                     <TableCell className="text-right tabular-nums">{unit.install_count}</TableCell>
@@ -648,7 +739,7 @@ export function PartDetailPage() {
             </Table>
           )}
         </CardContent>
-      </Card>
+      </PanelCard>
     </div>
   )
 }

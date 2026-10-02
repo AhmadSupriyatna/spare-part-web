@@ -3,10 +3,9 @@ import { cn } from '@/lib/utils'
 import { Card } from '@/components/ui/card'
 
 /**
- * Every dashboard card wrapped in this instead of a bare `Card` — carries
- * the same corner bolt-dot motif as `Nameplate` (the "card utama" stat
- * row), so the whole page reads as one consistent plant-control-panel UI
- * rather than Nameplate being a one-off style.
+ * A `Card` with the same corner bolt-dot motif as `Nameplate`, so any page
+ * using it reads as one consistent plant-control-panel UI instead of that
+ * style being a Dashboard-only one-off.
  */
 export function PanelCard({ className, children, ...props }: ComponentProps<typeof Card>) {
   return (
