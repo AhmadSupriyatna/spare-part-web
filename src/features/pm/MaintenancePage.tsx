@@ -1,5 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { CalendarDays, ChevronLeft, ChevronRight, FileText, List, Plus, Wrench } from 'lucide-react'
+import { CalendarDays, ChevronLeft, ChevronRight, FileText, List, Wrench } from 'lucide-react'
 import { useMemo, useState } from 'react'
 import { Link, useSearchParams } from 'react-router'
 import { toast } from 'sonner'
@@ -14,7 +14,6 @@ import { TaskDetailSheet } from '@/features/pm/TaskDetailSheet'
 import { UnscheduledWorkPanel } from '@/features/pm/UnscheduledWorkPanel'
 import { WoListView } from '@/features/pm/WoListView'
 import { RepairBoard } from '@/features/part-repairs/RepairBoard'
-import { ScheduleTaskLibraryDialog } from '@/features/task-libraries/ScheduleTaskLibraryDialog'
 import { fetchTaskLibrariesForBranch, scheduleTaskLibrary } from '@/features/task-libraries/api'
 import { fetchPmTasksForBranch, rescheduleTask } from '@/features/tasks/api'
 import { useBranchStore } from '@/stores/branch-store'
@@ -318,18 +317,6 @@ export function MaintenancePage() {
                 </span>
               </div>
               <div className="flex items-center gap-2">
-                {libraries && libraries.length > 0 && (
-                  <ScheduleTaskLibraryDialog
-                    libraries={libraries}
-                    invalidateKeys={[['pm-tasks', activeBranchId]]}
-                    trigger={
-                      <Button size="sm">
-                        <Plus className="size-3.5" />
-                        Jadwalkan
-                      </Button>
-                    }
-                  />
-                )}
                 <div className="flex gap-1">
                   <Button variant="outline" size="icon-sm" aria-label="Bulan sebelumnya" onClick={() => shiftMonth(-1)}>
                     <ChevronLeft />
@@ -591,6 +578,7 @@ export function MaintenancePage() {
             libraries={libraries}
             fp3Requests={fp3Requests}
             isLoading={fp3Loading}
+            invalidateKeys={[['pm-tasks', activeBranchId]]}
             onDragLibraryStart={setDraggingLibrary}
             onDragFp3Start={setDraggingFp3}
             onDragEnd={() => {

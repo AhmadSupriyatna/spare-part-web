@@ -1,15 +1,18 @@
 import { useMemo, useState } from 'react'
 import { CalendarPlus, Search } from 'lucide-react'
 import type { Fp3Request } from '@/features/fp3/api'
+import { ScheduleTaskLibraryDialog } from '@/features/task-libraries/ScheduleTaskLibraryDialog'
 import type { TaskLibrary } from '@/types/pm'
 import { EmptyState } from '@/components/EmptyState'
 import { Badge } from '@/components/ui/badge'
+import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 
 interface UnscheduledWorkPanelProps {
   libraries: TaskLibrary[] | undefined
   fp3Requests: Fp3Request[] | undefined
   isLoading: boolean
+  invalidateKeys: unknown[][]
   onDragLibraryStart: (library: TaskLibrary) => void
   onDragFp3Start: (fp3: Fp3Request) => void
   onDragEnd: () => void
@@ -22,14 +25,17 @@ interface UnscheduledWorkPanelProps {
  * schedule yet, which never appears on the grid at all otherwise —
  * "Manual" (schedule_type: none) Task Library recipes, always available to
  * re-run, and FP3 requests nobody's scheduled or claimed yet — each
- * draggable onto a calendar day (see MaintenancePage's handleDrop) or, on
- * touch devices with no drag support, still visible here to schedule from
- * the "Jadwalkan"/"Terima" actions elsewhere.
+ * draggable onto a calendar day (see MaintenancePage's handleDrop), or — on
+ * touch devices with no drag support, or just to jump straight to a date
+ * without scrolling the calendar — via each Task Library card's own date
+ * icon. There used to be a separate toolbar "Jadwalkan" button doing the
+ * exact same thing as dragging a card here; removed as redundant.
  */
 export function UnscheduledWorkPanel({
   libraries,
   fp3Requests,
   isLoading,
+  invalidateKeys,
   onDragLibraryStart,
   onDragFp3Start,
   onDragEnd,
@@ -67,7 +73,9 @@ export function UnscheduledWorkPanel({
     <div className="flex flex-col gap-3 rounded-lg border p-3">
       <div>
         <h2 className="text-sm font-medium">Pekerjaan Manual Belum Terjadwal</h2>
-        <p className="text-xs text-muted-foreground">Seret ke tanggal di kalender untuk menjadwalkan.</p>
+        <p className="text-xs text-muted-foreground">
+          Seret ke tanggal di kalender, atau pakai ikon kalender di kartu untuk pilih tanggal langsung.
+        </p>
       </div>
 
       <div className="relative">
@@ -106,9 +114,25 @@ export function UnscheduledWorkPanel({
                 >
                   <div className="flex items-start justify-between gap-2">
                     <span className="min-w-0 truncate font-medium">{library.title}</span>
-                    <Badge variant="default" className="shrink-0">
-                      Task Library
-                    </Badge>
+                    <div className="flex shrink-0 items-center gap-1">
+                      <Badge variant="default">Task Library</Badge>
+                      <ScheduleTaskLibraryDialog
+                        libraries={[library]}
+                        defaultLibraryId={library.id}
+                        invalidateKeys={invalidateKeys}
+                        trigger={
+                          <Button
+                            variant="ghost"
+                            size="icon-sm"
+                            draggable={false}
+                            aria-label={`Pilih tanggal untuk ${library.title}`}
+                            title="Pilih tanggal"
+                          >
+                            <CalendarPlus className="size-3.5" />
+                          </Button>
+                        }
+                      />
+                    </div>
                   </div>
                   <p className="truncate text-xs text-muted-foreground">
                     {library.equipment_name} · {library.machine_name} · {library.line_name}
