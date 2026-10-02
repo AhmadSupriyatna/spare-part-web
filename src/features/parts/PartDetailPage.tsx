@@ -1,6 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { ArrowLeft, MapPin, PackagePlus, Pencil, SlidersHorizontal, Trash2 } from 'lucide-react'
-import { Link, useParams } from 'react-router'
+import { Link, useNavigate, useParams } from 'react-router'
 import { toast } from 'sonner'
 import { Breadcrumb } from '@/components/Breadcrumb'
 import { EmptyState } from '@/components/EmptyState'
@@ -160,6 +160,7 @@ function StatTile({ label, value, sub }: { label: string; value: string; sub?: s
 
 export function PartDetailPage() {
   const { id } = useParams<{ id: string }>()
+  const navigate = useNavigate()
   const partId = Number(id)
   const activeBranchId = useBranchStore((state) => state.activeBranchId)
   const canManage = useCanManage()
@@ -221,10 +222,14 @@ export function PartDetailPage() {
 
   return (
     <div className="flex flex-col gap-6">
-      <Link to="/stock" className="flex w-fit items-center gap-1 text-sm text-muted-foreground hover:text-foreground">
+      <button
+        type="button"
+        onClick={() => navigate(-1)}
+        className="flex w-fit items-center gap-1 text-sm text-muted-foreground hover:text-foreground"
+      >
         <ArrowLeft className="size-4" />
-        Kembali ke Workspace
-      </Link>
+        Kembali
+      </button>
 
       <div className="flex gap-4">
         {part.image_url ? (
