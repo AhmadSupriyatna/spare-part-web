@@ -34,7 +34,7 @@ export function InstallationMultiSelectPicker({
 
   return (
     <div className="flex flex-col items-end gap-1.5">
-      <p className="text-[11px] text-muted-foreground">Pilih unit yang benar-benar akan diganti:</p>
+      <p className="text-[11px] text-muted-foreground">Pilih posisi yang benar-benar akan diganti:</p>
       <div className="flex flex-wrap justify-end gap-1.5">
         {sorted.map((installation) => {
           const selected = selectedIds.includes(installation.id)
@@ -51,7 +51,7 @@ export function InstallationMultiSelectPicker({
                 selected && 'border-primary bg-primary/5',
               )}
             >
-              <span className="font-medium">Unit {installation.slot_label ?? '?'}</span>
+              <span className="font-medium">Posisi {installation.slot_label ?? '?'}</span>
               <span className="text-[10px] font-normal text-muted-foreground">
                 {installation.age_in_days} hari · {installation.percent_used ?? '-'}% terpakai
               </span>

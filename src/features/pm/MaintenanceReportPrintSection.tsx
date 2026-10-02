@@ -76,7 +76,7 @@ function detailRowsFor(task: Task): DetailRow[] {
   for (const check of partChecks) {
     const partLabel = check.part_name ?? `Part #${check.part_id}`
     const isDuplicatePart = (countByPartId.get(check.part_id) ?? 0) > 1
-    const unitSuffix = isDuplicatePart && check.slot_label ? ` — Unit ${check.slot_label}` : ''
+    const unitSuffix = isDuplicatePart && check.slot_label ? ` — Posisi ${check.slot_label}` : ''
     const outcome = !isDone
       ? 'Direncanakan diganti.'
       : check.is_replaced

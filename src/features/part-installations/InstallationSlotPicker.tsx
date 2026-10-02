@@ -15,7 +15,7 @@ interface InstallationSlotPickerProps {
  * PartUnit.unit_code, which is a global running count across the whole
  * part catalog and not fit to show as a stable "address"). It survives a
  * replacement — the new installation inherits the old one's slot_label —
- * so "Unit A" means the same position over time, visible wherever
+ * so "Posisi A" means the same position over time, visible wherever
  * installed parts are listed, not just inside this picker. Shared between
  * the Workspace WO checklist and the breakdown approval board, since both
  * hit the exact same "which installation is this closing out" ambiguity
@@ -38,7 +38,7 @@ export function InstallationSlotPicker({ installations, onSelect, disabled }: In
           onClick={() => onSelect(installation)}
           className="h-auto flex-col items-start gap-0 py-1.5"
         >
-          <span className="font-medium">Unit {installation.slot_label ?? '?'}</span>
+          <span className="font-medium">Posisi {installation.slot_label ?? '?'}</span>
           <span className="text-[10px] font-normal text-muted-foreground">
             {installation.age_in_days} hari · {installation.percent_used ?? '-'}% terpakai
           </span>

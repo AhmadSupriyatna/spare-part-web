@@ -111,7 +111,7 @@ export function InstalledPartsPanel({ equipmentId }: { equipmentId: number }) {
               // global-per-part identity) stays reserved for that unit's own
               // detail page, linked to below.
               const label = [
-                group.installations.length > 1 ? `Unit ${installation.slot_label ?? '?'}` : null,
+                group.installations.length > 1 ? `Posisi ${installation.slot_label ?? '?'}` : null,
                 installation.percent_used != null ? `${Math.round(installation.percent_used)}%` : null,
               ]
                 .filter(Boolean)
