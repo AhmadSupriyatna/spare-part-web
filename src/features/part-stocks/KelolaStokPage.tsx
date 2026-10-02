@@ -10,6 +10,7 @@ import {
   Plus,
   Printer,
   QrCode,
+  ScanLine,
   Search,
   SlidersHorizontal,
   Trash2,
@@ -106,6 +107,17 @@ function StrategyBadge({ part }: { part: Part | undefined }) {
   )
 }
 
+/** "Part Passport" — flags a part whose units are tracked individually from Stock In, so replacing it during PM requires a QR scan instead of an auto-pick. */
+function PassportBadge({ part }: { part: Part | undefined }) {
+  if (!part?.has_passport) return null
+  return (
+    <Badge variant="outline" className="shrink-0 gap-1 border-primary/30 bg-primary/5 text-[10px] text-primary">
+      <ScanLine className="size-3" />
+      Passport
+    </Badge>
+  )
+}
+
 /** Left-edge stock-health strip — a quick traffic-light read (red/amber/green) beside the numeric badges, per request. */
 function healthBorderClass(stock: PartStock): string {
   if (stock.is_critical) return 'border-l-destructive'
@@ -186,6 +198,7 @@ function StockRow({ stock, part, branchId, canManage, selected, onToggleSelect }
               {part?.name ?? stock.part_name}
             </Link>
             <StrategyBadge part={part} />
+            <PassportBadge part={part} />
           </div>
           <p className="truncate font-mono text-xs text-muted-foreground">{part?.item_master_no ?? stock.item_master_no}</p>
         </div>
@@ -330,6 +343,7 @@ function UnstockedPartRow({ part, branchId }: UnstockedPartRowProps) {
           <div className="flex flex-wrap items-center gap-1.5">
             <p className="truncate font-medium text-muted-foreground">{part.name}</p>
             <StrategyBadge part={part} />
+            <PassportBadge part={part} />
           </div>
           <p className="truncate font-mono text-xs text-muted-foreground">{part.item_master_no}</p>
         </div>
