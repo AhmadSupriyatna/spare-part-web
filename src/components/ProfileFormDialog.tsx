@@ -1,12 +1,13 @@
 import { zodResolver } from '@hookform/resolvers/zod'
 import { useMutation } from '@tanstack/react-query'
-import { useEffect } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useForm } from 'react-hook-form'
 import { toast } from 'sonner'
 import { z } from 'zod'
 import { updateProfile } from '@/features/auth/api'
 import { useAuthStore } from '@/stores/auth-store'
 import { FormSheet } from '@/components/FormSheet'
+import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 
@@ -49,6 +50,9 @@ interface ProfileFormDialogProps {
 export function ProfileFormDialog({ open, onOpenChange }: ProfileFormDialogProps) {
   const user = useAuthStore((state) => state.user)
   const updateUser = useAuthStore((state) => state.updateUser)
+  const [avatarFile, setAvatarFile] = useState<File | null>(null)
+  const [avatarPreview, setAvatarPreview] = useState<string | null>(user?.avatar_url ?? null)
+  const fileInputRef = useRef<HTMLInputElement>(null)
 
   const defaultValues: ProfileFormValues = { name: user?.name ?? '', current_password: '', password: '' }
 
@@ -63,9 +67,19 @@ export function ProfileFormDialog({ open, onOpenChange }: ProfileFormDialogProps
   })
 
   useEffect(() => {
-    if (open) reset(defaultValues)
+    if (open) {
+      reset(defaultValues)
+      setAvatarFile(null)
+      setAvatarPreview(user?.avatar_url ?? null)
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open, user, reset])
+
+  function handleAvatarChange(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0] ?? null
+    setAvatarFile(file)
+    setAvatarPreview(file ? URL.createObjectURL(file) : (user?.avatar_url ?? null))
+  }
 
   const mutation = useMutation({
     mutationFn: (values: ProfileFormValues) =>
@@ -73,6 +87,7 @@ export function ProfileFormDialog({ open, onOpenChange }: ProfileFormDialogProps
         name: values.name,
         current_password: values.current_password || undefined,
         password: values.password || undefined,
+        avatar: avatarFile,
       }),
     onSuccess: (updated) => {
       updateUser(updated)
@@ -93,11 +108,25 @@ export function ProfileFormDialog({ open, onOpenChange }: ProfileFormDialogProps
       title="Edit Profil"
       open={open}
       onOpenChange={onOpenChange}
-      isDirty={isDirty}
+      isDirty={isDirty || avatarFile !== null}
       onSubmit={handleSubmit((values) => mutation.mutate(values))}
       submitLabel="Simpan"
       isSubmitting={mutation.isPending}
     >
+      <div className="flex items-center gap-3">
+        {avatarPreview ? (
+          <img src={avatarPreview} alt="Pratinjau" className="size-16 shrink-0 rounded-full border object-cover" />
+        ) : (
+          <div className="flex size-16 shrink-0 items-center justify-center rounded-full border bg-muted text-xs text-muted-foreground">
+            Foto
+          </div>
+        )}
+        <Button type="button" variant="outline" size="sm" onClick={() => fileInputRef.current?.click()}>
+          {avatarPreview ? 'Ganti Foto' : 'Pilih Foto'}
+        </Button>
+        <input ref={fileInputRef} type="file" accept="image/*" className="hidden" onChange={handleAvatarChange} />
+      </div>
+
       <div className="flex flex-col gap-2">
         <Label htmlFor="profile-name">Nama</Label>
         <Input id="profile-name" {...register('name')} />
