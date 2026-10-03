@@ -124,6 +124,8 @@ export interface ScheduledVsFailureTrendPoint {
 export interface DashboardAnalytics {
   /** The calendar year every time-windowed chart below is scoped to — echoes back the `year` query param (defaults to the current year). */
   year: number
+  /** Every year with at least some activity for this branch, newest first, plus the current year unconditionally — the year dropdown's option list. */
+  available_years: number[]
   failure_trend: MonthlyTrendPoint[]
   cost_heatmap: CostHeatmapCell[]
   budget_projection: BudgetProjection

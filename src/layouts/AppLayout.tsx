@@ -37,6 +37,7 @@ import { ProfileMenu } from '@/components/ProfileMenu'
 import { ThemeToggle } from '@/components/ThemeToggle'
 import { logout as logoutRequest } from '@/features/auth/api'
 import { fetchCompanySetting } from '@/features/settings/api'
+import { HeaderExtraSlotProvider } from '@/layouts/HeaderExtraSlot'
 import { cn } from '@/lib/utils'
 import { useAuthStore } from '@/stores/auth-store'
 import { useSheetStackStore } from '@/stores/sheet-stack-store'
@@ -185,6 +186,7 @@ export function AppLayout() {
   const [openGroup, setOpenGroup] = useState<string | null>(null)
   const [profileDialogOpen, setProfileDialogOpen] = useState(false)
   const [mobileMoreOpen, setMobileMoreOpen] = useState(false)
+  const [headerExtraSlot, setHeaderExtraSlot] = useState<HTMLDivElement | null>(null)
 
   const { data: companySetting } = useQuery({
     queryKey: ['settings', 'company'],
@@ -251,6 +253,7 @@ export function AppLayout() {
   }
 
   return (
+    <HeaderExtraSlotProvider value={headerExtraSlot}>
     <div className="flex h-svh overflow-hidden">
       <aside className="hidden h-full w-16 shrink-0 flex-col items-center border-r bg-sidebar text-sidebar-foreground sm:flex">
         <div className="h-[3px] w-full shrink-0 bg-warning" />
@@ -370,6 +373,7 @@ export function AppLayout() {
               <span className="relative inline-flex size-2 rounded-full bg-success" />
             </span>
             <BranchSelector />
+            <div ref={setHeaderExtraSlot} className="flex items-center gap-2" />
           </div>
           <div className="flex flex-1 justify-center">
             <GlobalSearch />
@@ -479,5 +483,6 @@ export function AppLayout() {
         </Popover>
       </nav>
     </div>
+    </HeaderExtraSlotProvider>
   )
 }

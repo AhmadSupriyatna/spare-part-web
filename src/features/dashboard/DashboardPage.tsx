@@ -16,6 +16,7 @@ import {
   Wallet,
 } from 'lucide-react'
 import { useState } from 'react'
+import { createPortal } from 'react-dom'
 import { fetchDashboardAnalytics } from '@/features/dashboard/api'
 import { BudgetProjectionChart } from '@/features/dashboard/BudgetProjectionChart'
 import { HierarchicalSunburst } from '@/features/dashboard/HierarchicalSunburst'
@@ -34,6 +35,7 @@ import { fetchFp3RequestsForBranch } from '@/features/fp3/api'
 import { fetchParts } from '@/features/parts/api'
 import { fetchPartStocksForBranch } from '@/features/part-stocks/api'
 import { fetchPmTasksForBranch } from '@/features/tasks/api'
+import { useHeaderExtraSlot } from '@/layouts/HeaderExtraSlot'
 import { useBranchStore } from '@/stores/branch-store'
 import { useHasRole } from '@/stores/use-has-role'
 import { QueryErrorState } from '@/components/QueryErrorState'
@@ -48,11 +50,11 @@ function compactRupiah(value: number): string {
 }
 
 const CURRENT_YEAR = new Date().getFullYear()
-const YEAR_OPTIONS = Array.from({ length: 5 }, (_, i) => CURRENT_YEAR - i)
 
 export function DashboardPage() {
   const activeBranchId = useBranchStore((state) => state.activeBranchId)
   const canViewCost = useHasRole(['admin_spare_part', 'supervisor', 'superadmin'])
+  const headerExtraSlot = useHeaderExtraSlot()
   const [year, setYear] = useState(CURRENT_YEAR)
 
   const {
@@ -109,6 +111,7 @@ export function DashboardPage() {
     enabled: !!activeBranchId && canViewCost,
   })
 
+  const yearOptions = analytics?.available_years ?? [CURRENT_YEAR]
   const hasError = partsError || stocksError || pmTasksError || fp3Error || (canViewCost && analyticsError)
 
   function retryAll() {
@@ -143,6 +146,27 @@ export function DashboardPage() {
 
   return (
     <div className="flex flex-col gap-4">
+      {activeBranchId &&
+        canViewCost &&
+        headerExtraSlot &&
+        createPortal(
+          <>
+            <span className="text-xs text-muted-foreground">Tahun</span>
+            <Select value={String(year)} onValueChange={(value) => setYear(Number(value))}>
+              <SelectTrigger className="w-24" size="sm">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {yearOptions.map((y) => (
+                  <SelectItem key={y} value={String(y)}>
+                    {y}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </>,
+          headerExtraSlot,
+        )}
       {!activeBranchId ? (
         <p className="text-sm text-muted-foreground">
           Pilih plant di header untuk melihat ringkasan stok & breakdown plant tersebut.
@@ -151,24 +175,6 @@ export function DashboardPage() {
         <QueryErrorState onRetry={retryAll} title="Gagal memuat data Dashboard" />
       ) : (
         <>
-          {canViewCost && (
-            <div className="flex items-center justify-end gap-2">
-              <span className="text-xs text-muted-foreground">Tahun</span>
-              <Select value={String(year)} onValueChange={(value) => setYear(Number(value))}>
-                <SelectTrigger className="w-24" size="sm">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {YEAR_OPTIONS.map((y) => (
-                    <SelectItem key={y} value={String(y)}>
-                      {y}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-          )}
-
           <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-3 lg:grid-cols-6">
             {canViewCost && (
               <Nameplate
