@@ -121,6 +121,20 @@ export interface ScheduledVsFailureTrendPoint {
   failure_count: number
 }
 
+/** One leaf of month+Line spend — see MonthlyCostStackedChart's "Per Line" mode. */
+export interface MonthlyCostByLineRow {
+  month: string
+  line_name: string
+  cost: string
+}
+
+/** Same month-bucketing as MonthlyCostByLineRow, fixed PM/Failure split instead of a flexible line list — see MonthlyCostStackedChart's "PM vs Schedule" mode. */
+export interface MonthlyCostByPmFailureRow {
+  month: string
+  pm_cost: string
+  failure_cost: string
+}
+
 export interface DashboardAnalytics {
   /** The calendar year every time-windowed chart below is scoped to — echoes back the `year` query param (defaults to the current year). */
   year: number
@@ -143,6 +157,8 @@ export interface DashboardAnalytics {
   installation_sunburst: InstallationSunburstRow[]
   cost_sunburst: CostSunburstRow[]
   scheduled_vs_failure_trend: ScheduledVsFailureTrendPoint[]
+  monthly_cost_by_line: MonthlyCostByLineRow[]
+  monthly_cost_by_pm_failure: MonthlyCostByPmFailureRow[]
 }
 
 export async function fetchDashboardAnalytics(branchId: number, year: number): Promise<DashboardAnalytics> {

@@ -23,7 +23,7 @@ import { HierarchicalSunburst } from '@/features/dashboard/HierarchicalSunburst'
 import { InventoryHealthBar } from '@/features/dashboard/InventoryHealthBar'
 import { LifeBasedList } from '@/features/dashboard/LifeBasedList'
 import { MaintenancePerformanceChart } from '@/features/dashboard/MaintenancePerformanceChart'
-import { MonthlyCostTrendChart } from '@/features/dashboard/MonthlyCostTrendChart'
+import { MonthlyCostStackedChart } from '@/features/dashboard/MonthlyCostStackedChart'
 import { Nameplate } from '@/components/Nameplate'
 import { PanelCard } from '@/components/PanelCard'
 import { PmVsFailureCostChart } from '@/features/dashboard/PmVsFailureCostChart'
@@ -332,6 +332,87 @@ export function DashboardPage() {
                 </PanelCard>
               </div>
 
+              <div className="grid grid-cols-1 gap-3 lg:grid-cols-4">
+                <PanelCard size="sm" className="lg:col-span-2">
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2 text-base">
+                      <PackageSearch className="size-4" />
+                      Fast vs Slow Moving Parts
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent className="flex max-h-72 flex-col gap-4 overflow-y-auto">
+                    {analyticsLoading ? (
+                      <Skeleton className="h-32 w-full" />
+                    ) : (
+                      <>
+                        <div className="flex flex-col gap-1.5">
+                          <p className="text-xs font-medium tracking-wide text-muted-foreground uppercase">Paling Sering Keluar</p>
+                          <RankedBarList
+                            items={(analytics?.part_movement.fast_moving ?? []).map((row) => ({
+                              label: row.part_name,
+                              sublabel: row.item_master_no,
+                              value: row.qty_issued ?? 0,
+                            }))}
+                            emptyMessage={`Belum ada part keluar tahun ${year}.`}
+                            barColorClass="bg-success"
+                          />
+                        </div>
+                        <div className="flex flex-col gap-1.5 border-t pt-3">
+                          <p className="text-xs font-medium tracking-wide text-muted-foreground uppercase">Jarang Bergerak</p>
+                          <RankedBarList
+                            items={(analytics?.part_movement.slow_moving ?? []).map((row) => ({
+                              label: row.part_name,
+                              sublabel: row.item_master_no,
+                              value: row.quantity_on_hand ?? 0,
+                            }))}
+                            emptyMessage="Tidak ada part yang menumpuk tanpa pergerakan."
+                            barColorClass="bg-warning"
+                          />
+                        </div>
+                      </>
+                    )}
+                  </CardContent>
+                </PanelCard>
+
+                <PanelCard size="sm" className="lg:col-span-1">
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2 text-base">
+                      <Scale className="size-4" />
+                      Sebaran Cost PM vs Failure
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    {analyticsLoading ? (
+                      <Skeleton className="h-40 w-full" />
+                    ) : (
+                      <PmVsFailureCostChart
+                        pm_cost={analytics?.pm_vs_failure_cost.pm_cost ?? '0.00'}
+                        failure_cost={analytics?.pm_vs_failure_cost.failure_cost ?? '0.00'}
+                        year={year}
+                      />
+                    )}
+                  </CardContent>
+                </PanelCard>
+
+                <PanelCard size="sm" className="lg:col-span-1">
+                  <CardHeader>
+                    <CardTitle className="text-base">Tren Biaya Bulanan</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    {analyticsLoading ? (
+                      <Skeleton className="h-60 w-full" />
+                    ) : (
+                      <MonthlyCostStackedChart
+                        byLine={analytics?.monthly_cost_by_line ?? []}
+                        byPmFailure={analytics?.monthly_cost_by_pm_failure ?? []}
+                        year={year}
+                        formatValue={(v) => compactRupiah(v)}
+                      />
+                    )}
+                  </CardContent>
+                </PanelCard>
+              </div>
+
               <PanelCard size="sm">
                 <CardHeader>
                   <CardTitle className="flex items-center gap-2 text-base">
@@ -344,8 +425,8 @@ export function DashboardPage() {
                 </CardContent>
               </PanelCard>
 
-              <div className="grid grid-cols-1 gap-3 lg:grid-cols-3">
-                <PanelCard size="sm" className="lg:col-span-1">
+              <div className="grid grid-cols-1 gap-3 lg:grid-cols-2">
+                <PanelCard size="sm">
                   <CardHeader>
                     <CardTitle className="flex items-center gap-2 text-base">
                       <Layers className="size-4" />
@@ -366,16 +447,7 @@ export function DashboardPage() {
                   </CardContent>
                 </PanelCard>
 
-                <PanelCard size="sm" className="lg:col-span-1">
-                  <CardHeader>
-                    <CardTitle className="text-base">Tren Biaya Bulanan</CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    {analyticsLoading ? <Skeleton className="h-32 w-full" /> : <MonthlyCostTrendChart data={analytics?.failure_trend ?? []} year={year} />}
-                  </CardContent>
-                </PanelCard>
-
-                <PanelCard size="sm" className="lg:col-span-1">
+                <PanelCard size="sm">
                   <CardHeader>
                     <CardTitle className="text-base">Radial Map Failure</CardTitle>
                   </CardHeader>
@@ -417,26 +489,6 @@ export function DashboardPage() {
                 <PanelCard size="sm">
                   <CardHeader>
                     <CardTitle className="flex items-center gap-2 text-base">
-                      <Scale className="size-4" />
-                      Sebaran Cost PM vs Failure
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    {analyticsLoading ? (
-                      <Skeleton className="h-40 w-full" />
-                    ) : (
-                      <PmVsFailureCostChart
-                        pm_cost={analytics?.pm_vs_failure_cost.pm_cost ?? '0.00'}
-                        failure_cost={analytics?.pm_vs_failure_cost.failure_cost ?? '0.00'}
-                        year={year}
-                      />
-                    )}
-                  </CardContent>
-                </PanelCard>
-
-                <PanelCard size="sm">
-                  <CardHeader>
-                    <CardTitle className="flex items-center gap-2 text-base">
                       <Coins className="size-4" />
                       Part Cost Tertinggi
                     </CardTitle>
@@ -457,9 +509,7 @@ export function DashboardPage() {
                     )}
                   </CardContent>
                 </PanelCard>
-              </div>
 
-              <div className="grid grid-cols-1 gap-3 lg:grid-cols-2">
                 <PanelCard size="sm">
                   <CardHeader>
                     <CardTitle className="flex items-center gap-2 text-base">
@@ -476,47 +526,6 @@ export function DashboardPage() {
                         emptyMessage="Tidak ada WO yang sedang diklaim siapa pun."
                         barColorClass="bg-primary"
                       />
-                    )}
-                  </CardContent>
-                </PanelCard>
-
-                <PanelCard size="sm">
-                  <CardHeader>
-                    <CardTitle className="flex items-center gap-2 text-base">
-                      <PackageSearch className="size-4" />
-                      Fast vs Slow Moving Parts
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent className="flex flex-col gap-4">
-                    {analyticsLoading ? (
-                      <Skeleton className="h-32 w-full" />
-                    ) : (
-                      <>
-                        <div className="flex flex-col gap-1.5">
-                          <p className="text-xs font-medium tracking-wide text-muted-foreground uppercase">Paling Sering Keluar</p>
-                          <RankedBarList
-                            items={(analytics?.part_movement.fast_moving ?? []).map((row) => ({
-                              label: row.part_name,
-                              sublabel: row.item_master_no,
-                              value: row.qty_issued ?? 0,
-                            }))}
-                            emptyMessage={`Belum ada part keluar tahun ${year}.`}
-                            barColorClass="bg-success"
-                          />
-                        </div>
-                        <div className="flex flex-col gap-1.5 border-t pt-3">
-                          <p className="text-xs font-medium tracking-wide text-muted-foreground uppercase">Jarang Bergerak</p>
-                          <RankedBarList
-                            items={(analytics?.part_movement.slow_moving ?? []).map((row) => ({
-                              label: row.part_name,
-                              sublabel: row.item_master_no,
-                              value: row.quantity_on_hand ?? 0,
-                            }))}
-                            emptyMessage="Tidak ada part yang menumpuk tanpa pergerakan."
-                            barColorClass="bg-warning"
-                          />
-                        </div>
-                      </>
                     )}
                   </CardContent>
                 </PanelCard>
