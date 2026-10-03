@@ -27,7 +27,6 @@ import { MonthlyCostStackedChart } from '@/features/dashboard/MonthlyCostStacked
 import { Nameplate } from '@/components/Nameplate'
 import { PanelCard } from '@/components/PanelCard'
 import { PmVsFailureCostChart } from '@/features/dashboard/PmVsFailureCostChart'
-import { RadialMapChart } from '@/features/dashboard/RadialMapChart'
 import { RankedBarList } from '@/features/dashboard/RankedBarList'
 import { ScheduledVsFailureTrendChart } from '@/features/dashboard/ScheduledVsFailureTrendChart'
 import { StockMovementTrendChart } from '@/features/dashboard/StockMovementTrendChart'
@@ -413,79 +412,19 @@ export function DashboardPage() {
                 </PanelCard>
               </div>
 
-              <PanelCard size="sm">
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2 text-base">
-                    <Sparkles className="size-4" />
-                    Life Based Part Performance
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  {analyticsLoading ? <Skeleton className="h-56 w-full" /> : <LifeBasedList parts={analytics?.at_risk_parts ?? []} />}
-                </CardContent>
-              </PanelCard>
-
-              <div className="grid grid-cols-1 gap-3 lg:grid-cols-2">
+              <div className="grid grid-cols-1 gap-3 lg:grid-cols-3">
                 <PanelCard size="sm">
                   <CardHeader>
                     <CardTitle className="flex items-center gap-2 text-base">
-                      <Layers className="size-4" />
-                      Mapping Instalasi Part
+                      <Sparkles className="size-4" />
+                      Life Based Part Performance
                     </CardTitle>
                   </CardHeader>
                   <CardContent>
-                    {analyticsLoading ? (
-                      <Skeleton className="h-52 w-full" />
-                    ) : (
-                      <RadialMapChart
-                        data={analytics?.installation_map ?? []}
-                        centerLabel="Terpasang"
-                        emptyMessage="Belum ada part terpasang di plant ini."
-                        ariaLabel="Peta radial instalasi part per Line dan Mesin"
-                      />
-                    )}
+                    {analyticsLoading ? <Skeleton className="h-56 w-full" /> : <LifeBasedList parts={analytics?.at_risk_parts ?? []} />}
                   </CardContent>
                 </PanelCard>
 
-                <PanelCard size="sm">
-                  <CardHeader>
-                    <CardTitle className="text-base">Radial Map Failure</CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    {analyticsLoading ? (
-                      <Skeleton className="h-52 w-full" />
-                    ) : (
-                      <RadialMapChart
-                        data={analytics?.failure_radial ?? []}
-                        centerLabel="Kejadian"
-                        emptyMessage={`Belum ada failure/breakdown tercatat tahun ${year}.`}
-                        ariaLabel="Peta radial failure per Line dan Mesin"
-                      />
-                    )}
-                  </CardContent>
-                </PanelCard>
-              </div>
-
-              <PanelCard size="sm">
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2 text-base">
-                    <Wallet className="size-4" />
-                    Proyeksi Biaya vs Realisasi ({analytics?.budget_projection.year ?? year})
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  {analyticsLoading ? (
-                    <Skeleton className="h-40 w-full" />
-                  ) : (
-                    <BudgetProjectionChart
-                      rows={analytics?.budget_projection.rows ?? []}
-                      plannedTotal={analytics?.budget_projection.planned_total ?? '0.00'}
-                    />
-                  )}
-                </CardContent>
-              </PanelCard>
-
-              <div className="grid grid-cols-1 gap-3 lg:grid-cols-2">
                 <PanelCard size="sm">
                   <CardHeader>
                     <CardTitle className="flex items-center gap-2 text-base">
@@ -530,6 +469,25 @@ export function DashboardPage() {
                   </CardContent>
                 </PanelCard>
               </div>
+
+              <PanelCard size="sm">
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2 text-base">
+                    <Wallet className="size-4" />
+                    Proyeksi Biaya vs Realisasi ({analytics?.budget_projection.year ?? year})
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  {analyticsLoading ? (
+                    <Skeleton className="h-40 w-full" />
+                  ) : (
+                    <BudgetProjectionChart
+                      rows={analytics?.budget_projection.rows ?? []}
+                      plannedTotal={analytics?.budget_projection.planned_total ?? '0.00'}
+                    />
+                  )}
+                </CardContent>
+              </PanelCard>
             </>
           )}
         </>
