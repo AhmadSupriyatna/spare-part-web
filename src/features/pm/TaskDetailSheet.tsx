@@ -1,7 +1,22 @@
-import { Printer } from 'lucide-react'
+import { useMutation, useQueryClient } from '@tanstack/react-query'
+import { CalendarClock, Printer } from 'lucide-react'
+import { useState } from 'react'
 import { Link } from 'react-router'
+import { toast } from 'sonner'
 import { taskSource, taskSourceLabel } from '@/features/pm/taskColors'
+import { RescheduleTaskDialog } from '@/features/pm/RescheduleTaskDialog'
+import { cancelTask } from '@/features/tasks/api'
 import type { Task, TaskStatus } from '@/types/tasks'
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Sheet, SheetContent, SheetDescription, SheetTitle } from '@/components/ui/sheet'
@@ -26,12 +41,35 @@ interface TaskDetailSheetProps {
 }
 
 /**
- * Read-only push-drawer for a PM task clicked on the calendar. WOs are no
- * longer handed to a specific person from here — Engineer/Supervisor pick
- * a WO up themselves by pressing Mulai in the Workspace, so "Ditugaskan ke"
- * just reflects whoever has started working it (or "Belum dikerjakan").
+ * Push-drawer for a PM task clicked on the calendar. WOs are no longer
+ * handed to a specific person from here — Engineer/Supervisor pick a WO up
+ * themselves by pressing Mulai in the Workspace, so "Ditugaskan ke" just
+ * reflects whoever has started working it (or "Belum dikerjakan").
+ *
+ * Reschedule/Batalkan are only offered for a Task Library-sourced task
+ * (taskSource(task) === 'library') and only while it's still pending — per
+ * request, not extended to Part Lifetime or Breakdown tasks even though the
+ * backend itself would allow rescheduling the former (see
+ * RescheduleTaskRequest): those have their own management flows elsewhere.
  */
 export function TaskDetailSheet({ task, onOpenChange }: TaskDetailSheetProps) {
+  const queryClient = useQueryClient()
+  const [reschedulingTask, setReschedulingTask] = useState<Task | null>(null)
+  const [confirmCancelOpen, setConfirmCancelOpen] = useState(false)
+
+  const cancelMutation = useMutation({
+    mutationFn: () => cancelTask(task!.id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['pm-tasks'] })
+      toast.success('Tugas berhasil dibatalkan.')
+      setConfirmCancelOpen(false)
+      onOpenChange(false)
+    },
+    onError: () => toast.error('Gagal membatalkan tugas.'),
+  })
+
+  const canManageSchedule = !!task && taskSource(task) === 'library' && task.status === 'pending'
+
   return (
     <Sheet open={!!task} onOpenChange={onOpenChange} modal={false}>
       <SheetContent className="gap-0 p-0" showOverlay={false}>
@@ -43,7 +81,7 @@ export function TaskDetailSheet({ task, onOpenChange }: TaskDetailSheetProps) {
                 {task.equipment_name} · {task.machine_name} · {task.line_name}
               </SheetDescription>
             </div>
-            <div className="flex flex-1 flex-col gap-4 overflow-y-auto p-4">
+            <div className="scroll-thin flex flex-1 flex-col gap-4 overflow-y-auto p-4">
               <div className="flex flex-wrap items-center gap-2">
                 <Badge variant={statusVariants[task.status]}>{statusLabels[task.status]}</Badge>
                 {task.is_overdue && task.status !== 'completed' && task.status !== 'cancelled' && (
@@ -122,20 +160,52 @@ export function TaskDetailSheet({ task, onOpenChange }: TaskDetailSheetProps) {
                 </div>
               )}
 
-              <Button
-                variant="outline"
-                size="sm"
-                className="self-start"
-                nativeButton={false}
-                render={<Link to={`/pm/tasks/${task.id}/print`} />}
-              >
-                <Printer />
-                Cetak Checklist
-              </Button>
+              <div className="flex flex-wrap gap-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  nativeButton={false}
+                  render={<Link to={`/pm/tasks/${task.id}/print`} />}
+                >
+                  <Printer />
+                  Cetak Checklist
+                </Button>
+                {canManageSchedule && (
+                  <>
+                    <Button variant="outline" size="sm" onClick={() => setReschedulingTask(task)}>
+                      <CalendarClock />
+                      Reschedule
+                    </Button>
+                    <Button variant="ghost" size="sm" onClick={() => setConfirmCancelOpen(true)}>
+                      Batalkan Tugas
+                    </Button>
+                  </>
+                )}
+              </div>
             </div>
           </>
         )}
       </SheetContent>
+
+      <RescheduleTaskDialog task={reschedulingTask} onOpenChange={(open) => !open && setReschedulingTask(null)} />
+
+      <AlertDialog open={confirmCancelOpen} onOpenChange={setConfirmCancelOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Batalkan tugas ini?</AlertDialogTitle>
+            <AlertDialogDescription>
+              "{task?.title}" akan ditandai dibatalkan dan tidak lagi muncul sebagai pekerjaan terjadwal. Tindakan ini
+              tidak bisa dibatalkan.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Tidak Jadi</AlertDialogCancel>
+            <AlertDialogAction onClick={() => cancelMutation.mutate()} disabled={cancelMutation.isPending}>
+              {cancelMutation.isPending ? 'Membatalkan...' : 'Ya, Batalkan'}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </Sheet>
   )
 }

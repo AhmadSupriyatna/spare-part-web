@@ -402,7 +402,7 @@ export function AppLayout() {
         </header>
         <main
           className={cn(
-            'flex-1 overflow-y-auto p-6 pb-24 transition-[margin-right] duration-300 sm:pb-6',
+            'scroll-thin flex-1 overflow-y-auto p-6 pb-24 transition-[margin-right] duration-300 sm:pb-6',
             sheetOpenCount > 0 && 'mr-96',
           )}
         >
