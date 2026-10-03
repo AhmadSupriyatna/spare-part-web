@@ -111,7 +111,7 @@ export function MonthlyCostStackedChart({
         ))}
       </div>
 
-      <div className="flex max-h-52 flex-col gap-1.5 overflow-y-auto pr-1">
+      <div className="scroll-thin flex max-h-52 flex-col gap-1.5 overflow-y-auto pr-1">
         {rows.map((row) => {
           const total = row.segments.reduce((sum, s) => sum + s.value, 0)
           return (

@@ -340,7 +340,7 @@ export function DashboardPage() {
                       Fast vs Slow Moving Parts
                     </CardTitle>
                   </CardHeader>
-                  <CardContent className="flex max-h-72 flex-col gap-4 overflow-y-auto">
+                  <CardContent className="scroll-thin flex max-h-72 flex-col gap-4 overflow-y-auto">
                     {analyticsLoading ? (
                       <Skeleton className="h-32 w-full" />
                     ) : (
