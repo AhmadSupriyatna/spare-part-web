@@ -6,8 +6,9 @@ export function useHasRole(roles: UserRole[]): boolean {
   return userRoles.some((role) => roles.includes(role))
 }
 
+/** Master data & inventory CRUD — mirrors the `admin_spare_part|supervisor|superadmin` route group on the backend. */
 export function useCanManage(): boolean {
-  return useHasRole(['admin_spare_part', 'superadmin'])
+  return useHasRole(['admin_spare_part', 'supervisor', 'superadmin'])
 }
 
 /**
