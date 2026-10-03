@@ -176,7 +176,7 @@ export function TaskDetailSheet({ task, onOpenChange }: TaskDetailSheetProps) {
                       <CalendarClock />
                       Reschedule
                     </Button>
-                    <Button variant="ghost" size="sm" onClick={() => setConfirmCancelOpen(true)}>
+                    <Button variant="destructive" size="sm" onClick={() => setConfirmCancelOpen(true)}>
                       Batalkan Tugas
                     </Button>
                   </>
@@ -192,7 +192,7 @@ export function TaskDetailSheet({ task, onOpenChange }: TaskDetailSheetProps) {
       <AlertDialog open={confirmCancelOpen} onOpenChange={setConfirmCancelOpen}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Batalkan tugas ini?</AlertDialogTitle>
+            <AlertDialogTitle>Apakah Anda yakin?</AlertDialogTitle>
             <AlertDialogDescription>
               "{task?.title}" akan ditandai dibatalkan dan tidak lagi muncul sebagai pekerjaan terjadwal. Tindakan ini
               tidak bisa dibatalkan.
@@ -200,7 +200,11 @@ export function TaskDetailSheet({ task, onOpenChange }: TaskDetailSheetProps) {
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>Tidak Jadi</AlertDialogCancel>
-            <AlertDialogAction onClick={() => cancelMutation.mutate()} disabled={cancelMutation.isPending}>
+            <AlertDialogAction
+              variant="destructive"
+              onClick={() => cancelMutation.mutate()}
+              disabled={cancelMutation.isPending}
+            >
               {cancelMutation.isPending ? 'Membatalkan...' : 'Ya, Batalkan'}
             </AlertDialogAction>
           </AlertDialogFooter>
