@@ -50,7 +50,7 @@ interface NationalHolidayEntry {
  * calendar grid.
  */
 export async function fetchNationalHolidays(year: number): Promise<Record<string, string>> {
-  const response = await fetch(`https://api.kemendesa.link/libur-nasional/api/holidays/${year}.json`)
+  const response = await fetch(`https://tanggalmerah.upset.dev/api/holidays?year=${year}`)
   if (!response.ok) {
     throw new Error(`Gagal memuat data libur nasional (${response.status}).`)
   }
