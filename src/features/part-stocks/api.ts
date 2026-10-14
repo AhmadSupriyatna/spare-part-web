@@ -47,6 +47,7 @@ export interface StockLedgerReportEntry {
   channel: string
   quantity_change: number
   balance_after: number
+  opening_balance: number
   /** Per-transaction cost snapshot (e.g. a receiving batch's own unit cost) — distinct from PartStock's live weighted-average unit_cost. */
   unit_cost: string | null
   total_cost: string | null

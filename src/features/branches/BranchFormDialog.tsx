@@ -8,15 +8,7 @@ import { fetchCurrentUser } from '@/features/auth/api'
 import { createBranch, updateBranch } from '@/features/branches/api'
 import { useAuthStore } from '@/stores/auth-store'
 import type { Branch } from '@/types/auth'
-import { Button } from '@/components/ui/button'
-import {
-  Dialog,
-  DialogContent,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from '@/components/ui/dialog'
+import { FormSheet } from '@/components/FormSheet'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
@@ -48,7 +40,7 @@ export function BranchFormDialog({ branch, trigger }: BranchFormDialogProps) {
     register,
     handleSubmit,
     reset,
-    formState: { errors },
+    formState: { errors, isDirty },
   } = useForm<BranchFormValues>({
     resolver: zodResolver(branchSchema),
     defaultValues: {
@@ -82,19 +74,23 @@ export function BranchFormDialog({ branch, trigger }: BranchFormDialogProps) {
       const freshUser = await fetchCurrentUser()
       updateUser(freshUser)
       toast.success(isEdit ? 'Plant berhasil diperbarui.' : 'Plant berhasil ditambahkan.')
+      reset()
       setOpen(false)
     },
     onError: () => toast.error('Gagal menyimpan plant.'),
   })
 
   return (
-    <Dialog open={open} onOpenChange={setOpen}>
-      <DialogTrigger render={trigger as React.ReactElement} />
-      <DialogContent>
-        <DialogHeader>
-          <DialogTitle>{isEdit ? 'Ubah Plant' : 'Tambah Plant'}</DialogTitle>
-        </DialogHeader>
-        <form className="flex flex-col gap-4" onSubmit={handleSubmit((values) => mutation.mutate(values))}>
+    <FormSheet
+      trigger={trigger}
+      title={isEdit ? 'Ubah Plant' : 'Tambah Plant'}
+      open={open}
+      onOpenChange={setOpen}
+      isDirty={isDirty}
+      onSubmit={handleSubmit((values) => mutation.mutate(values))}
+      submitLabel="Simpan"
+      isSubmitting={mutation.isPending}
+    >
           <div className="flex flex-col gap-2">
             <Label htmlFor="code">Kode</Label>
             <Input id="code" placeholder="JKT" {...register('code')} />
@@ -122,16 +118,9 @@ export function BranchFormDialog({ branch, trigger }: BranchFormDialogProps) {
               Minimum Plant" (diatur di pendaftaran Part).
             </p>
             {errors.default_minimum_stock && (
-              <p className="text-sm text-destructive">{errors.default_minimum_stock.message}</p>
+              <p className="text-sm text-destructive">              {errors.default_minimum_stock.message}</p>
             )}
           </div>
-          <DialogFooter>
-            <Button type="submit" disabled={mutation.isPending}>
-              {mutation.isPending ? 'Menyimpan...' : 'Simpan'}
-            </Button>
-          </DialogFooter>
-        </form>
-      </DialogContent>
-    </Dialog>
+    </FormSheet>
   )
 }

@@ -18,6 +18,7 @@ import { OutsideLineMachineFormDialog } from '@/features/machines/OutsideLineMac
 import { InstalledPartsPanel } from '@/features/part-installations/InstalledPartsPanel'
 import { PartPickerSheet } from '@/features/part-installations/PartPickerSheet'
 import { useAuthStore } from '@/stores/auth-store'
+import { InventoryAssetsNavigation } from '@/components/InventoryAssetsNavigation'
 import { useBranchStore } from '@/stores/branch-store'
 import { useCanManage } from '@/stores/use-has-role'
 import type { Machine } from '@/types/tasks'
@@ -43,8 +44,9 @@ export function LineHierarchyPage() {
   return (
     <div className="flex flex-col gap-4">
       <PageHeader
-        title="Line Equipment"
+        title="Production Lines"
         description="Hierarki Line, Mesin, dan Equipment produksi — beserta asset di luar line."
+        action={<InventoryAssetsNavigation />}
       />
       <Tabs defaultValue="produksi">
       <TabsList>
@@ -274,7 +276,7 @@ function ProductionLineBrowser({ activeBranchId }: { activeBranchId: number }) {
               isSelected={machine.id === selectedMachineId}
               onClick={() => selectMachine(machine.id)}
               title={machine.name}
-              subtitle={machine.category ?? machine.code}
+              subtitle={machine.code}
               badge={!machine.is_active ? <Badge variant="secondary">Nonaktif</Badge> : undefined}
               detailHref={`/machines/${machine.id}`}
               viewAction={
@@ -569,7 +571,7 @@ function NonProductionAssetsBrowser({
                 setSelectedEquipmentId(null)
               }}
               title={machine.name}
-              subtitle={machine.category ?? machine.code}
+              subtitle={machine.code}
               badge={!machine.is_active ? <Badge variant="secondary">Nonaktif</Badge> : undefined}
               detailHref={`/machines/${machine.id}`}
               viewAction={

@@ -6,7 +6,6 @@ import type { PartInstallation } from '@/types/relations'
 /** No `code` — it's system-generated from `name` server-side (see Machine::generateCode()), never client-supplied. */
 export interface MachinePayload {
   name: string
-  category?: string | null
   is_active?: boolean
 }
 
@@ -34,7 +33,6 @@ export async function deleteMachine(id: number, password: string): Promise<void>
 /** No `line_id` (there is none) and no `code` — system-generated from `name`, same policy as production Machine. */
 export interface OutsideLineMachinePayload {
   name: string
-  category?: string | null
   is_active?: boolean
 }
 
@@ -131,6 +129,10 @@ export interface CostByEquipment {
 }
 
 export interface MachineSummaryData extends MachineMonitoringData {
+  upcoming_task_count: number
+  lifetime_hours_sample_count: number
+  lifetime_hours_total: number
+  top_parts_consumed_this_year: TopPartConsumed[]
   /** Current branch unit_cost x active installation count, summed — cost fields only ever appear here, never on the public endpoint. */
   installed_part_value: string
   /** Year-to-date (Jan 1 through now), not a trailing-12-months window like the other consumption charts. */

@@ -29,7 +29,7 @@ function monthLabel(month: string): string {
  * exact same table that gets printed (LineMonthlyReportPrintSection),
  * then handed off to PrintLineMonthlyReportPage via router state.
  */
-export function LineReportsPage() {
+export function LineReportsPage({ showPageHeader = true }: { showPageHeader?: boolean }) {
   const activeBranchId = useBranchStore((state) => state.activeBranchId)
 
   if (!activeBranchId) {
@@ -38,7 +38,9 @@ export function LineReportsPage() {
 
   return (
     <div className="flex flex-col gap-4">
-      <PageHeader title="Laporan Line" description="Rekap bulanan kWh dan Running Hours untuk seluruh Line di plant yang sedang aktif." />
+      {showPageHeader && (
+        <PageHeader title="Laporan Line" description="Rekap bulanan kWh dan Running Hours untuk seluruh Line di plant yang sedang aktif." />
+      )}
 
       <Tabs defaultValue="kwh">
         <TabsList>

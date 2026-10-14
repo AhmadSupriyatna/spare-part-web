@@ -1,4 +1,3 @@
-import { QRCodeSVG } from 'qrcode.react'
 import { Fragment } from 'react'
 import type { CompanySetting } from '@/types/settings'
 import type { Task } from '@/types/tasks'
@@ -15,10 +14,9 @@ interface MaintenanceReportPrintSectionProps {
   lineName?: string | null
   machineName?: string | null
   periodLabel: string
+  periodLabelCaption?: string
   runtimeHours: number | null
   supervisorName?: string | null
-  /** The QR Validator's scan URL — omitted on the digital (already-scanned) view, since a QR pointing back to itself has no purpose there. */
-  scanUrl?: string | null
   sections: MaintenanceReportSection[]
   companySetting?: CompanySetting
 }
@@ -32,66 +30,37 @@ function durationMinutes(task: Task): number | null {
   return Math.max(0, Math.round(ms / 60000))
 }
 
+function executionDateLabel(task: Task): string {
+  const started = task.started_at ? new Date(task.started_at) : null
+  const completed = task.completed_at ? new Date(task.completed_at) : null
+  const format = (date: Date) => date.toLocaleDateString('id-ID', { dateStyle: 'medium' })
+
+  if (started && completed && started.toDateString() !== completed.toDateString()) {
+    return `${format(started)} – ${format(completed)}`
+  }
+  if (completed) return format(completed)
+  if (started) return format(started)
+  if (task.due_date) return `${format(new Date(task.due_date))} (jadwal)`
+  return '-'
+}
+
 interface DetailRow {
   key: string
+  itemId: number
   label: string
   /** null = not yet decided (task still pending/in progress). */
   resultOk: boolean | null
   note: string
 }
 
-/**
- * One row per condition-check item, plus one row per planned part — never
- * lumped into a single task-wide summary, since each part is its own
- * checklist entry with its own outcome. A part's Kondisi reads as "was it
- * still fine, or did it need replacing": Tidak if that specific part was
- * actually replaced (that's precisely why it was replaced), Baik if it
- * turned out not to need it. A task's full scope of work belongs on the
- * report inline, not behind a separate print.
- */
-function detailRowsFor(task: Task): DetailRow[] {
-  const isDone = task.status === 'completed'
-  const rows: DetailRow[] = []
-
-  for (const item of task.checklist_items ?? []) {
-    rows.push({
-      key: `item-${item.id}`,
-      label: item.description,
-      resultOk: item.condition_ok,
-      note: item.notes ?? '',
-    })
-  }
-
-  // Only disambiguate by unit/slot when the same part appears more than
-  // once on this task ("satu baris satu alamat" — each row is a distinct
-  // physical address) — otherwise it's just noise. Never a guessed ordinal
-  // when slot_label isn't available (e.g. a "not replaced" row never
-  // recorded which unit it was): the suffix is simply omitted then.
-  const partChecks = task.part_checks ?? []
-  const countByPartId = new Map<number, number>()
-  for (const check of partChecks) {
-    countByPartId.set(check.part_id, (countByPartId.get(check.part_id) ?? 0) + 1)
-  }
-
-  for (const check of partChecks) {
-    const partLabel = check.part_name ?? `Part #${check.part_id}`
-    const isDuplicatePart = (countByPartId.get(check.part_id) ?? 0) > 1
-    const unitSuffix = isDuplicatePart && check.slot_label ? ` — Posisi ${check.slot_label}` : ''
-    const outcome = !isDone
-      ? 'Direncanakan diganti.'
-      : check.is_replaced
-        ? `Diganti (Qty ${check.quantity_used ?? '-'}).`
-        : `Tidak diganti${check.reason ? ` karena ${check.reason}` : ''}.`
-
-    rows.push({
-      key: `part-${check.id}`,
-      label: `Ganti ${partLabel}`,
-      resultOk: isDone ? !check.is_replaced : null,
-      note: `${outcome}${unitSuffix}`,
-    })
-  }
-
-  return rows
+function conditionRowsFor(task: Task): DetailRow[] {
+  return (task.checklist_items ?? []).map((item) => ({
+    key: `item-${item.id}`,
+    itemId: item.id,
+    label: item.description,
+    resultOk: item.condition_ok,
+    note: item.notes ?? '',
+  }))
 }
 
 function SectionTable({ tasks }: { tasks: Task[] }) {
@@ -107,20 +76,29 @@ function SectionTable({ tasks }: { tasks: Task[] }) {
           <th className="border px-1.5 py-1">Deskripsi Kegiatan</th>
           <th className="w-12 border px-1 py-1 text-center">Baik</th>
           <th className="w-12 border px-1 py-1 text-center">Tidak</th>
-          <th className="border px-1.5 py-1">Tindakan / Perbaikan / Keterangan</th>
+          <th className="border px-1.5 py-1">Tindak Lanjut</th>
+          <th className="border px-1.5 py-1">Keterangan</th>
+          <th className="w-24 border px-1.5 py-1 text-center">Tgl. Pelaksanaan</th>
           <th className="w-28 border px-1.5 py-1 text-center">PIC</th>
         </tr>
       </thead>
       <tbody>
         {tasks.map((task, taskIndex) => {
           const isDone = task.status === 'completed'
-          const rows = detailRowsFor(task)
+          const conditionRows = conditionRowsFor(task)
+          const partChecks = task.part_checks ?? []
+          const checklistItemIds = new Set(conditionRows.map((row) => row.itemId))
+          const unlinkedPartChecks = partChecks.filter(
+            (check) => check.task_checklist_item_id == null || !checklistItemIds.has(check.task_checklist_item_id),
+          )
           const duration = durationMinutes(task)
           // The header (equipment/WO identity) is always its own row, fully
           // separate from the checklist items below it — a sub-item's
           // Baik/Tidak must line up with that item alone, never appear to
           // belong to the header line above it.
-          const contentRowCount = Math.max(rows.length, 1)
+          const contentRowCount =
+            Math.max(conditionRows.length, 1) +
+            (conditionRows.length > 0 && unlinkedPartChecks.length > 0 ? 1 : 0)
           const noCell = (
             <td className="border px-1.5 py-1 text-center align-top font-semibold" rowSpan={contentRowCount + 1}>
               {taskIndex + 1}
@@ -129,9 +107,11 @@ function SectionTable({ tasks }: { tasks: Task[] }) {
           const picCell = (
             <td className="border px-1.5 py-1 text-center align-top" rowSpan={contentRowCount + 1}>
               <p className="font-medium">{task.assignee_name ?? '-'}</p>
-              <p className="text-muted-foreground">
-                {task.completed_at ? new Date(task.completed_at).toLocaleDateString('id-ID', { dateStyle: 'medium' }) : '-'}
-              </p>
+            </td>
+          )
+          const executionDateCell = (
+            <td className="border px-1.5 py-1 text-center align-top" rowSpan={contentRowCount + 1}>
+              {executionDateLabel(task)}
             </td>
           )
 
@@ -139,7 +119,7 @@ function SectionTable({ tasks }: { tasks: Task[] }) {
             <Fragment key={task.id}>
               <tr className="bg-muted/30">
                 {noCell}
-                <td className="border px-1.5 py-1 font-semibold" colSpan={4}>
+                <td className="border px-1.5 py-1 font-semibold" colSpan={5}>
                   {task.machine_name ? `${task.machine_name} — ` : ''}
                   {task.equipment_name} <span className="font-normal italic">{task.title}</span>
                   <span className="font-normal text-muted-foreground">
@@ -147,31 +127,148 @@ function SectionTable({ tasks }: { tasks: Task[] }) {
                     - Duration: {duration != null ? `${duration} menit` : '-'} (WO #{task.id})
                   </span>
                 </td>
+                {executionDateCell}
                 {picCell}
               </tr>
-              {rows.length === 0 ? (
+              {conditionRows.length === 0 ? (
                 <tr>
-                  <td className="border px-1.5 py-1 align-top text-muted-foreground" colSpan={4}>
-                    Tidak ada checklist pada WO ini.
+                  <td className="border px-1.5 py-1 align-top text-muted-foreground">
+                    Tidak ada pengecekan kondisi pada WO ini.
+                  </td>
+                  <td className="border px-1 py-1 text-center align-top">{!isDone ? '☐' : ''}</td>
+                  <td className="border px-1 py-1 text-center align-top">{!isDone ? '☐' : ''}</td>
+                  <td className="border px-1.5 py-1 align-top">
+                    {unlinkedPartChecks.length > 0 && (
+                      <PartFollowUpList
+                        checks={unlinkedPartChecks}
+                        isDone={isDone}
+                      />
+                    )}
+                  </td>
+                  <td className="border px-1.5 py-1 align-top">
+                    {unlinkedPartChecks.length > 0 && (
+                      <PartRemarksList checks={unlinkedPartChecks} isDone={isDone} />
+                    )}
                   </td>
                 </tr>
               ) : (
-                rows.map((row, rowIndex) => (
-                  <tr key={row.key}>
-                    <td className="border py-1 pr-1.5 pl-4 align-top">
-                      {LETTERS[rowIndex] ?? rowIndex + 1}. {row.label}
-                    </td>
-                    <td className="border px-1 py-1 text-center align-top">{!isDone ? '☐' : row.resultOk === true ? '✓' : ''}</td>
-                    <td className="border px-1 py-1 text-center align-top">{!isDone ? '☐' : row.resultOk === false ? '✓' : ''}</td>
-                    <td className="border px-1.5 py-1 align-top">{row.note}</td>
-                  </tr>
-                ))
+                conditionRows.map((row, rowIndex) => {
+                  const checks = partChecks.filter((check) => check.task_checklist_item_id === row.itemId)
+
+                  return (
+                    <tr key={row.key}>
+                      <td className="border py-1 pr-1.5 pl-4 align-top">
+                        {LETTERS[rowIndex] ?? rowIndex + 1}. {row.label}
+                      </td>
+                      <td className="border px-1 py-1 text-center align-top">{!isDone ? '☐' : row.resultOk === true ? '✓' : ''}</td>
+                      <td className="border px-1 py-1 text-center align-top">{!isDone ? '☐' : row.resultOk === false ? '✓' : ''}</td>
+                      <td className="border px-1.5 py-1 align-top">
+                        {row.resultOk !== true && (
+                          <>
+                            {row.note && <p className={checks.length > 0 ? 'mb-1.5' : ''}>{row.note}</p>}
+                            {checks.length > 0 && <PartFollowUpList checks={checks} isDone={isDone} />}
+                          </>
+                        )}
+                      </td>
+                      <td className="border px-1.5 py-1 align-top">
+                        {row.resultOk !== true && checks.length > 0 && (
+                          <PartRemarksList checks={checks} isDone={isDone} />
+                        )}
+                      </td>
+                    </tr>
+                  )
+                })
+              )}
+              {conditionRows.length > 0 && unlinkedPartChecks.length > 0 && (
+                <tr>
+                  <td className="border px-1.5 py-1 align-top text-muted-foreground">Part tanpa pengecekan kondisi terkait.</td>
+                  <td className="border px-1 py-1 text-center align-top" />
+                  <td className="border px-1 py-1 text-center align-top" />
+                  <td className="border px-1.5 py-1 align-top">
+                    <PartFollowUpList checks={unlinkedPartChecks} isDone={isDone} />
+                  </td>
+                  <td className="border px-1.5 py-1 align-top">
+                    <PartRemarksList checks={unlinkedPartChecks} isDone={isDone} />
+                  </td>
+                </tr>
               )}
             </Fragment>
           )
         })}
       </tbody>
     </table>
+  )
+}
+
+function partPrefix(index: number): string {
+  let prefix = ''
+  let value = index + 1
+  while (value > 0) {
+    value -= 1
+    prefix = String.fromCharCode(65 + (value % 26)) + prefix
+    value = Math.floor(value / 26)
+  }
+  return prefix
+}
+
+function partIdentity(check: NonNullable<Task['part_checks']>[number]): string {
+  return [check.item_master_no, check.part_name ?? `Part #${check.part_id}`].filter(Boolean).join(' — ')
+}
+
+function PartFollowUpList({
+  checks,
+  isDone,
+}: {
+  checks: NonNullable<Task['part_checks']>
+  isDone: boolean
+}) {
+  return (
+    <div>
+      {checks.map((check, partIndex) => {
+        const followUp = !isDone
+          ? 'Rencana penggantian part'
+          : check.is_replaced
+            ? 'Penggantian part'
+            : 'Tidak ada penggantian part'
+
+        return (
+          <div key={check.id} className={cnPartRow(partIndex)}>
+            {partPrefix(partIndex)}. {followUp}
+          </div>
+        )
+      })}
+    </div>
+  )
+}
+
+function cnPartRow(index: number): string {
+  return index === 0 ? 'py-0.5' : 'border-t border-dashed py-0.5'
+}
+
+function PartRemarksList({
+  checks,
+  isDone,
+}: {
+  checks: NonNullable<Task['part_checks']>
+  isDone: boolean
+}) {
+  return (
+    <div>
+      {checks.map((check, partIndex) => {
+        const position = check.slot_label ? ` — Posisi ${check.slot_label}` : ''
+        const outcome = !isDone
+          ? `Direncanakan diganti${position}.`
+          : check.is_replaced
+            ? `Diganti${position}${check.quantity_used != null ? ` (Qty ${check.quantity_used})` : ''}.`
+            : `Tidak diganti${check.reason ? ` — Alasan: ${check.reason}` : ''}.`
+
+        return (
+          <div key={check.id} className={cnPartRow(partIndex)}>
+            {partPrefix(partIndex)}. {partIdentity(check)} — {outcome}
+          </div>
+        )
+      })}
+    </div>
   )
 }
 
@@ -184,8 +281,8 @@ function SectionTable({ tasks }: { tasks: Task[] }) {
  * a side-by-side grid, so it stays legible regardless of how many weeks the
  * month has. Every WO's full scope of work (condition-check items and/or
  * planned parts) renders inline — this is the one and only printed output
- * for a WO's checklist. Reused as-is for the QR Validator's digital view
- * (see MaintenanceReportScanPage) — same component, just no scanUrl.
+ * for a WO's checklist. Reused as-is for the digital report view
+ * (see MaintenanceReportScanPage).
  */
 export function MaintenanceReportPrintSection({
   title,
@@ -193,15 +290,15 @@ export function MaintenanceReportPrintSection({
   lineName,
   machineName,
   periodLabel,
+  periodLabelCaption = 'Periode',
   runtimeHours,
   supervisorName,
-  scanUrl,
   sections,
   companySetting,
 }: MaintenanceReportPrintSectionProps) {
   return (
     <div className="mx-auto flex w-full max-w-4xl flex-col gap-3 text-sm">
-      <div className="flex h-14 items-center justify-between gap-4 border-b pb-3">
+      <div className="flex h-14 items-center gap-4 border-b pb-3">
         <div className="flex h-full items-center gap-2">
           {companySetting?.logo_url ? (
             <img src={companySetting.logo_url} alt="" className="h-10 w-auto object-contain" />
@@ -215,39 +312,28 @@ export function MaintenanceReportPrintSection({
             <p className="text-xs text-muted-foreground">{branchName ?? '-'}</p>
           </div>
         </div>
-        {scanUrl && (
-          <div className="flex h-full items-center">
-            <QRCodeSVG value={scanUrl} size={56} />
-          </div>
-        )}
       </div>
 
       <p className="text-center text-base font-bold tracking-wide uppercase">{title}</p>
 
       <div className="grid grid-cols-2 gap-x-4 gap-y-1 border-b pb-3 text-xs">
-        <div className="flex flex-col gap-1">
-          <p className="flex gap-1">
-            <span className="inline-block w-12 shrink-0 text-right text-muted-foreground">Line</span>
-            <span className="text-muted-foreground">:</span>
-            <span className="font-medium">{lineName ?? '-'}</span>
-          </p>
-          <p className="flex gap-1">
-            <span className="inline-block w-12 shrink-0 text-right text-muted-foreground">Mesin</span>
-            <span className="text-muted-foreground">:</span>
-            <span className="font-medium">{machineName ?? 'Semua Mesin'}</span>
-          </p>
+        <div className="grid grid-cols-[max-content_0.75rem_minmax(0,1fr)] content-start gap-y-1">
+          <span className="text-muted-foreground">Line</span>
+          <span className="text-center text-muted-foreground">:</span>
+          <span className="font-medium">{lineName ?? '-'}</span>
+          <span className="text-muted-foreground">Mesin</span>
+          <span className="text-center text-muted-foreground">:</span>
+          <span className="font-medium">{machineName ?? 'Semua Mesin'}</span>
         </div>
-        <div className="flex flex-col gap-1">
-          <p className="flex gap-1">
-            <span className="inline-block w-32 shrink-0 text-right text-muted-foreground">Running Hours (Line)</span>
-            <span className="text-muted-foreground">:</span>
-            <span className="font-medium">{runtimeHours != null ? `${runtimeHours.toLocaleString('id-ID')} jam` : '-'}</span>
-          </p>
-          <p className="flex gap-1">
-            <span className="inline-block w-32 shrink-0 text-right text-muted-foreground">Periode</span>
-            <span className="text-muted-foreground">:</span>
-            <span className="font-medium">{periodLabel}</span>
-          </p>
+        <div className="grid grid-cols-[max-content_0.75rem_minmax(0,1fr)] content-start gap-y-1">
+          <span className="text-muted-foreground">Running Hours (Line)</span>
+          <span className="text-center text-muted-foreground">:</span>
+          <span className="font-medium">
+            {runtimeHours != null ? `${runtimeHours.toLocaleString('id-ID')} jam` : '-'}
+          </span>
+          <span className="text-muted-foreground">{periodLabelCaption}</span>
+          <span className="text-center text-muted-foreground">:</span>
+          <span className="font-medium">{periodLabel}</span>
         </div>
       </div>
 
@@ -265,7 +351,8 @@ export function MaintenanceReportPrintSection({
           <p className="mb-1 font-semibold">Keterangan:</p>
           <ul className="list-disc pl-4 text-muted-foreground">
             <li>Beri tanda centang (✓) pada kolom "Kondisi".</li>
-            <li>Jika kondisi Tidak, isi kolom "Tindakan/Perbaikan/Keterangan".</li>
+            <li>Jika kondisi Tidak, isi kolom "Tindak Lanjut" dengan tindakan yang dilakukan.</li>
+            <li>Kolom "Keterangan" menampilkan part yang diganti atau alasan part tidak diganti.</li>
           </ul>
         </div>
         <div className="flex justify-end">

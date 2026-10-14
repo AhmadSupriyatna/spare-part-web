@@ -11,7 +11,6 @@ import { Label } from '@/components/ui/label'
 
 const outsideLineMachineSchema = z.object({
   name: z.string().min(1, 'Nama wajib diisi').max(255),
-  category: z.string().optional(),
 })
 
 type OutsideLineMachineFormValues = z.infer<typeof outsideLineMachineSchema>
@@ -57,12 +56,12 @@ export function OutsideLineMachineFormDialog({
     formState: { errors, isDirty },
   } = useForm<OutsideLineMachineFormValues>({
     resolver: zodResolver(outsideLineMachineSchema),
-    defaultValues: { name: '', category: '' },
+    defaultValues: { name: '' },
   })
 
   useEffect(() => {
     if (open) {
-      reset({ name: '', category: '' })
+      reset({ name: '' })
     }
   }, [open, reset])
 
@@ -100,10 +99,6 @@ export function OutsideLineMachineFormDialog({
         <Label htmlFor="ol-machine-name">Nama</Label>
         <Input id="ol-machine-name" placeholder="Compressor Room" {...register('name')} />
         {errors.name && <p className="text-sm text-destructive">{errors.name.message}</p>}
-      </div>
-      <div className="flex flex-col gap-2">
-        <Label htmlFor="ol-machine-category">Kategori</Label>
-        <Input id="ol-machine-category" placeholder="Utility" {...register('category')} />
       </div>
     </FormSheet>
   )

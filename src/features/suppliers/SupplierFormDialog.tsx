@@ -6,16 +6,8 @@ import { toast } from 'sonner'
 import { z } from 'zod'
 import { createSupplier, updateSupplier } from '@/features/suppliers/api'
 import type { Supplier } from '@/types/inventory'
-import { Button } from '@/components/ui/button'
+import { FormSheet } from '@/components/FormSheet'
 import { Checkbox } from '@/components/ui/checkbox'
-import {
-  Dialog,
-  DialogContent,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from '@/components/ui/dialog'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
@@ -48,7 +40,7 @@ export function SupplierFormDialog({ branchId, supplier, trigger }: SupplierForm
     control,
     handleSubmit,
     reset,
-    formState: { errors },
+    formState: { errors, isDirty },
   } = useForm<SupplierFormValues>({
     resolver: zodResolver(supplierSchema),
     defaultValues: {
@@ -82,22 +74,23 @@ export function SupplierFormDialog({ branchId, supplier, trigger }: SupplierForm
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['suppliers', branchId] })
       toast.success(isEdit ? 'Supplier berhasil diperbarui.' : 'Supplier berhasil ditambahkan.')
+      reset()
       setOpen(false)
     },
     onError: () => toast.error('Gagal menyimpan supplier.'),
   })
 
   return (
-    <Dialog open={open} onOpenChange={setOpen}>
-      <DialogTrigger render={trigger as React.ReactElement} />
-      <DialogContent>
-        <DialogHeader>
-          <DialogTitle>{isEdit ? 'Ubah Supplier' : 'Tambah Supplier'}</DialogTitle>
-        </DialogHeader>
-        <form
-          className="flex max-h-[70vh] flex-col gap-4 overflow-y-auto"
-          onSubmit={handleSubmit((values) => mutation.mutate(values))}
-        >
+    <FormSheet
+      trigger={trigger}
+      title={isEdit ? 'Ubah Supplier' : 'Tambah Supplier'}
+      open={open}
+      onOpenChange={setOpen}
+      isDirty={isDirty}
+      onSubmit={handleSubmit((values) => mutation.mutate(values))}
+      submitLabel="Simpan"
+      isSubmitting={mutation.isPending}
+    >
           <div className="flex flex-col gap-2">
             <Label htmlFor="name">Nama</Label>
             <Input id="name" {...register('name')} />
@@ -136,13 +129,6 @@ export function SupplierFormDialog({ branchId, supplier, trigger }: SupplierForm
               </label>
             )}
           />
-          <DialogFooter>
-            <Button type="submit" disabled={mutation.isPending}>
-              {mutation.isPending ? 'Menyimpan...' : 'Simpan'}
-            </Button>
-          </DialogFooter>
-        </form>
-      </DialogContent>
-    </Dialog>
+    </FormSheet>
   )
 }

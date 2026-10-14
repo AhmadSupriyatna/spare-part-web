@@ -3,9 +3,9 @@ import { useLocation } from 'react-router'
 import { fetchCompanySetting } from '@/features/settings/api'
 import { WoPrintSection } from '@/features/pm/WoPrintSection'
 import type { Task } from '@/types/tasks'
-import { Button } from '@/components/ui/button'
 import { EmptyState } from '@/components/EmptyState'
 import { ClipboardList } from 'lucide-react'
+import { PrintPageActions } from '@/components/PrintPageActions'
 
 interface PrintWoChecklistsLocationState {
   tasks: Task[]
@@ -49,9 +49,7 @@ export function PrintWoChecklistsPage() {
         }
       `}</style>
 
-      <div className="flex justify-end print:hidden">
-        <Button onClick={() => window.print()}>Cetak {tasks.length} WO</Button>
-      </div>
+      <PrintPageActions printLabel={`Cetak ${tasks.length} WO`} />
 
       <div id="wo-print-area" className="flex flex-col gap-8">
         {tasks.map((task, i) => (

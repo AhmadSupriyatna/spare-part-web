@@ -79,7 +79,6 @@ export interface Machine {
   branch_name?: string | null
   code: string
   name: string
-  category: string | null
   is_active: boolean
 }
 

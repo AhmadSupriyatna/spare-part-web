@@ -6,9 +6,9 @@ interface PartSummaryRow {
   part_id: number
   part_name: string
   item_master_no: string
+  opening_stock: number
   qty_in: number
   qty_out: number
-  destinations: { channel: string; qty: number }[]
   current_stock: number | null
 }
 
@@ -22,9 +22,9 @@ function buildSummary(entries: StockLedgerReportEntry[], partStocks: PartStock[]
         part_id: entry.part_id,
         part_name: entry.part_name,
         item_master_no: entry.item_master_no,
+        opening_stock: entry.opening_balance,
         qty_in: 0,
         qty_out: 0,
-        destinations: [],
         current_stock: stockByPartId.get(entry.part_id) ?? null,
       })
     }
@@ -33,14 +33,7 @@ function buildSummary(entries: StockLedgerReportEntry[], partStocks: PartStock[]
     if (entry.quantity_change > 0) {
       row.qty_in += entry.quantity_change
     } else if (entry.quantity_change < 0) {
-      const qty = Math.abs(entry.quantity_change)
-      row.qty_out += qty
-      const destination = row.destinations.find((d) => d.channel === entry.channel)
-      if (destination) {
-        destination.qty += qty
-      } else {
-        row.destinations.push({ channel: entry.channel, qty })
-      }
+      row.qty_out += Math.abs(entry.quantity_change)
     }
   }
 
@@ -59,8 +52,8 @@ interface StockTransactionReportPrintSectionProps {
 /**
  * "Transaksi Stok" print report — unlike the on-screen Stock In/Out tabs
  * (transaction-by-transaction), this is a per-PART summary: total masuk,
- * total keluar broken down by where it went (channel), and the current
- * stock balance. Same header/table language as LineMonthlyReportPrintSection
+ * total keluar, opening stock, and current stock balance. Same header/table
+ * language as LineMonthlyReportPrintSection
  * so every print report in this app reads as one family.
  */
 export function StockTransactionReportPrintSection({
@@ -103,15 +96,16 @@ export function StockTransactionReportPrintSection({
         <thead>
           <tr className="border-b-2 border-neutral-800 bg-neutral-50 text-left text-xs font-semibold tracking-wide text-neutral-600 uppercase">
             <th className="py-2 pl-2">Part</th>
+            <th className="py-2 text-right">Stok Awal</th>
             <th className="py-2 text-right">Masuk</th>
-            <th className="py-2">Keluar</th>
+            <th className="py-2 text-right">Keluar</th>
             <th className="py-2 pr-2 text-right">Stok Saat Ini</th>
           </tr>
         </thead>
         <tbody>
           {rows.length === 0 ? (
             <tr>
-              <td colSpan={4} className="py-6 text-center text-neutral-500">
+              <td colSpan={5} className="py-6 text-center text-neutral-500">
                 Tidak ada transaksi pada rentang ini.
               </td>
             </tr>
@@ -122,19 +116,9 @@ export function StockTransactionReportPrintSection({
                   <p className="font-medium">{row.part_name}</p>
                   <p className="font-mono text-xs text-neutral-500">{row.item_master_no}</p>
                 </td>
+                <td className="py-2 text-right tabular-nums">{row.opening_stock}</td>
                 <td className="py-2 text-right font-semibold tabular-nums">{row.qty_in > 0 ? `+${row.qty_in}` : '-'}</td>
-                <td className="py-2">
-                  {row.qty_out > 0 ? (
-                    <>
-                      <span className="font-semibold tabular-nums">-{row.qty_out}</span>
-                      <p className="text-xs text-neutral-500">
-                        {row.destinations.map((d) => `${d.channel}: ${d.qty}`).join(', ')}
-                      </p>
-                    </>
-                  ) : (
-                    '-'
-                  )}
-                </td>
+                <td className="py-2 text-right font-semibold tabular-nums">{row.qty_out > 0 ? `-${row.qty_out}` : '-'}</td>
                 <td className="py-2 pr-2 text-right font-semibold tabular-nums">{row.current_stock ?? '-'}</td>
               </tr>
             ))
@@ -144,8 +128,9 @@ export function StockTransactionReportPrintSection({
           <tfoot>
             <tr className="border-t-2 border-neutral-800 font-bold">
               <td className="py-2 pl-2">Total</td>
+              <td className="py-2" />
               <td className="py-2 text-right tabular-nums">+{totalIn}</td>
-              <td className="py-2">-{totalOut}</td>
+              <td className="py-2 text-right tabular-nums">-{totalOut}</td>
               <td className="py-2 pr-2" />
             </tr>
           </tfoot>

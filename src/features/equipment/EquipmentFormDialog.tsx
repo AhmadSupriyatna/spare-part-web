@@ -1,14 +1,18 @@
 import { zodResolver } from '@hookform/resolvers/zod'
-import { useMutation, useQueryClient } from '@tanstack/react-query'
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useEffect, useState } from 'react'
-import { useForm } from 'react-hook-form'
+import { Controller, useForm } from 'react-hook-form'
 import { toast } from 'sonner'
 import { z } from 'zod'
+import { fetchAssetCategories } from '@/features/asset-categories/api'
 import { createEquipment, updateEquipment } from '@/features/equipment/api'
 import type { Equipment } from '@/types/tasks'
 import { FormSheet } from '@/components/FormSheet'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
+
+const NO_CATEGORY = 'none'
 
 const equipmentSchema = z.object({
   name: z.string().min(1, 'Nama wajib diisi').max(255),
@@ -27,9 +31,14 @@ export function EquipmentFormDialog({ machineId, equipment, trigger }: Equipment
   const [open, setOpen] = useState(false)
   const queryClient = useQueryClient()
   const isEdit = Boolean(equipment)
+  const { data: categories, isLoading: categoriesLoading, isError: categoriesError } = useQuery({
+    queryKey: ['asset-categories'],
+    queryFn: fetchAssetCategories,
+  })
 
   const {
     register,
+    control,
     handleSubmit,
     reset,
     formState: { errors, isDirty },
@@ -51,8 +60,10 @@ export function EquipmentFormDialog({ machineId, equipment, trigger }: Equipment
   }, [open, equipment, reset])
 
   const mutation = useMutation({
-    mutationFn: (values: EquipmentFormValues) =>
-      isEdit ? updateEquipment(equipment!.id, values) : createEquipment(machineId, values),
+    mutationFn: (values: EquipmentFormValues) => {
+      const payload = { ...values, category: values.category || null }
+      return isEdit ? updateEquipment(equipment!.id, payload) : createEquipment(machineId, payload)
+    },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['equipment', machineId] })
       toast.success(isEdit ? 'Equipment berhasil diperbarui.' : 'Equipment berhasil ditambahkan.')
@@ -87,7 +98,28 @@ export function EquipmentFormDialog({ machineId, equipment, trigger }: Equipment
       </div>
       <div className="flex flex-col gap-2">
         <Label htmlFor="category">Kategori</Label>
-        <Input id="category" placeholder="Mekanikal" {...register('category')} />
+        <Controller
+          control={control}
+          name="category"
+          render={({ field }) => (
+            <Select
+              value={categories?.find((category) => category.type === 'equipment' && category.name === field.value)?.id.toString() ?? NO_CATEGORY}
+              onValueChange={(value) => field.onChange(categories?.find((category) => String(category.id) === value)?.name ?? '')}
+              disabled={categoriesLoading || categoriesError}
+            >
+              <SelectTrigger id="category">
+                <SelectValue placeholder={categoriesLoading ? 'Memuat kategori...' : 'Pilih kategori'} />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value={NO_CATEGORY}>Tanpa kategori</SelectItem>
+                {categories?.filter((category) => category.type === 'equipment').map((category) => (
+                  <SelectItem key={category.id} value={String(category.id)}>{category.name}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          )}
+        />
+        {categoriesError && <p className="text-sm text-destructive">Gagal memuat kategori equipment.</p>}
       </div>
     </FormSheet>
   )

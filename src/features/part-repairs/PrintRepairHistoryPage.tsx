@@ -3,11 +3,12 @@ import { History } from 'lucide-react'
 import { useLocation } from 'react-router'
 import { fetchCompanySetting } from '@/features/settings/api'
 import type { PartRepair, PartRepairDisposition } from '@/types/relations'
-import { Button } from '@/components/ui/button'
 import { EmptyState } from '@/components/EmptyState'
+import { PrintPageActions } from '@/components/PrintPageActions'
 
 interface PrintRepairHistoryLocationState {
   repairs: PartRepair[]
+  periodLabel?: string
 }
 
 const dispositionLabels: Record<PartRepairDisposition, string> = {
@@ -24,7 +25,8 @@ const dispositionLabels: Record<PartRepairDisposition, string> = {
  */
 export function PrintRepairHistoryPage() {
   const location = useLocation()
-  const repairs = (location.state as PrintRepairHistoryLocationState | null)?.repairs ?? []
+  const state = location.state as PrintRepairHistoryLocationState | null
+  const repairs = state?.repairs ?? []
 
   const { data: companySetting } = useQuery({
     queryKey: ['settings', 'company'],
@@ -53,9 +55,7 @@ export function PrintRepairHistoryPage() {
         }
       `}</style>
 
-      <div className="flex justify-end print:hidden">
-        <Button onClick={() => window.print()}>Cetak {repairs.length} Riwayat</Button>
-      </div>
+      <PrintPageActions printLabel={`Cetak ${repairs.length} Riwayat`} />
 
       <div id="repair-print-area" className="mx-auto flex w-full max-w-3xl flex-col gap-4 text-sm">
         <div className="flex items-center justify-between border-b pb-3">
@@ -71,7 +71,10 @@ export function PrintRepairHistoryPage() {
               <p className="font-semibold">{companySetting?.name ?? 'Nama Perusahaan'}</p>
             </div>
           </div>
-          <p className="font-semibold uppercase tracking-wide">Riwayat Perbaikan Part</p>
+          <div className="text-right">
+            <p className="font-semibold uppercase tracking-wide">Riwayat Perbaikan Part</p>
+            {state?.periodLabel && <p className="text-xs text-muted-foreground">{state.periodLabel}</p>}
+          </div>
         </div>
 
         <table className="w-full border-collapse text-left text-xs">

@@ -1,4 +1,3 @@
-import { QRCodeSVG } from 'qrcode.react'
 import type { Fp3Disposition, Fp3Request } from '@/features/fp3/api'
 import type { CompanySetting } from '@/types/settings'
 
@@ -28,8 +27,6 @@ function SectionLabel({ children }: { children: React.ReactNode }) {
 interface Fp3PrintSectionProps {
   fp3: Fp3Request
   companySetting?: CompanySetting
-  /** The QR Validator's scan URL — omitted on the digital (already-scanned) view, since a QR pointing back to itself has no purpose there. */
-  scanUrl?: string | null
 }
 
 /**
@@ -39,9 +36,9 @@ interface Fp3PrintSectionProps {
  * Pelaksanaan (filled once Teknik & Automation picks it up, with their
  * completion photo), then a shared Serah Terima signature block and
  * disposition status. Reused as-is for the QR Validator's digital view
- * (see Fp3ScanPage) — same component, just no scanUrl.
+ * (see Fp3ScanPage).
  */
-export function Fp3PrintSection({ fp3, companySetting, scanUrl }: Fp3PrintSectionProps) {
+export function Fp3PrintSection({ fp3, companySetting }: Fp3PrintSectionProps) {
   const executorList = (fp3.executor_names ?? '').split(',').map((name) => name.trim()).filter(Boolean)
   const partUsages = fp3.part_usages ?? []
 
@@ -61,16 +58,11 @@ export function Fp3PrintSection({ fp3, companySetting, scanUrl }: Fp3PrintSectio
             <p className="text-xs text-muted-foreground">{fp3.branch_name ?? '-'}</p>
           </div>
         </div>
-        <div className="flex h-full items-center gap-3">
+        <div className="flex h-full items-center">
           <div className="text-right">
             <p className="font-mono text-xs text-muted-foreground">{fp3.code}</p>
             <p className="text-xs text-muted-foreground">Kepada: Teknik &amp; Automation</p>
           </div>
-          {scanUrl && (
-            <div className="flex h-full items-center">
-              <QRCodeSVG value={scanUrl} size={56} />
-            </div>
-          )}
         </div>
       </div>
 

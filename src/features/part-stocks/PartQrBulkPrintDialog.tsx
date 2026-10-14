@@ -169,7 +169,8 @@ export function PartQrBulkPrintDialog({
             <DialogTitle>Cetak QR Terpilih</DialogTitle>
             <DialogDescription>
               Tentukan berapa lembar QR Breakdown yang mau dicetak untuk tiap part biasa. Untuk Part
-              Passport, pilih unit fisik mana saja yang mau dicetak ulang labelnya.
+              Passport, centang tanggal kedatangan untuk memilih semua unit pada tanggal itu. Buka
+              tanggalnya untuk memilih unit satu per satu.
             </DialogDescription>
           </DialogHeader>
           <div className="flex max-h-80 flex-col gap-3 overflow-y-auto">

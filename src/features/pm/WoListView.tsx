@@ -1,14 +1,15 @@
 import { ClipboardList, Printer } from 'lucide-react'
 import { useState } from 'react'
-import { Link, useNavigate } from 'react-router'
+import { Link } from 'react-router'
 import { taskChipVariant, taskSource, taskSourceLabel } from '@/features/pm/taskColors'
 import type { Task, TaskStatus } from '@/types/tasks'
 import { EmptyState } from '@/components/EmptyState'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
-import { Checkbox } from '@/components/ui/checkbox'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
+
+const PAGE_SIZE = 10
 
 const statusLabels: Record<TaskStatus, string> = {
   pending: 'Belum Mulai',
@@ -26,13 +27,10 @@ interface WoListViewProps {
 /**
  * Flat table of every WO in the branch — replaces the old standalone Work
  * Order page and WO Ledger tab, now that everything lives on one
- * Maintenance page alongside the calendar. Checkbox selection + "Cetak
- * Terpilih" hands the selected Tasks straight to PrintWoChecklistsPage via
- * router state (this list already has everything that page needs loaded).
+ * Maintenance page alongside the calendar.
  */
 export function WoListView({ tasks, isLoading, onSelect }: WoListViewProps) {
-  const navigate = useNavigate()
-  const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set())
+  const [page, setPage] = useState(1)
 
   if (isLoading) {
     return (
@@ -48,42 +46,16 @@ export function WoListView({ tasks, isLoading, onSelect }: WoListViewProps) {
     return <EmptyState icon={ClipboardList} title="Belum ada WO" description="Belum ada WO yang tercatat di plant ini." />
   }
 
-  const allSelected = tasks.length > 0 && tasks.every((t) => selectedIds.has(t.id))
-
-  function toggleAll() {
-    if (!tasks) return
-    setSelectedIds(allSelected ? new Set() : new Set(tasks.map((t) => t.id)))
-  }
-
-  function toggleOne(id: number) {
-    setSelectedIds((prev) => {
-      const next = new Set(prev)
-      if (next.has(id)) next.delete(id)
-      else next.add(id)
-      return next
-    })
-  }
-
-  function printSelected() {
-    const selected = tasks?.filter((t) => selectedIds.has(t.id)) ?? []
-    navigate('/pm/tasks/print', { state: { tasks: selected } })
-  }
+  const pageCount = Math.max(1, Math.ceil(tasks.length / PAGE_SIZE))
+  const currentPage = Math.min(page, pageCount)
+  const visibleTasks = tasks.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE)
 
   return (
     <div className="flex flex-col gap-2">
-      <div className="flex items-center justify-end">
-        <Button size="sm" disabled={selectedIds.size === 0} onClick={printSelected}>
-          <Printer className="size-3.5" />
-          Cetak Terpilih ({selectedIds.size})
-        </Button>
-      </div>
       <div className="overflow-x-auto rounded-md border">
         <Table>
           <TableHeader>
             <TableRow>
-              <TableHead className="w-10">
-                <Checkbox checked={allSelected} onCheckedChange={toggleAll} aria-label="Pilih semua" />
-              </TableHead>
               <TableHead>WO</TableHead>
               <TableHead>Equipment / Line</TableHead>
               <TableHead>Ditugaskan ke</TableHead>
@@ -94,15 +66,8 @@ export function WoListView({ tasks, isLoading, onSelect }: WoListViewProps) {
             </TableRow>
           </TableHeader>
           <TableBody>
-            {tasks.map((task) => (
+            {visibleTasks.map((task) => (
               <TableRow key={task.id} className="cursor-pointer" onClick={() => onSelect(task)}>
-                <TableCell onClick={(e) => e.stopPropagation()}>
-                  <Checkbox
-                    checked={selectedIds.has(task.id)}
-                    onCheckedChange={() => toggleOne(task.id)}
-                    aria-label={`Pilih WO ${task.title}`}
-                  />
-                </TableCell>
                 <TableCell className="font-medium">{task.title}</TableCell>
                 <TableCell className="text-muted-foreground">
                   {task.equipment_name}
@@ -142,6 +107,31 @@ export function WoListView({ tasks, isLoading, onSelect }: WoListViewProps) {
           </TableBody>
         </Table>
       </div>
+      {pageCount > 1 && (
+        <div className="flex items-center justify-between gap-3">
+          <p className="text-sm text-muted-foreground">
+            Halaman {currentPage} dari {pageCount} · {tasks.length} WO
+          </p>
+          <div className="flex items-center gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              disabled={currentPage <= 1}
+              onClick={() => setPage((previous) => Math.max(1, Math.min(previous, pageCount) - 1))}
+            >
+              Sebelumnya
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              disabled={currentPage >= pageCount}
+              onClick={() => setPage((previous) => Math.min(pageCount, Math.min(previous, pageCount) + 1))}
+            >
+              Berikutnya
+            </Button>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

@@ -1,6 +1,7 @@
 import { BrowserRouter, Navigate, Route, Routes } from 'react-router'
 import { ActivityLogPage } from '@/features/activity-log/ActivityLogPage'
 import { ApprovalPage } from '@/features/approval/ApprovalPage'
+import { AssetCategoriesPage } from '@/features/asset-categories/AssetCategoriesPage'
 import { LoginPage } from '@/features/auth/LoginPage'
 import { BranchesPage } from '@/features/branches/BranchesPage'
 import { BreakdownScanPage } from '@/features/breakdown/BreakdownScanPage'
@@ -10,12 +11,10 @@ import { DashboardPage } from '@/features/dashboard/DashboardPage'
 import { DatabaseBackupPage } from '@/features/database-backup/DatabaseBackupPage'
 import { DepartmentsPage } from '@/features/departments/DepartmentsPage'
 import { EquipmentDetailPage } from '@/features/equipment/EquipmentDetailPage'
-import { Fp3ListPage } from '@/features/fp3/Fp3ListPage'
 import { Fp3PrintPage } from '@/features/fp3/Fp3PrintPage'
 import { Fp3RequestPage } from '@/features/fp3/Fp3RequestPage'
 import { Fp3ScanPage } from '@/features/fp3/Fp3ScanPage'
 import { LineHierarchyPage } from '@/features/lines/LineHierarchyPage'
-import { LineReportsPage } from '@/features/lines/LineReportsPage'
 import { LineRuntimeScanPage } from '@/features/lines/LineRuntimeScanPage'
 import { PrintLineMonthlyReportPage } from '@/features/lines/PrintLineMonthlyReportPage'
 import { PrintLineRuntimeReportPage } from '@/features/lines/PrintLineRuntimeReportPage'
@@ -32,6 +31,7 @@ import { StockLedgerPage } from '@/features/part-stocks/StockLedgerPage'
 import { PartUnitScanPage } from '@/features/part-unit-actions/PartUnitScanPage'
 import { PartUnitDetailPage } from '@/features/part-units/PartUnitDetailPage'
 import { PrintRepairHistoryPage } from '@/features/part-repairs/PrintRepairHistoryPage'
+import { ReportsPage } from '@/features/reports/ReportsPage'
 import { MaintenancePage } from '@/features/pm/MaintenancePage'
 import { PrintMaintenanceReportPage } from '@/features/pm/PrintMaintenanceReportPage'
 import { PrintWoChecklistPage } from '@/features/pm/PrintWoChecklistPage'
@@ -39,12 +39,12 @@ import { PrintWoChecklistsPage } from '@/features/pm/PrintWoChecklistsPage'
 import { CompanySettingsPage } from '@/features/settings/CompanySettingsPage'
 import { SupplierDetailPage } from '@/features/suppliers/SupplierDetailPage'
 import { SuppliersPage } from '@/features/suppliers/SuppliersPage'
-import { TaskLibraryPage } from '@/features/task-libraries/TaskLibraryPage'
 import { UnitsPage } from '@/features/units/UnitsPage'
 import { UsersPage } from '@/features/users/UsersPage'
 import { WorkspacePage } from '@/features/workspace/WorkspacePage'
 import { AppLayout } from '@/layouts/AppLayout'
 import { ProtectedRoute } from '@/routes/ProtectedRoute'
+import { SuperadminRoute } from '@/routes/SuperadminRoute'
 
 function App() {
   return (
@@ -83,36 +83,42 @@ function App() {
             <Route path="stock/ledger" element={<StockLedgerPage />} />
             <Route path="stock/transaction/print" element={<PrintStockTransactionReportPage />} />
             <Route path="stock/:id" element={<PartStockDetailPage />} />
-            <Route path="branches" element={<BranchesPage />} />
             <Route path="suppliers" element={<SuppliersPage />} />
             <Route path="suppliers/:id" element={<SupplierDetailPage />} />
             <Route path="locations" element={<LocationsPage />} />
             <Route path="locations/:id" element={<LocationDetailPage />} />
             <Route path="budgets" element={<BudgetsPage />} />
-            <Route path="lines" element={<LineHierarchyPage />} />
-            <Route path="lines/report" element={<LineReportsPage />} />
+            <Route path="reports" element={<ReportsPage />} />
+            <Route path="reports/:reportType" element={<ReportsPage />} />
+            <Route path="lines/report" element={<Navigate to="/reports/line" replace />} />
             <Route path="lines/runtime-report/print" element={<PrintLineRuntimeReportPage />} />
             <Route path="lines/monthly-report/print" element={<PrintLineMonthlyReportPage />} />
-            <Route path="equipment/:id" element={<EquipmentDetailPage />} />
-            <Route path="machines/:id" element={<MachineDetailPage />} />
             <Route path="workspace" element={<WorkspacePage />} />
-            <Route path="fp3" element={<Fp3ListPage />} />
+            <Route path="fp3" element={<Navigate to="/reports/fp3" replace />} />
             <Route path="fp3/:id/print" element={<Fp3PrintPage />} />
             <Route path="approval" element={<ApprovalPage />} />
-            <Route path="task-libraries" element={<TaskLibraryPage />} />
+            <Route path="task-libraries" element={<Navigate to="/pm/calendar?tab=library" replace />} />
             <Route path="breakdown/print-qr" element={<PrintQrCodesPage />} />
-            <Route path="settings/company" element={<CompanySettingsPage />} />
-            <Route path="settings/units" element={<UnitsPage />} />
-            <Route path="settings/departments" element={<DepartmentsPage />} />
-            <Route path="settings/users" element={<UsersPage />} />
             <Route path="settings/activity-log" element={<ActivityLogPage />} />
-            <Route path="settings/backup" element={<DatabaseBackupPage />} />
             <Route path="part-units/:id" element={<PartUnitDetailPage />} />
             <Route path="pm/calendar" element={<MaintenancePage />} />
             <Route path="pm/tasks/print" element={<PrintWoChecklistsPage />} />
             <Route path="pm/tasks/:id/print" element={<PrintWoChecklistPage />} />
             <Route path="pm/maintenance-report/print" element={<PrintMaintenanceReportPage />} />
             <Route path="pm/repairs/print" element={<PrintRepairHistoryPage />} />
+
+            <Route element={<SuperadminRoute />}>
+              <Route path="branches" element={<BranchesPage />} />
+              <Route path="lines" element={<LineHierarchyPage />} />
+              <Route path="equipment/:id" element={<EquipmentDetailPage />} />
+              <Route path="machines/:id" element={<MachineDetailPage />} />
+              <Route path="settings/company" element={<CompanySettingsPage />} />
+              <Route path="settings/units" element={<UnitsPage />} />
+              <Route path="settings/departments" element={<DepartmentsPage />} />
+              <Route path="settings/asset-categories" element={<AssetCategoriesPage />} />
+              <Route path="settings/users" element={<UsersPage />} />
+              <Route path="settings/backup" element={<DatabaseBackupPage />} />
+            </Route>
           </Route>
         </Route>
         <Route path="*" element={<Navigate to="/" replace />} />

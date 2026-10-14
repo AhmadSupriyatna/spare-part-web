@@ -164,7 +164,7 @@ export function UnscheduledWorkPanel({
                   <div className="flex items-start justify-between gap-2">
                     <span className="min-w-0 truncate font-medium">{fp3.requester_name}</span>
                     <Badge variant="outline" className="shrink-0">
-                      WO FP3
+                      FP3
                     </Badge>
                   </div>
                   <p className="truncate text-xs text-muted-foreground">

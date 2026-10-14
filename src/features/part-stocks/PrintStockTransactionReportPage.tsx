@@ -5,8 +5,8 @@ import type { StockLedgerReportEntry } from '@/features/part-stocks/api'
 import { StockTransactionReportPrintSection } from '@/features/part-stocks/StockTransactionReportPrintSection'
 import { fetchCompanySetting } from '@/features/settings/api'
 import type { PartStock } from '@/types/inventory'
-import { Button } from '@/components/ui/button'
 import { EmptyState } from '@/components/EmptyState'
+import { PrintPageActions } from '@/components/PrintPageActions'
 
 interface PrintStockTransactionReportLocationState {
   branchName?: string
@@ -52,9 +52,7 @@ export function PrintStockTransactionReportPage() {
         }
       `}</style>
 
-      <div className="flex justify-end print:hidden">
-        <Button onClick={() => window.print()}>Cetak</Button>
-      </div>
+      <PrintPageActions />
 
       <div id="stock-transaction-report-print-area">
         <StockTransactionReportPrintSection

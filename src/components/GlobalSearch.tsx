@@ -5,6 +5,7 @@ import { useNavigate } from 'react-router'
 import { searchGlobal } from '@/features/search/api'
 import { useBranchStore } from '@/stores/branch-store'
 import { cn } from '@/lib/utils'
+import { Button } from '@/components/ui/button'
 
 function useDebouncedValue<T>(value: T, delayMs: number): T {
   const [debounced, setDebounced] = useState(value)
@@ -24,9 +25,11 @@ export function GlobalSearch() {
   const navigate = useNavigate()
   const activeBranchId = useBranchStore((state) => state.activeBranchId)
   const containerRef = useRef<HTMLDivElement>(null)
+  const mobileInputRef = useRef<HTMLInputElement>(null)
 
   const [query, setQuery] = useState('')
   const [open, setOpen] = useState(false)
+  const [mobileOpen, setMobileOpen] = useState(false)
   const debouncedQuery = useDebouncedValue(query.trim(), 300)
 
   const { data, isFetching } = useQuery({
@@ -40,6 +43,7 @@ export function GlobalSearch() {
     function handleClickOutside(event: MouseEvent) {
       if (containerRef.current && !containerRef.current.contains(event.target as Node)) {
         setOpen(false)
+        setMobileOpen(false)
       }
     }
     document.addEventListener('mousedown', handleClickOutside)
@@ -54,14 +58,15 @@ export function GlobalSearch() {
   function goTo(path: string) {
     navigate(path)
     setOpen(false)
+    setMobileOpen(false)
     setQuery('')
   }
 
   const showDropdown = open && debouncedQuery.length >= 2
 
   return (
-    <div ref={containerRef} className="relative w-full max-w-md">
-      <div className="relative">
+    <div ref={containerRef} className="relative w-fit sm:w-full sm:max-w-md">
+      <div className="relative hidden w-full sm:block">
         <Search className="pointer-events-none absolute top-1/2 left-2.5 size-4 -translate-y-1/2 text-muted-foreground" />
         <input
           value={query}
@@ -79,71 +84,142 @@ export function GlobalSearch() {
           placeholder="Cari part, equipment, supplier, lokasi..."
           className="h-9 w-full rounded-md border bg-background pr-3 pl-8 text-sm shadow-xs outline-none placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50"
         />
+        {showDropdown && (
+          <SearchResults
+            data={data}
+            isFetching={isFetching}
+            totalResults={totalResults}
+            query={debouncedQuery}
+            onSelect={goTo}
+          />
+        )}
       </div>
 
-      {showDropdown && (
-        <div className="absolute top-full left-0 z-50 mt-1.5 max-h-[26rem] w-full overflow-y-auto rounded-md border bg-popover p-1.5 text-popover-foreground shadow-md">
-          {isFetching && !data ? (
-            <p className="px-2 py-3 text-center text-sm text-muted-foreground">Mencari...</p>
-          ) : totalResults === 0 ? (
-            <p className="px-2 py-3 text-center text-sm text-muted-foreground">
-              Tidak ada hasil untuk &quot;{debouncedQuery}&quot;.
-            </p>
-          ) : (
-            <div className="flex flex-col gap-2">
-              {data && data.parts.length > 0 && (
-                <ResultGroup label="Part" icon={Package}>
-                  {data.parts.map((part) => (
-                    <ResultRow
-                      key={part.id}
-                      title={part.name}
-                      subtitle={part.item_master_no}
-                      onClick={() => goTo(`/parts/${part.id}`)}
-                    />
-                  ))}
-                </ResultGroup>
-              )}
-
-              {data && data.equipment.length > 0 && (
-                <ResultGroup label="Equipment" icon={Factory}>
-                  {data.equipment.map((item) => (
-                    <ResultRow
-                      key={item.id}
-                      title={item.name}
-                      subtitle={`${item.line_name} · ${item.machine_name} · ${item.code}`}
-                      onClick={() =>
-                        goTo(`/lines?line=${item.line_id}&machine=${item.machine_id}&equipment=${item.id}`)
-                      }
-                    />
-                  ))}
-                </ResultGroup>
-              )}
-
-              {data && data.suppliers.length > 0 && (
-                <ResultGroup label="Supplier" icon={Truck}>
-                  {data.suppliers.map((supplier) => (
-                    <ResultRow
-                      key={supplier.id}
-                      title={supplier.name}
-                      onClick={() => goTo(`/suppliers/${supplier.id}`)}
-                    />
-                  ))}
-                </ResultGroup>
-              )}
-
-              {data && data.locations.length > 0 && (
-                <ResultGroup label="Lokasi" icon={MapPin}>
-                  {data.locations.map((location) => (
-                    <ResultRow
-                      key={location.id}
-                      title={location.code}
-                      subtitle={location.description ?? undefined}
-                      onClick={() => goTo(`/locations/${location.id}`)}
-                    />
-                  ))}
-                </ResultGroup>
-              )}
+      <div className="sm:hidden">
+        <Button
+          variant="outline"
+          size="icon-sm"
+          aria-label="Cari"
+          title="Cari"
+          onClick={() => {
+            setMobileOpen((current) => !current)
+            setOpen(true)
+            window.setTimeout(() => mobileInputRef.current?.focus(), 0)
+          }}
+        >
+          <Search />
+        </Button>
+        {mobileOpen && (
+          <div className="fixed inset-x-3 top-[60px] z-50 sm:hidden">
+            <div className="relative">
+              <Search className="pointer-events-none absolute top-1/2 left-2.5 size-4 -translate-y-1/2 text-muted-foreground" />
+              <input
+                ref={mobileInputRef}
+                value={query}
+                onChange={(e) => {
+                  setQuery(e.target.value)
+                  setOpen(true)
+                }}
+                onFocus={() => setOpen(true)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Escape') {
+                    setOpen(false)
+                    setMobileOpen(false)
+                    e.currentTarget.blur()
+                  }
+                }}
+                placeholder="Cari part, equipment, supplier, lokasi..."
+                className="h-9 w-full rounded-md border bg-background pr-3 pl-8 text-sm shadow-xs outline-none placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50"
+              />
             </div>
+            {showDropdown && (
+              <SearchResults
+                data={data}
+                isFetching={isFetching}
+                totalResults={totalResults}
+                query={debouncedQuery}
+                onSelect={goTo}
+              />
+            )}
+          </div>
+        )}
+      </div>
+    </div>
+  )
+}
+
+function SearchResults({
+  data,
+  isFetching,
+  totalResults,
+  query,
+  onSelect,
+}: {
+  data: Awaited<ReturnType<typeof searchGlobal>> | undefined
+  isFetching: boolean
+  totalResults: number
+  query: string
+  onSelect: (path: string) => void
+}) {
+  return (
+    <div className="mt-1.5 max-h-[26rem] w-full overflow-y-auto rounded-md border bg-popover p-1.5 text-popover-foreground shadow-md">
+      {isFetching && !data ? (
+        <p className="px-2 py-3 text-center text-sm text-muted-foreground">Mencari...</p>
+      ) : totalResults === 0 ? (
+        <p className="px-2 py-3 text-center text-sm text-muted-foreground">
+          Tidak ada hasil untuk &quot;{query}&quot;.
+        </p>
+      ) : (
+        <div className="flex flex-col gap-2">
+          {data && data.parts.length > 0 && (
+            <ResultGroup label="Part" icon={Package}>
+              {data.parts.map((part) => (
+                <ResultRow
+                  key={part.id}
+                  title={part.name}
+                  subtitle={part.item_master_no}
+                  onClick={() => onSelect(`/parts/${part.id}`)}
+                />
+              ))}
+            </ResultGroup>
+          )}
+
+          {data && data.equipment.length > 0 && (
+            <ResultGroup label="Equipment" icon={Factory}>
+              {data.equipment.map((item) => (
+                <ResultRow
+                  key={item.id}
+                  title={item.name}
+                  subtitle={`${item.line_name} · ${item.machine_name} · ${item.code}`}
+                  onClick={() => onSelect(`/lines?line=${item.line_id}&machine=${item.machine_id}&equipment=${item.id}`)}
+                />
+              ))}
+            </ResultGroup>
+          )}
+
+          {data && data.suppliers.length > 0 && (
+            <ResultGroup label="Supplier" icon={Truck}>
+              {data.suppliers.map((supplier) => (
+                <ResultRow
+                  key={supplier.id}
+                  title={supplier.name}
+                  onClick={() => onSelect(`/suppliers/${supplier.id}`)}
+                />
+              ))}
+            </ResultGroup>
+          )}
+
+          {data && data.locations.length > 0 && (
+            <ResultGroup label="Lokasi" icon={MapPin}>
+              {data.locations.map((location) => (
+                <ResultRow
+                  key={location.id}
+                  title={location.code}
+                  subtitle={location.description ?? undefined}
+                  onClick={() => onSelect(`/locations/${location.id}`)}
+                />
+              ))}
+            </ResultGroup>
           )}
         </div>
       )}

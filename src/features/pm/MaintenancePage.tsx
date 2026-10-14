@@ -1,13 +1,12 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { CalendarDays, ChevronLeft, ChevronRight, FileText, List, Wrench } from 'lucide-react'
+import { CalendarDays, ChevronLeft, ChevronRight, List, NotebookPen, Wrench } from 'lucide-react'
 import { useMemo, useState } from 'react'
-import { Link, useSearchParams } from 'react-router'
+import { Link, Navigate, useSearchParams } from 'react-router'
 import { toast } from 'sonner'
 import { fetchFp3RequestsForBranch, scheduleFp3Request, type Fp3Request } from '@/features/fp3/api'
 import { FindingActionView } from '@/features/findings/FindingActionView'
 import { MaintenanceHistoryView } from '@/features/maintenance-history/MaintenanceHistoryView'
 import { fetchNationalHolidays, fetchTaskRescheduleHistory } from '@/features/pm/api'
-import { MaintenanceReportView } from '@/features/pm/MaintenanceReportView'
 import { RescheduleReasonDialog } from '@/features/pm/RescheduleReasonDialog'
 import { taskChipVariant, taskSource } from '@/features/pm/taskColors'
 import { TaskDetailSheet } from '@/features/pm/TaskDetailSheet'
@@ -15,6 +14,7 @@ import { UnscheduledWorkPanel } from '@/features/pm/UnscheduledWorkPanel'
 import { WoListView } from '@/features/pm/WoListView'
 import { RepairBoard } from '@/features/part-repairs/RepairBoard'
 import { fetchTaskLibrariesForBranch, scheduleTaskLibrary } from '@/features/task-libraries/api'
+import { TaskLibraryBrowser } from '@/features/task-libraries/TaskLibraryBrowser'
 import { fetchPmTasksForBranch, rescheduleTask } from '@/features/tasks/api'
 import { useBranchStore } from '@/stores/branch-store'
 import { diffInDays, toDateKey } from '@/lib/dates'
@@ -33,7 +33,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 const WEEKDAYS = ['Sen', 'Sel', 'Rab', 'Kam', 'Jum', 'Sab', 'Min']
 const VISIBLE_TASKS_PER_DAY = 3
 
-type MaintenanceView = 'calendar' | 'list' | 'report' | 'repair' | 'history' | 'findings'
+type MaintenanceView = 'library' | 'calendar' | 'list' | 'repair' | 'history' | 'findings'
 
 export function MaintenancePage() {
   const activeBranchId = useBranchStore((state) => state.activeBranchId)
@@ -41,8 +41,8 @@ export function MaintenancePage() {
   const [searchParams, setSearchParams] = useSearchParams()
   const tabParam = searchParams.get('tab')
   const view: MaintenanceView =
+    tabParam === 'library' ||
     tabParam === 'list' ||
-    tabParam === 'report' ||
     tabParam === 'repair' ||
     tabParam === 'history' ||
     tabParam === 'findings'
@@ -238,6 +238,10 @@ export function MaintenancePage() {
     }
   }
 
+  if (tabParam === 'report') {
+    return <Navigate to="/reports?tab=pemeriksaan" replace />
+  }
+
   if (!activeBranchId) {
     return <p className="text-muted-foreground">Pilih plant terlebih dahulu.</p>
   }
@@ -245,29 +249,55 @@ export function MaintenancePage() {
   return (
     <div className="flex flex-col gap-3">
       <PageHeader
-        title="Maintenance"
+        title={
+          view === 'library'
+            ? 'Task Library'
+            : view === 'calendar'
+              ? 'Schedule'
+              : view === 'list'
+              ? 'Work Order List'
+                : view === 'repair'
+                  ? 'Part Repairs'
+                  : 'Maintenance'
+        }
         action={
-          <div className="flex gap-1 rounded-md border p-1">
+          <div className="hidden max-w-full gap-0.5 overflow-x-auto rounded-md border p-0.5 sm:flex">
+            <Button
+              variant={view === 'library' ? 'default' : 'ghost'}
+              size="xs"
+              className="h-6 shrink-0 px-2 text-[11px]"
+              onClick={() => setView('library')}
+            >
+              <NotebookPen className="size-3" />
+              Task Library
+            </Button>
             <Button
               variant={view === 'calendar' ? 'default' : 'ghost'}
-              size="sm"
+              size="xs"
+              className="h-6 shrink-0 px-2 text-[11px]"
               onClick={() => setView('calendar')}
             >
-              <CalendarDays className="size-3.5" />
-              Kalender
+              <CalendarDays className="size-3" />
+              Schedule
             </Button>
-            <Button variant={view === 'list' ? 'default' : 'ghost'} size="sm" onClick={() => setView('list')}>
-              <List className="size-3.5" />
-              WO
+            <Button
+              variant={view === 'list' ? 'default' : 'ghost'}
+              size="xs"
+              className="h-6 shrink-0 px-2 text-[11px]"
+              onClick={() => setView('list')}
+            >
+              <List className="size-3" />
+              Work Order List
             </Button>
-          <Button variant={view === 'report' ? 'default' : 'ghost'} size="sm" onClick={() => setView('report')}>
-            <FileText className="size-3.5" />
-            Laporan
-          </Button>
-          <Button variant={view === 'repair' ? 'default' : 'ghost'} size="sm" onClick={() => setView('repair')}>
-            <Wrench className="size-3.5" />
-            Repair Part
-          </Button>
+            <Button
+              variant={view === 'repair' ? 'default' : 'ghost'}
+              size="xs"
+              className="h-6 shrink-0 px-2 text-[11px]"
+              onClick={() => setView('repair')}
+            >
+              <Wrench className="size-3" />
+              Part Repairs
+            </Button>
           {/* Maintenance History is no longer its own tab — merged into
               Repair Part as "Riwayat Perbaikan" (see RepairHistoryList),
               which answers the same "part apa, dilepas dari mana/kapan,
@@ -285,9 +315,9 @@ export function MaintenancePage() {
         }
       />
 
-      {view === 'list' && <WoListView tasks={tasks} isLoading={tasksLoading} onSelect={setDetailTask} />}
+      {view === 'library' && <TaskLibraryBrowser />}
 
-      {view === 'report' && activeBranchId && <MaintenanceReportView branchId={activeBranchId} />}
+      {view === 'list' && <WoListView tasks={tasks} isLoading={tasksLoading} onSelect={setDetailTask} />}
 
       {view === 'repair' && <RepairBoard branchId={activeBranchId} />}
 
@@ -310,7 +340,7 @@ export function MaintenancePage() {
                   <span className="size-2.5 rounded-full bg-destructive" /> Breakdown
                 </span>
                 <span className="flex items-center gap-1">
-                  <span className="size-2.5 rounded-full bg-chart-2" /> WO FP3
+                  <span className="size-2.5 rounded-full bg-yellow-400" /> FP3
                 </span>
                 <span className="flex items-center gap-1">
                   <span className="size-2.5 rounded-full bg-success" /> Selesai
@@ -469,7 +499,7 @@ export function MaintenancePage() {
                           >
                             <Badge
                               variant="outline"
-                              className="max-w-full border-chart-2/40 bg-chart-2/15 px-1 py-0 text-chart-2"
+                              className="max-w-full border-yellow-400/60 bg-yellow-300/30 px-1 py-0 text-yellow-800 dark:border-yellow-500/50 dark:bg-yellow-500/15 dark:text-yellow-300"
                             >
                               <span className="truncate">{fp3.requester_name}</span>
                             </Badge>
@@ -497,7 +527,7 @@ export function MaintenancePage() {
                                   >
                                     <Badge
                                       variant="outline"
-                                      className="max-w-full border-chart-2/40 bg-chart-2/15 text-chart-2"
+                                      className="max-w-full border-yellow-400/60 bg-yellow-300/30 text-yellow-800 dark:border-yellow-500/50 dark:bg-yellow-500/15 dark:text-yellow-300"
                                     >
                                       <span className="truncate">{fp3.requester_name}</span>
                                     </Badge>

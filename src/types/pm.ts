@@ -3,6 +3,7 @@ export type TaskLibraryScheduleType = 'calendar' | 'runtime'
 export interface TaskLibraryPart {
   id: number
   task_library_id: number
+  task_library_checklist_item_id: number | null
   part_id: number
   part_name?: string | null
   item_master_no?: string | null
@@ -14,6 +15,7 @@ export interface TaskLibraryChecklistItem {
   id: number
   description: string
   order: number
+  parts: TaskLibraryPart[]
 }
 
 export interface TaskLibrary {
@@ -38,6 +40,7 @@ export interface TaskLibrary {
 
 export interface TaskPartCheck {
   id: number
+  task_checklist_item_id: number | null
   part_id: number
   part_name?: string | null
   item_master_no?: string | null

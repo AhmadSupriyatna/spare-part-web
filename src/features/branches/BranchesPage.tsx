@@ -1,6 +1,8 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { Archive, ArchiveRestore, Pencil } from 'lucide-react'
+import { Archive, ArchiveRestore, Pencil, Plus, Search } from 'lucide-react'
+import { useState } from 'react'
 import { toast } from 'sonner'
+import { InventoryAssetsNavigation } from '@/components/InventoryAssetsNavigation'
 import { BranchFormDialog } from '@/features/branches/BranchFormDialog'
 import { archiveBranch, fetchBranches, unarchiveBranch } from '@/features/branches/api'
 import { useCanManage, useIsSuperadmin } from '@/stores/use-has-role'
@@ -8,6 +10,7 @@ import { DeleteWithPasswordDialog } from '@/components/DeleteWithPasswordDialog'
 import { PageHeader } from '@/components/PageHeader'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 
@@ -15,6 +18,7 @@ export function BranchesPage() {
   const canManage = useCanManage()
   const isSuperadmin = useIsSuperadmin()
   const queryClient = useQueryClient()
+  const [search, setSearch] = useState('')
 
   const { data: branches, isLoading } = useQuery({
     queryKey: ['branches'],
@@ -29,14 +33,40 @@ export function BranchesPage() {
     },
     onError: () => toast.error('Gagal mengaktifkan kembali plant.'),
   })
+  const filteredBranches = branches?.filter((branch) =>
+    [branch.code, branch.name, branch.address]
+      .filter(Boolean)
+      .some((value) => value?.toLowerCase().includes(search.trim().toLowerCase()) ?? false),
+  )
 
   return (
     <div className="flex flex-col gap-4">
       <PageHeader
-        title="Plant"
+        title="Plants"
         description="Daftar plant yang terdaftar dalam sistem."
-        action={canManage && <BranchFormDialog trigger={<Button>Tambah Plant</Button>} />}
+        action={<InventoryAssetsNavigation />}
       />
+      <div className="flex flex-wrap items-center gap-2">
+        <div className="relative min-w-40 flex-1">
+          <Search className="pointer-events-none absolute top-1/2 left-2.5 size-4 -translate-y-1/2 text-muted-foreground" />
+          <Input
+            placeholder="Cari kode, nama, atau alamat plant"
+            value={search}
+            onChange={(event) => setSearch(event.target.value)}
+            className="pl-9"
+          />
+        </div>
+        {canManage && (
+          <BranchFormDialog
+            trigger={
+              <Button>
+                <Plus />
+                Tambah Plant
+              </Button>
+            }
+          />
+        )}
+      </div>
 
       {isLoading ? (
         <div className="flex flex-col gap-2">
@@ -56,7 +86,7 @@ export function BranchesPage() {
             </TableRow>
           </TableHeader>
           <TableBody>
-            {branches?.map((branch) => (
+            {filteredBranches?.map((branch) => (
               <TableRow key={branch.id}>
                 <TableCell className="font-mono font-medium">{branch.code}</TableCell>
                 <TableCell>{branch.name}</TableCell>
@@ -112,6 +142,13 @@ export function BranchesPage() {
                 )}
               </TableRow>
             ))}
+            {!isLoading && filteredBranches?.length === 0 && (
+              <TableRow>
+                <TableCell colSpan={canManage ? 5 : 4} className="py-8 text-center text-muted-foreground">
+                  {search ? 'Tidak ada plant yang cocok dengan pencarian.' : 'Belum ada plant.'}
+                </TableCell>
+              </TableRow>
+            )}
           </TableBody>
         </Table>
       )}

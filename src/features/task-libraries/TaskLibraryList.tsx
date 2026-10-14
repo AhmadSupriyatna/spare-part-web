@@ -31,8 +31,8 @@ function intervalLabel(scheduleType: string | null, intervalDays: number | null,
 
 /**
  * The full Task Library (PM recipe) management block for one equipment —
- * list of recipes plus create/edit (via one unified drawer that also owns
- * the parts checklist) and scheduling. Used by the Line/Sub System browser
+ * list of recipes plus create/edit (via one unified drawer that owns
+ * condition checks and their related parts) and scheduling. Used by the Line/Sub System browser
  * in TaskLibraryBrowser.tsx (the "Library" view on MaintenancePage).
  */
 export function TaskLibraryList({ equipmentId, title = 'Task Library (PM)' }: { equipmentId: number; title?: string }) {
@@ -123,24 +123,44 @@ export function TaskLibraryList({ equipmentId, title = 'Task Library (PM)' }: { 
                   )}
                 </div>
 
-                <div className="mt-3 flex flex-col gap-1">
-                  <p className="text-xs font-medium tracking-wide text-muted-foreground uppercase">Checklist Part</p>
-                  {library.parts.length === 0 ? (
-                    <p className="text-sm text-muted-foreground">Belum ada part di checklist ini.</p>
-                  ) : (
+                {library.checklist_items.map((item) => (
+                  <div key={item.id} className="mt-3 flex flex-col gap-1">
+                    <p className="text-xs font-medium tracking-wide text-muted-foreground uppercase">{item.description}</p>
+                    {item.parts.length === 0 ? (
+                      <p className="text-sm text-muted-foreground">Belum ada part terkait.</p>
+                    ) : (
+                      <ul className="flex flex-col gap-1">
+                        {item.parts.map((part) => (
+                          <li key={part.id} className="flex items-center justify-between gap-2 rounded-md bg-muted/50 px-3 py-1.5 text-sm">
+                            <span>
+                              {part.part_name}{' '}
+                              <span className="font-mono text-xs text-muted-foreground">({part.item_master_no})</span>
+                            </span>
+                            <span className="shrink-0 text-xs text-muted-foreground">× {part.quantity_required}</span>
+                          </li>
+                        ))}
+                      </ul>
+                    )}
+                  </div>
+                ))}
+                {library.parts.some((part) => part.task_library_checklist_item_id == null) && (
+                  <div className="mt-3 flex flex-col gap-1">
+                    <p className="text-xs font-medium tracking-wide text-muted-foreground uppercase">Part belum terkait kondisi</p>
                     <ul className="flex flex-col gap-1">
-                      {library.parts.map((part) => (
-                        <li key={part.id} className="flex items-center justify-between gap-2 rounded-md bg-muted/50 px-3 py-1.5 text-sm">
-                          <span>
-                            {part.part_name}{' '}
-                            <span className="font-mono text-xs text-muted-foreground">({part.item_master_no})</span>
-                          </span>
-                          <span className="shrink-0 text-xs text-muted-foreground">× {part.quantity_required}</span>
-                        </li>
-                      ))}
+                      {library.parts
+                        .filter((part) => part.task_library_checklist_item_id == null)
+                        .map((part) => (
+                          <li key={part.id} className="flex items-center justify-between gap-2 rounded-md bg-muted/50 px-3 py-1.5 text-sm">
+                            <span>
+                              {part.part_name}{' '}
+                              <span className="font-mono text-xs text-muted-foreground">({part.item_master_no})</span>
+                            </span>
+                            <span className="shrink-0 text-xs text-muted-foreground">× {part.quantity_required}</span>
+                          </li>
+                        ))}
                     </ul>
-                  )}
-                </div>
+                  </div>
+                )}
               </div>
             )
           })}

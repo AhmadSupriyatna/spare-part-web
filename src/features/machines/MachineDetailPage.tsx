@@ -140,7 +140,6 @@ export function MachineDetailPage() {
         description={
           <span className="flex flex-wrap items-center gap-1.5">
             <span className="font-mono">{data.machine.code}</span>
-            {data.machine.category && <Badge variant="outline">{data.machine.category}</Badge>}
             {!data.machine.is_active && <Badge variant="secondary">Nonaktif</Badge>}
             <span>
               {data.machine.line_id != null

@@ -2,9 +2,9 @@ import { useQuery } from '@tanstack/react-query'
 import { useParams } from 'react-router'
 import { fetchCompanySetting } from '@/features/settings/api'
 import { fetchTask } from '@/features/tasks/api'
-import { WoPrintSection } from '@/features/pm/WoPrintSection'
-import { Button } from '@/components/ui/button'
+import { MaintenanceReportPrintSection } from '@/features/pm/MaintenanceReportPrintSection'
 import { Skeleton } from '@/components/ui/skeleton'
+import { PrintPageActions } from '@/components/PrintPageActions'
 
 export function PrintWoChecklistPage() {
   const { id } = useParams<{ id: string }>()
@@ -38,12 +38,20 @@ export function PrintWoChecklistPage() {
         }
       `}</style>
 
-      <div className="flex justify-end print:hidden">
-        <Button onClick={() => window.print()}>Cetak</Button>
-      </div>
+      <PrintPageActions />
 
       <div id="wo-print-area">
-        <WoPrintSection task={task} companySetting={companySetting} />
+        <MaintenanceReportPrintSection
+          title={`Laporan Pemeriksaan Mesin — WO #${task.id}`}
+          branchName={task.branch_name}
+          machineName={task.machine_name}
+          lineName={task.line_name}
+          periodLabel={`#${task.id}`}
+          periodLabelCaption="Nomor WO"
+          runtimeHours={null}
+          sections={[{ tasks: [task] }]}
+          companySetting={companySetting}
+        />
       </div>
     </div>
   )

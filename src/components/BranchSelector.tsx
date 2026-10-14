@@ -40,13 +40,14 @@ export function BranchSelector() {
       value={activeBranchId ? String(activeBranchId) : ''}
       onValueChange={(value) => setActiveBranchId(Number(value))}
     >
-      <SelectTrigger className="w-[180px]">
+      <SelectTrigger className="w-[94px] max-w-[94px] sm:w-[180px] sm:max-w-[180px]">
         <SelectValue placeholder="Pilih plant" />
       </SelectTrigger>
       <SelectContent>
         {branches.map((branch) => (
           <SelectItem key={branch.id} value={String(branch.id)}>
-            {branch.code} — {branch.name}
+            <span className="truncate">{branch.code}</span>
+            <span className="hidden sm:inline"> — {branch.name}</span>
           </SelectItem>
         ))}
       </SelectContent>

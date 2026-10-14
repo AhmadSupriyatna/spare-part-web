@@ -6,9 +6,8 @@ import { toast } from 'sonner'
 import { z } from 'zod'
 import { createLocation, createRack, createRackLevel, fetchRacks, updateLocation } from '@/features/locations/api'
 import type { Location } from '@/types/inventory'
-import { Button } from '@/components/ui/button'
+import { FormSheet } from '@/components/FormSheet'
 import { Checkbox } from '@/components/ui/checkbox'
-import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
@@ -46,7 +45,7 @@ export function LocationFormDialog({ branchId, location, trigger }: LocationForm
     control,
     handleSubmit,
     reset,
-    formState: { errors },
+    formState: { errors, isDirty },
   } = useForm<LocationFormValues>({
     resolver: zodResolver(locationSchema),
     defaultValues: {
@@ -80,19 +79,23 @@ export function LocationFormDialog({ branchId, location, trigger }: LocationForm
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['locations', branchId] })
       toast.success(isEdit ? 'Lokasi berhasil diperbarui.' : 'Lokasi berhasil ditambahkan.')
+      reset()
       setOpen(false)
     },
     onError: () => toast.error('Gagal menyimpan lokasi.'),
   })
 
   return (
-    <Dialog open={open} onOpenChange={setOpen}>
-      <DialogTrigger render={trigger as React.ReactElement} />
-      <DialogContent>
-        <DialogHeader>
-          <DialogTitle>{isEdit ? 'Ubah Lokasi' : 'Tambah Lokasi'}</DialogTitle>
-        </DialogHeader>
-        <form className="flex flex-col gap-4" onSubmit={handleSubmit((values) => mutation.mutate(values))}>
+    <FormSheet
+      trigger={trigger}
+      title={isEdit ? 'Ubah Lokasi' : 'Tambah Lokasi'}
+      open={open}
+      onOpenChange={setOpen}
+      isDirty={isDirty}
+      onSubmit={handleSubmit((values) => mutation.mutate(values))}
+      submitLabel="Simpan"
+      isSubmitting={mutation.isPending}
+    >
           <div className="flex flex-col gap-2">
             <Label htmlFor="code">Kode</Label>
             <Input id="code" className="font-mono" placeholder="Kosongkan untuk kode otomatis" {...register('code')} />
@@ -119,13 +122,6 @@ export function LocationFormDialog({ branchId, location, trigger }: LocationForm
               )}
             />
           )}
-          <DialogFooter>
-            <Button type="submit" disabled={mutation.isPending}>
-              {mutation.isPending ? 'Menyimpan...' : 'Simpan'}
-            </Button>
-          </DialogFooter>
-        </form>
-      </DialogContent>
-    </Dialog>
+    </FormSheet>
   )
 }

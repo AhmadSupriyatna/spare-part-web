@@ -47,7 +47,7 @@ export function ProfileMenu({ name, email, avatarUrl, onEditProfile, onLogout, i
             {initials(name)}
           </div>
         )}
-        <span className="text-sm font-medium">{name}</span>
+        <span className="hidden text-sm font-medium sm:inline">{name}</span>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end" className="w-56">
         <DropdownMenuGroup>

@@ -3,8 +3,8 @@ import { useParams } from 'react-router'
 import { fetchFp3Request } from '@/features/fp3/api'
 import { Fp3PrintSection } from '@/features/fp3/Fp3PrintSection'
 import { fetchCompanySetting } from '@/features/settings/api'
-import { Button } from '@/components/ui/button'
 import { Skeleton } from '@/components/ui/skeleton'
+import { PrintPageActions } from '@/components/PrintPageActions'
 
 /**
  * Cetak FP3 — see Fp3PrintSection for the actual layout. This page just
@@ -34,8 +34,6 @@ export function Fp3PrintPage() {
     )
   }
 
-  const scanUrl = `${window.location.origin}/fp3/scan/${fp3.id}`
-
   return (
     <div className="flex flex-col gap-4 p-6 print:p-0">
       <style>{`
@@ -46,12 +44,10 @@ export function Fp3PrintPage() {
         }
       `}</style>
 
-      <div className="flex justify-end print:hidden">
-        <Button onClick={() => window.print()}>Cetak</Button>
-      </div>
+      <PrintPageActions />
 
       <div id="fp3-print-area">
-        <Fp3PrintSection fp3={fp3} companySetting={companySetting} scanUrl={scanUrl} />
+        <Fp3PrintSection fp3={fp3} companySetting={companySetting} />
       </div>
     </div>
   )

@@ -1,7 +1,9 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { MapPin, Pencil, Plus, Trash2 } from 'lucide-react'
+import { MapPin, Pencil, Plus, Search, Trash2 } from 'lucide-react'
+import { useState } from 'react'
 import { Link } from 'react-router'
 import { toast } from 'sonner'
+import { InventoryAssetsNavigation } from '@/components/InventoryAssetsNavigation'
 import { deleteLocation, fetchLocations } from '@/features/locations/api'
 import { LocationFormDialog } from '@/features/locations/LocationFormDialog'
 import { useBranchStore } from '@/stores/branch-store'
@@ -21,6 +23,7 @@ import {
 } from '@/components/ui/alert-dialog'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 
@@ -34,6 +37,7 @@ export function LocationsPage() {
   const activeBranchId = useBranchStore((state) => state.activeBranchId)
   const canManage = useCanManage()
   const queryClient = useQueryClient()
+  const [search, setSearch] = useState('')
 
   const { data: locations, isLoading } = useQuery({
     queryKey: ['locations', activeBranchId],
@@ -48,6 +52,11 @@ export function LocationsPage() {
       toast.success('Lokasi berhasil dihapus.')
     },
   })
+  const filteredLocations = locations?.filter((location) =>
+    [location.code, location.description]
+      .filter(Boolean)
+      .some((value) => value?.toLowerCase().includes(search.trim().toLowerCase()) ?? false),
+  )
 
   if (!activeBranchId) {
     return <p className="text-muted-foreground">Pilih plant terlebih dahulu.</p>
@@ -56,22 +65,32 @@ export function LocationsPage() {
   return (
     <div className="flex flex-col gap-4">
       <PageHeader
-        title="Lokasi"
+        title="Locations"
         description="Daftar lokasi penyimpanan part di plant ini."
-        action={
-          canManage && (
-            <LocationFormDialog
-              branchId={activeBranchId}
-              trigger={
-                <Button>
-                  <Plus />
-                  Tambah Lokasi
-                </Button>
-              }
-            />
-          )
-        }
+        action={<InventoryAssetsNavigation />}
       />
+      <div className="flex flex-wrap items-center gap-2">
+        <div className="relative min-w-40 flex-1">
+          <Search className="pointer-events-none absolute top-1/2 left-2.5 size-4 -translate-y-1/2 text-muted-foreground" />
+          <Input
+            placeholder="Cari kode atau deskripsi lokasi"
+            value={search}
+            onChange={(event) => setSearch(event.target.value)}
+            className="pl-9"
+          />
+        </div>
+        {canManage && (
+          <LocationFormDialog
+            branchId={activeBranchId}
+            trigger={
+              <Button>
+                <Plus />
+                Lokasi
+              </Button>
+            }
+          />
+        )}
+      </div>
 
       {isLoading ? (
         <div className="flex flex-col gap-2">
@@ -79,19 +98,20 @@ export function LocationsPage() {
             <Skeleton key={i} className="h-10 w-full" />
           ))}
         </div>
-      ) : locations?.length === 0 ? (
+      ) : filteredLocations?.length === 0 ? (
         <EmptyState
           icon={MapPin}
-          title="Belum ada lokasi di plant ini"
-          description="Tambahkan lokasi pertama untuk mulai menempatkan part."
+          title={search ? 'Lokasi tidak ditemukan' : 'Belum ada lokasi di plant ini'}
+          description={search ? 'Coba kata kunci lain.' : 'Tambahkan lokasi pertama untuk mulai menempatkan part.'}
           action={
+            !search &&
             canManage && (
               <LocationFormDialog
                 branchId={activeBranchId}
                 trigger={
                   <Button size="sm">
                     <Plus />
-                    Tambah Lokasi
+                    Lokasi
                   </Button>
                 }
               />
@@ -110,7 +130,7 @@ export function LocationsPage() {
             </TableRow>
           </TableHeader>
           <TableBody>
-            {locations?.map((location) => {
+            {filteredLocations?.map((location) => {
               const partCount = location.part_stocks_count ?? 0
               return (
                 <TableRow key={location.id}>

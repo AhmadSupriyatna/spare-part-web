@@ -20,6 +20,7 @@ import {
 import { useMemo, useState } from 'react'
 import { Link } from 'react-router'
 import { toast } from 'sonner'
+import { InventoryAssetsNavigation } from '@/components/InventoryAssetsNavigation'
 import { AdjustStockDialog } from '@/features/part-stocks/AdjustStockDialog'
 import { AssignPartSupplierSheet } from '@/features/part-stocks/AssignPartSupplierSheet'
 import { fetchPartStocksForBranch } from '@/features/part-stocks/api'
@@ -479,7 +480,11 @@ export function KelolaStokPage() {
 
   return (
     <div className="flex flex-col gap-4">
-      <PageHeader title="Kelola Stok" description="Pendaftaran part & posisi stoknya per lokasi di plant yang sedang aktif." />
+      <PageHeader
+        title="Parts Inventory"
+        description="Pendaftaran part & posisi stoknya per lokasi di plant yang sedang aktif."
+        action={<InventoryAssetsNavigation />}
+      />
 
       <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-4">
         <Nameplate

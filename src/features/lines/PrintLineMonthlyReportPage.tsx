@@ -4,8 +4,8 @@ import { useLocation } from 'react-router'
 import { fetchCompanySetting } from '@/features/settings/api'
 import { LineMonthlyReportPrintSection } from '@/features/lines/LineMonthlyReportPrintSection'
 import type { LineKwhReportRow, LineRuntimeReportRow } from '@/types/tasks'
-import { Button } from '@/components/ui/button'
 import { EmptyState } from '@/components/EmptyState'
+import { PrintPageActions } from '@/components/PrintPageActions'
 
 type PrintLineMonthlyReportLocationState =
   | { metric: 'kwh'; branchName?: string | null; monthLabel: string; rows: LineKwhReportRow[] }
@@ -48,9 +48,7 @@ export function PrintLineMonthlyReportPage() {
         }
       `}</style>
 
-      <div className="flex justify-end print:hidden">
-        <Button onClick={() => window.print()}>Cetak</Button>
-      </div>
+      <PrintPageActions />
 
       <div id="line-monthly-report-print-area">
         {state.metric === 'kwh' ? (

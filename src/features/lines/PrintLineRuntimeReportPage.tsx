@@ -4,8 +4,8 @@ import { useLocation } from 'react-router'
 import { fetchCompanySetting } from '@/features/settings/api'
 import { LineRuntimeReportPrintSection } from '@/features/lines/LineRuntimeReportPrintSection'
 import type { LineRuntimeLog } from '@/types/tasks'
-import { Button } from '@/components/ui/button'
 import { EmptyState } from '@/components/EmptyState'
+import { PrintPageActions } from '@/components/PrintPageActions'
 
 interface PrintLineRuntimeReportLocationState {
   lineName: string
@@ -53,9 +53,7 @@ export function PrintLineRuntimeReportPage() {
         }
       `}</style>
 
-      <div className="flex justify-end print:hidden">
-        <Button onClick={() => window.print()}>Cetak</Button>
-      </div>
+      <PrintPageActions />
 
       <div id="line-runtime-report-print-area">
         <LineRuntimeReportPrintSection

@@ -7,9 +7,10 @@ export interface TaskLibraryPartInput {
   part_id: number
 }
 
-/** A generic condition-check item (Kondisi Baik/Tidak), independent of the part checklist above — see TaskLibraryChecklistItem's backend docblock. */
+/** A generic condition-check item with the parts to show when its result is Tidak. */
 export interface TaskLibraryChecklistItemInput {
   description: string
+  parts?: TaskLibraryPartInput[]
 }
 
 export interface TaskLibraryPayload {
@@ -20,15 +21,16 @@ export interface TaskLibraryPayload {
   interval_hours?: number | null
   estimated_duration_minutes?: number | null
   is_active?: boolean
-  /** Only used on create — editing an existing library manages parts via add/remove below. */
+  /** Only used on create for legacy, unassigned parts. */
   parts?: TaskLibraryPartInput[]
-  /** Only used on create — editing an existing library manages checklist items via add/remove below. */
+  /** Only used on create; nested parts belong to their condition check. */
   checklist_items?: TaskLibraryChecklistItemInput[]
 }
 
 /** No `quantity_required` — see TaskLibraryPartInput. */
 export interface TaskLibraryPartPayload {
   part_id: number
+  task_library_checklist_item_id?: number
   notes?: string | null
 }
 
@@ -78,6 +80,16 @@ export async function addTaskLibraryPart(
 
 export async function removeTaskLibraryPart(id: number): Promise<void> {
   await apiClient.delete(`/task-library-parts/${id}`)
+}
+
+export async function updateTaskLibraryPartChecklistItem(
+  id: number,
+  checklistItemId: number,
+): Promise<TaskLibraryPart> {
+  const { data } = await apiClient.put<{ data: TaskLibraryPart }>(`/task-library-parts/${id}`, {
+    task_library_checklist_item_id: checklistItemId,
+  })
+  return data.data
 }
 
 export async function addTaskLibraryChecklistItem(

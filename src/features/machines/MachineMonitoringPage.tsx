@@ -42,7 +42,6 @@ export function MachineMonitoringPage() {
                 <div className="flex flex-wrap items-center gap-2">
                   <h1 className="text-xl font-semibold">{data.machine.name}</h1>
                   {!data.machine.is_active && <Badge variant="secondary">Nonaktif</Badge>}
-                  {data.machine.category && <Badge variant="outline">{data.machine.category}</Badge>}
                 </div>
                 <p className="font-mono text-sm text-muted-foreground">{data.machine.code}</p>
                 <p className="text-sm text-muted-foreground">

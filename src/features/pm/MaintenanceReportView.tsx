@@ -1,10 +1,10 @@
 import { useQuery } from '@tanstack/react-query'
-import { ClipboardList, Printer } from 'lucide-react'
+import { CalendarDays, ChevronRight, ClipboardList, Printer } from 'lucide-react'
 import { useMemo, useState } from 'react'
 import { useNavigate } from 'react-router'
 import { fetchLineRuntimeAt, fetchLines, fetchWoReportForLine } from '@/features/lines/api'
 import { fetchMachines, fetchOutsideLineMachines, fetchWoReportForMachine } from '@/features/machines/api'
-import { buildReportSections, monthLabel, type ReportPeriod } from '@/features/pm/reportSections'
+import { buildReportSections, monthLabel } from '@/features/pm/reportSections'
 import { fetchSupervisorForBranch } from '@/features/users/api'
 import { useAuthStore } from '@/stores/auth-store'
 import { toDateKey } from '@/lib/dates'
@@ -13,57 +13,66 @@ import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
 import { Checkbox } from '@/components/ui/checkbox'
 import { EmptyState } from '@/components/EmptyState'
+import { QueryErrorState } from '@/components/QueryErrorState'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Skeleton } from '@/components/ui/skeleton'
 
 type ReportScope = 'machine' | 'line'
 /** Only meaningful when scope is "machine" — a Line-scoped report has no meaning for a Machine outside any Line, so this choice doesn't exist there. */
 type MachineLocation = 'inline' | 'outside'
+type ReportPeriod = 'weekly' | 'monthly'
+type ReportStep = 'scope' | 'location' | 'line' | 'machine' | 'period' | 'date'
 
-function SegmentedControl<T extends string>({
-  value,
-  onChange,
-  options,
+const stepTitles: Record<ReportStep, string> = {
+  scope: 'Jenis laporan',
+  location: 'Lokasi Machine',
+  line: 'Line',
+  machine: 'Machine',
+  period: 'Periode',
+  date: 'Tanggal laporan',
+}
+
+function SelectionCard({
+  title,
+  description,
+  selected,
+  onClick,
 }: {
-  value: T
-  onChange: (value: T) => void
-  options: { value: T; label: string }[]
+  title: string
+  description: string
+  selected: boolean
+  onClick: () => void
 }) {
   return (
-    <div className="flex gap-2">
-      {options.map((option) => (
-        <button
-          key={option.value}
-          type="button"
-          onClick={() => onChange(option.value)}
-          className={cn(
-            'flex-1 rounded-md border px-3 py-1.5 text-sm transition-colors',
-            value === option.value ? 'border-primary bg-primary/5 text-primary' : 'text-muted-foreground hover:bg-muted',
-          )}
-        >
-          {option.label}
-        </button>
-      ))}
-    </div>
+    <button
+      type="button"
+      aria-pressed={selected}
+      onClick={onClick}
+      className={cn(
+        'rounded-lg text-left outline-none focus-visible:ring-3 focus-visible:ring-ring/50',
+        selected && 'ring-2 ring-primary',
+      )}
+    >
+      <Card className={cn('h-full transition-colors hover:bg-muted/40', selected && 'bg-primary/5')}>
+        <CardContent className="flex h-full flex-col justify-center gap-1 p-3">
+          <span className="font-medium">{title}</span>
+          <span className="text-xs text-muted-foreground">{description}</span>
+        </CardContent>
+      </Card>
+    </button>
   )
 }
 
 /**
- * "Laporan" tab — Maintenance page's official Laporan Pemeriksaan Mesin
- * generator. Separate from the WO list on purpose: that tab stays a plain
- * list of individual WOs, this one builds the combined printed report (see
- * MaintenanceReportPrintSection for what gets printed — every WO's full
- * checklist renders inline, there is no separate per-WO print to refer
- * back to). Laid out as two groups — "where" (Cakupan/Lokasi/Line/Mesin)
- * then "when" (Jenis Laporan/Periode) — instead of one flat grid, so a
- * Mesin Luar Line pick doesn't have to masquerade as a fake "Line".
+ * Builds a combined WO report through a guided selection flow:
+ * scope → production location/asset → period.
  */
 export function MaintenanceReportView({ branchId }: { branchId: number }) {
-  const [period, setPeriod] = useState<ReportPeriod>('weekly')
-  const [scope, setScope] = useState<ReportScope>('machine')
-  const [location, setLocation] = useState<MachineLocation>('inline')
+  const [period, setPeriod] = useState<ReportPeriod | null>(null)
+  const [activeStep, setActiveStep] = useState<ReportStep>('scope')
+  const [scope, setScope] = useState<ReportScope | null>(null)
+  const [location, setLocation] = useState<MachineLocation | null>(null)
   const [lineId, setLineId] = useState<string>('')
   const [machineId, setMachineId] = useState<string>('')
   const [weekAnchor, setWeekAnchor] = useState(() => toDateKey(new Date()))
@@ -81,27 +90,61 @@ export function MaintenanceReportView({ branchId }: { branchId: number }) {
     queryFn: () => fetchSupervisorForBranch(branchId),
   })
 
-  const showLineSelect = scope === 'line' || (scope === 'machine' && location === 'inline')
-  const showOutsideMachines = scope === 'machine' && location === 'outside'
-
-  const { data: lines } = useQuery({ queryKey: ['lines', branchId], queryFn: () => fetchLines(branchId) })
-  const { data: outsideLineMachines } = useQuery({
+  const {
+    data: lines,
+    isLoading: isLoadingLines,
+    isError: isLinesError,
+    refetch: refetchLines,
+  } = useQuery({ queryKey: ['lines', branchId], queryFn: () => fetchLines(branchId) })
+  const {
+    data: outsideLineMachines,
+    isLoading: isLoadingOutsideMachines,
+    isError: isOutsideMachinesError,
+    refetch: refetchOutsideMachines,
+  } = useQuery({
     queryKey: ['outside-line-machines', branchId],
     queryFn: () => fetchOutsideLineMachines(branchId),
-    enabled: showOutsideMachines,
+    enabled: scope === 'machine' && location === 'outside',
   })
-  const { data: lineMachines } = useQuery({
+  const {
+    data: lineMachines,
+    isLoading: isLoadingLineMachines,
+    isError: isLineMachinesError,
+    refetch: refetchLineMachines,
+  } = useQuery({
     queryKey: ['machines', lineId],
     queryFn: () => fetchMachines(Number(lineId)),
     enabled: scope === 'machine' && location === 'inline' && !!lineId,
   })
 
   const selectedLine = lines?.find((line) => String(line.id) === lineId)
-  const machineOptions = showOutsideMachines ? outsideLineMachines : lineMachines
+  const machineOptions = location === 'outside' ? outsideLineMachines : lineMachines
+  const isLoadingMachines = location === 'outside' ? isLoadingOutsideMachines : isLoadingLineMachines
+  const isMachinesError = location === 'outside' ? isOutsideMachinesError : isLineMachinesError
+  const refetchMachines = location === 'outside' ? refetchOutsideMachines : refetchLineMachines
   const selectedMachine = machineOptions?.find((machine) => String(machine.id) === machineId)
 
+  const steps: ReportStep[] = ['scope']
+  if (scope === 'machine') {
+    steps.push('location')
+    if (location === 'inline') steps.push('line')
+    if (location) steps.push('machine')
+  } else if (scope === 'line') {
+    steps.push('line')
+  }
+  if ((scope === 'line' && lineId) || (scope === 'machine' && machineId)) steps.push('period')
+  if (period) steps.push('date')
+
+  const completedStepTitles: Partial<Record<ReportStep, string>> = {
+    scope: scope === 'machine' ? 'Machine' : scope === 'line' ? 'Line' : undefined,
+    location: location === 'inline' ? 'Produksi' : location === 'outside' ? 'Diluar produksi' : undefined,
+    line: selectedLine?.name,
+    machine: selectedMachine?.name,
+    period: period === 'weekly' ? 'Mingguan' : period === 'monthly' ? 'Bulanan' : undefined,
+  }
+
   const { from, to, periodLabel } = useMemo(() => {
-    if (period === 'weekly') {
+    if (period !== 'monthly') {
       const [y, m, d] = weekAnchor.split('-').map(Number)
       const jsDay = new Date(y, m - 1, d).getDay()
       const mondayOffset = (jsDay + 6) % 7
@@ -120,11 +163,15 @@ export function MaintenanceReportView({ branchId }: { branchId: number }) {
     return { from: toDateKey(start), to: toDateKey(end), periodLabel: monthLabel(y, m - 1) }
   }, [period, weekAnchor, monthAnchor])
 
-  const readyToFetch = scope === 'machine' ? !!machineId : !!lineId
+  const readyToFetch =
+    period != null && (scope === 'machine' ? !!machineId : scope === 'line' && !!lineId)
 
   const { data: tasks, isLoading } = useQuery({
     queryKey: ['wo-report', scope, scope === 'machine' ? machineId : lineId, from, to],
-    queryFn: () => (scope === 'machine' ? fetchWoReportForMachine(Number(machineId), from, to) : fetchWoReportForLine(Number(lineId), from, to)),
+    queryFn: () =>
+      scope === 'machine'
+        ? fetchWoReportForMachine(Number(machineId), from, to)
+        : fetchWoReportForLine(Number(lineId), from, to),
     enabled: readyToFetch,
   })
 
@@ -140,17 +187,10 @@ export function MaintenanceReportView({ branchId }: { branchId: number }) {
   const selectedTasks = (tasks ?? []).filter((task) => !excludedTaskIds.has(task.id))
 
   async function handlePrint() {
+    if (!period || !scope || !readyToFetch) return
     setIsPreparingPrint(true)
     try {
       const sections = buildReportSections(selectedTasks, period, from)
-      const scanId = scope === 'machine' ? machineId : lineId
-      const scanUrl = `${window.location.origin}/maintenance-report/scan?${new URLSearchParams({
-        scope,
-        id: scanId,
-        from,
-        to,
-        period,
-      }).toString()}`
 
       // The report's Running Hours reflects the line's total as of the end
       // of the chosen period, not today's live figure — see
@@ -167,7 +207,6 @@ export function MaintenanceReportView({ branchId }: { branchId: number }) {
           periodLabel,
           runtimeHours,
           supervisorName,
-          scanUrl,
           sections,
         },
       })
@@ -180,108 +219,207 @@ export function MaintenanceReportView({ branchId }: { branchId: number }) {
     <div className="grid grid-cols-1 gap-4 lg:grid-cols-[35fr_65fr]">
       <Card className="h-fit">
         <CardContent className="flex flex-col gap-4 pt-6">
-          <div className="flex flex-col gap-2">
-            <Label>Cakupan</Label>
-            <SegmentedControl
-              value={scope}
-              onChange={(value) => {
-                setScope(value)
-                setLineId('')
-                setMachineId('')
-              }}
-              options={[
-                { value: 'machine', label: 'Per Mesin' },
-                { value: 'line', label: 'Per Line' },
-              ]}
-            />
-          </div>
+          <nav aria-label="Navigasi pilihan laporan" className="flex flex-wrap items-center gap-x-1 gap-y-1 text-sm">
+            {steps.map((step, index) => {
+              const title = completedStepTitles[step] ?? (step === activeStep ? stepTitles[step] : null)
+              if (!title) return null
+              const isActive = step === activeStep
+              return (
+                <span key={step} className="inline-flex items-center gap-1">
+                  {index > 0 && <ChevronRight aria-hidden="true" className="size-3.5 text-muted-foreground" />}
+                  {isActive ? (
+                    <span aria-current="step" className="font-medium text-foreground">{title}</span>
+                  ) : (
+                    <button
+                      type="button"
+                      onClick={() => setActiveStep(step)}
+                      className="rounded-sm text-muted-foreground underline-offset-4 hover:text-foreground hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                    >
+                      {title}
+                    </button>
+                  )}
+                </span>
+              )
+            })}
+          </nav>
 
-          {scope === 'machine' && (
-            <div className="flex flex-col gap-2">
-              <Label>Lokasi Mesin</Label>
-              <SegmentedControl
-                value={location}
-                onChange={(value) => {
-                  setLocation(value)
-                  setLineId('')
-                  setMachineId('')
-                }}
-                options={[
-                  { value: 'inline', label: 'Di Dalam Line' },
-                  { value: 'outside', label: 'Mesin Luar Line' },
-                ]}
-              />
-            </div>
-          )}
-
-          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-            {showLineSelect && (
+          <div
+            key={activeStep}
+            className="flex flex-col gap-4 motion-reduce:animate-none animate-in fade-in-0 slide-in-from-right-2 duration-200"
+          >
+            {activeStep === 'scope' && (
               <div className="flex flex-col gap-2">
-                <Label>Line</Label>
-                <Select
-                  value={lineId}
-                  onValueChange={(next) => {
-                    setLineId(next ?? '')
+                <p className="text-sm font-medium">Pilih Jenis Laporan</p>
+                <div className="grid grid-cols-2 gap-2">
+                  <SelectionCard
+                    title="Machine"
+                    description="Laporan pemeriksaan per mesin"
+                    selected={scope === 'machine'}
+                    onClick={() => {
+                      setScope('machine')
+                      setLocation(null)
+                      setLineId('')
+                      setMachineId('')
+                      setPeriod(null)
+                      setExcludedTaskIds(new Set())
+                      setActiveStep('location')
+                    }}
+                  />
+                  <SelectionCard
+                    title="Line"
+                    description="Laporan pemeriksaan seluruh Line"
+                    selected={scope === 'line'}
+                    onClick={() => {
+                      setScope('line')
+                      setLocation(null)
+                      setLineId('')
+                      setMachineId('')
+                      setPeriod(null)
+                      setExcludedTaskIds(new Set())
+                      setActiveStep('line')
+                    }}
+                  />
+                </div>
+              </div>
+            )}
+
+            {activeStep === 'location' && scope === 'machine' && (
+            <div className="flex flex-col gap-2">
+              <p className="text-sm font-medium">Pilih Lokasi Machine</p>
+              <div className="grid grid-cols-2 gap-2">
+                <SelectionCard
+                  title="Produksi"
+                  description="Machine di dalam Line"
+                  selected={location === 'inline'}
+                  onClick={() => {
+                    setLocation('inline')
+                    setLineId('')
                     setMachineId('')
+                    setPeriod(null)
+                    setExcludedTaskIds(new Set())
+                    setActiveStep('line')
                   }}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Pilih line" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {lines?.map((line) => (
-                      <SelectItem key={line.id} value={String(line.id)}>
-                        {line.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                />
+                <SelectionCard
+                  title="Diluar produksi"
+                  description="Machine yang tidak berada di Line"
+                  selected={location === 'outside'}
+                  onClick={() => {
+                    setLocation('outside')
+                    setLineId('')
+                    setMachineId('')
+                    setPeriod(null)
+                    setExcludedTaskIds(new Set())
+                    setActiveStep('machine')
+                  }}
+                />
               </div>
-            )}
-
-            {scope === 'machine' && (
-              <div className="flex flex-col gap-2">
-                <Label>Mesin</Label>
-                <Select
-                  value={machineId}
-                  onValueChange={(next) => setMachineId(next ?? '')}
-                  disabled={location === 'inline' && !lineId}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Pilih mesin" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {machineOptions?.map((machine) => (
-                      <SelectItem key={machine.id} value={String(machine.id)}>
-                        {machine.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-            )}
-          </div>
-
-          <div className="border-t" />
-
-          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-            <div className="flex flex-col gap-2">
-              <Label>Jenis Laporan</Label>
-              <SegmentedControl
-                value={period}
-                onChange={setPeriod}
-                options={[
-                  { value: 'weekly', label: 'Mingguan' },
-                  { value: 'monthly', label: 'Bulanan' },
-                ]}
-              />
             </div>
+            )}
 
+            {activeStep === 'line' && (scope === 'line' || (scope === 'machine' && location === 'inline')) && (
             <div className="flex flex-col gap-2">
-              <Label htmlFor="maintenance-report-period">{period === 'weekly' ? 'Minggu' : 'Bulan'}</Label>
+              <p className="text-sm font-medium">Pilih Line</p>
+              {isLinesError ? (
+                <QueryErrorState onRetry={() => refetchLines()} title="Gagal memuat daftar Line" />
+              ) : isLoadingLines ? (
+                <Skeleton className="h-20 w-full" />
+              ) : lines ? (
+                lines.length > 0 ? (
+                  <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+                    {lines.map((line) => (
+                      <SelectionCard
+                        key={line.id}
+                        title={line.name}
+                        description={line.code}
+                        selected={lineId === String(line.id)}
+                        onClick={() => {
+                          setLineId(String(line.id))
+                          setMachineId('')
+                          setPeriod(null)
+                          setExcludedTaskIds(new Set())
+                          setActiveStep(scope === 'line' ? 'period' : 'machine')
+                        }}
+                      />
+                    ))}
+                  </div>
+                ) : (
+                  <p className="text-sm text-muted-foreground">Belum ada Line di plant ini.</p>
+                )
+              ) : null}
+            </div>
+            )}
+
+            {activeStep === 'machine' &&
+            scope === 'machine' &&
+            (location === 'outside' || (location === 'inline' && !!lineId)) && (
+            <div className="flex flex-col gap-2">
+              <p className="text-sm font-medium">Pilih Machine</p>
+              {isMachinesError ? (
+                <QueryErrorState onRetry={() => refetchMachines()} title="Gagal memuat daftar Machine" />
+              ) : isLoadingMachines ? (
+                <Skeleton className="h-20 w-full" />
+              ) : machineOptions ? (
+                machineOptions.length > 0 ? (
+                  <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+                    {machineOptions.map((machine) => (
+                      <SelectionCard
+                        key={machine.id}
+                        title={machine.name}
+                        description={machine.code}
+                        selected={machineId === String(machine.id)}
+                        onClick={() => {
+                          setMachineId(String(machine.id))
+                          setPeriod(null)
+                          setExcludedTaskIds(new Set())
+                          setActiveStep('period')
+                        }}
+                      />
+                    ))}
+                  </div>
+                ) : (
+                  <p className="text-sm text-muted-foreground">Tidak ada Machine pada pilihan ini.</p>
+                )
+              ) : null}
+            </div>
+            )}
+
+            {activeStep === 'period' && ((scope === 'line' && !!lineId) || (scope === 'machine' && !!machineId)) && (
+            <div className="flex flex-col gap-2">
+              <p className="text-sm font-medium">Pilih Periode Laporan</p>
+              <div className="grid grid-cols-2 gap-2">
+                <SelectionCard
+                  title="Mingguan"
+                  description="Laporan per minggu"
+                  selected={period === 'weekly'}
+                  onClick={() => {
+                    setPeriod('weekly')
+                    setActiveStep('date')
+                  }}
+                />
+                <SelectionCard
+                  title="Bulanan"
+                  description="Laporan per bulan"
+                  selected={period === 'monthly'}
+                  onClick={() => {
+                    setPeriod('monthly')
+                    setActiveStep('date')
+                  }}
+                />
+              </div>
+            </div>
+            )}
+
+            {activeStep === 'date' && period && (
+            <div className="flex flex-col gap-2 border-t pt-4">
+              <p className="flex items-center gap-2 text-sm font-medium">
+                <CalendarDays className="size-4" />
+                {period === 'weekly' ? 'Pilih Tanggal dalam Minggu' : 'Pilih Bulan'}
+              </p>
               {period === 'weekly' ? (
                 <Input
                   id="maintenance-report-period"
+                  aria-label="Tanggal dalam minggu"
                   type="date"
                   value={weekAnchor}
                   onChange={(e) => setWeekAnchor(e.target.value || toDateKey(new Date()))}
@@ -289,6 +427,7 @@ export function MaintenanceReportView({ branchId }: { branchId: number }) {
               ) : (
                 <Input
                   id="maintenance-report-period"
+                  aria-label="Bulan laporan"
                   type="month"
                   value={monthAnchor}
                   onChange={(e) => setMonthAnchor(e.target.value || monthAnchor)}
@@ -296,6 +435,7 @@ export function MaintenanceReportView({ branchId }: { branchId: number }) {
               )}
               <p className="text-xs text-muted-foreground">{periodLabel}</p>
             </div>
+            )}
           </div>
         </CardContent>
       </Card>
@@ -305,8 +445,8 @@ export function MaintenanceReportView({ branchId }: { branchId: number }) {
           {!readyToFetch ? (
             <EmptyState
               icon={ClipboardList}
-              title="Pilih cakupan dulu"
-              description={`Pilih ${scope === 'machine' ? 'mesin' : 'line'} di kiri untuk melihat WO pada periode ini.`}
+              title="Pilih kriteria laporan"
+              description="Pilih Machine atau Line, tentukan lokasi dan asetnya, lalu pilih periode untuk melihat WO."
             />
           ) : (
             <>

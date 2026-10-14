@@ -1,7 +1,6 @@
 import { useMutation, useQuery } from '@tanstack/react-query'
 import {
   ArrowLeftRight,
-  Bell,
   Boxes,
   Building2,
   CalendarDays,
@@ -9,7 +8,6 @@ import {
   DatabaseBackup,
   Factory,
   FileText,
-  FileWarning,
   Hammer,
   History,
   LayoutDashboard,
@@ -22,27 +20,26 @@ import {
   Settings,
   ShieldCheck,
   Truck,
+  Tags,
   UserRoundCog,
   Wallet,
-  Warehouse,
   Wrench,
 } from 'lucide-react'
-import { useEffect, useMemo, useState } from 'react'
+import { Fragment, useEffect, useMemo, useState } from 'react'
 import { NavLink, Outlet, useLocation, useNavigate } from 'react-router'
-import { toast } from 'sonner'
 import { BranchSelector } from '@/components/BranchSelector'
 import { GlobalSearch } from '@/components/GlobalSearch'
 import { ProfileFormDialog } from '@/components/ProfileFormDialog'
 import { ProfileMenu } from '@/components/ProfileMenu'
 import { ThemeToggle } from '@/components/ThemeToggle'
 import { logout as logoutRequest } from '@/features/auth/api'
+import { NotificationsPopover } from '@/features/notifications/NotificationsPopover'
 import { fetchCompanySetting } from '@/features/settings/api'
 import { HeaderExtraSlotProvider } from '@/layouts/HeaderExtraSlot'
 import { cn } from '@/lib/utils'
 import { useAuthStore } from '@/stores/auth-store'
 import { useSheetStackStore } from '@/stores/sheet-stack-store'
 import type { UserRole } from '@/types/auth'
-import { Button } from '@/components/ui/button'
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
 
@@ -51,7 +48,8 @@ interface NavItem {
   label: string
   icon: React.ComponentType<{ className?: string }>
   end?: boolean
-  /** Omit to show for everyone — only Kelola Pengguna is currently restricted. */
+  subgroup?: string
+  /** Omit to show for everyone. */
   roles?: UserRole[]
 }
 
@@ -67,32 +65,31 @@ const navSections: NavSection[] = [
     items: [{ to: '/', label: 'Dashboard', icon: LayoutDashboard, end: true }],
   },
   {
-    label: 'Kelola Stok',
-    icon: Warehouse,
+    label: 'Inventory & Assets',
+    icon: Factory,
     items: [
-      { to: '/stock', label: 'Stok & Part', icon: Boxes },
-      { to: '/stock/ledger', label: 'Transaksi Stok', icon: ArrowLeftRight },
-      { to: '/suppliers', label: 'Supplier', icon: Truck },
-      { to: '/locations', label: 'Lokasi', icon: MapPin },
+      { to: '/stock', label: 'Parts Inventory', icon: Boxes, subgroup: 'Stock Management' },
+      { to: '/stock/ledger', label: 'Stock Transactions', icon: ArrowLeftRight, subgroup: 'Stock Management' },
+      { to: '/suppliers', label: 'Suppliers', icon: Truck, subgroup: 'Stock Management' },
+      { to: '/locations', label: 'Locations', icon: MapPin, subgroup: 'Stock Management' },
+      { to: '/branches', label: 'Plants', icon: Building2, roles: ['superadmin'], subgroup: 'Assets & Production' },
+      {
+        to: '/lines',
+        label: 'Production Lines',
+        icon: Factory,
+        roles: ['superadmin'],
+        subgroup: 'Assets & Production',
+      },
     ],
   },
   {
     items: [
       {
         to: '/budgets',
-        label: 'Budget',
+        label: 'Budgets',
         icon: Wallet,
         roles: ['superadmin', 'supervisor', 'admin_spare_part'],
       },
-    ],
-  },
-  {
-    label: 'Aset & Produksi',
-    icon: Factory,
-    items: [
-      { to: '/branches', label: 'Plant', icon: Building2 },
-      { to: '/lines', label: 'Line Equipment', icon: Factory },
-      { to: '/lines/report', label: 'Laporan', icon: FileText },
     ],
   },
   {
@@ -101,50 +98,52 @@ const navSections: NavSection[] = [
     items: [
       {
         to: '/workspace',
-        label: 'Task & Request',
+        label: 'Tasks & Requests',
         icon: ClipboardList,
         roles: ['superadmin', 'supervisor', 'engineer'],
       },
-      { to: '/fp3', label: 'Riwayat Request', icon: FileWarning },
     ],
   },
   {
     items: [
       {
         to: '/approval',
-        label: 'Approval',
+        label: 'Approvals',
         icon: ShieldCheck,
         roles: ['superadmin', 'supervisor', 'engineer'],
       },
     ],
   },
   {
-    items: [{ to: '/task-libraries', label: 'Task Library', icon: NotebookPen }],
-  },
-  {
     label: 'Maintenance',
     icon: Wrench,
     items: [
-      { to: '/pm/calendar?tab=calendar', label: 'Kalender', icon: CalendarDays, end: true },
-      { to: '/pm/calendar?tab=list', label: 'WO', icon: List, end: true },
-      { to: '/pm/calendar?tab=report', label: 'Laporan', icon: FileText, end: true },
-      { to: '/pm/calendar?tab=repair', label: 'Repair Part', icon: Hammer, end: true },
+      { to: '/pm/calendar?tab=library', label: 'Task Library', icon: NotebookPen },
+      { to: '/pm/calendar?tab=calendar', label: 'Schedule', icon: CalendarDays, end: true },
+      { to: '/pm/calendar?tab=list', label: 'Work Order List', icon: List, end: true },
+      { to: '/pm/calendar?tab=repair', label: 'Part Repairs', icon: Hammer, end: true },
     ],
   },
   {
-    items: [{ to: '/breakdown/print-qr', label: 'Cetak QR Code', icon: QrCode }],
+    items: [{ to: '/breakdown/print-qr', label: 'Print QR Codes', icon: QrCode }],
   },
   {
-    label: 'Pengaturan',
+    label: 'Reports',
+    icon: FileText,
+    items: [{ to: '/reports', label: 'All Reports', icon: FileText }],
+  },
+  {
+    label: 'Settings',
     icon: Settings,
     items: [
-      { to: '/settings/company', label: 'Profil Perusahaan', icon: Settings },
-      { to: '/settings/units', label: 'Satuan Part', icon: Ruler },
-      { to: '/settings/departments', label: 'Departemen', icon: Building2 },
-      { to: '/settings/users', label: 'Kelola Pengguna', icon: UserRoundCog, roles: ['superadmin'] },
+      { to: '/settings/company', label: 'Company Profile', icon: Settings, roles: ['superadmin'] },
+      { to: '/settings/units', label: 'Units of Measure', icon: Ruler, roles: ['superadmin'] },
+      { to: '/settings/departments', label: 'Departments', icon: Building2, roles: ['superadmin'] },
+      { to: '/settings/asset-categories', label: 'Equipment Categories', icon: Tags, roles: ['superadmin'] },
+      { to: '/settings/users', label: 'User Management', icon: UserRoundCog, roles: ['superadmin'] },
       {
         to: '/settings/activity-log',
-        label: 'Log Aktivitas',
+        label: 'Activity Log',
         icon: History,
         roles: ['admin_spare_part', 'supervisor', 'superadmin'],
       },
@@ -168,7 +167,7 @@ const navSections: NavSection[] = [
  * the most-used operational screens (same reasoning QueryErrorState's
  * rollout used); everything else lives behind "Lainnya".
  */
-const MOBILE_PRIMARY_LABELS = ['Kelola Stok', 'Workspace', 'Maintenance']
+const MOBILE_PRIMARY_LABELS = ['Inventory & Assets', 'Workspace', 'Maintenance']
 
 const navIconButtonClass = 'relative flex size-11 shrink-0 items-center justify-center rounded-lg transition-colors'
 /** The left accent bar reads like a control-panel indicator lamp next to whichever icon is "on". */
@@ -179,6 +178,7 @@ const navIconButtonInactiveClass = 'text-sidebar-foreground/70 hover:bg-sidebar-
 export function AppLayout() {
   const navigate = useNavigate()
   const location = useLocation()
+  const showGlobalSearch = location.pathname !== '/'
   const user = useAuthStore((state) => state.user)
   const clearSession = useAuthStore((state) => state.clearSession)
   const sheetOpenCount = useSheetStackStore((state) => state.openCount)
@@ -195,7 +195,7 @@ export function AppLayout() {
   })
 
   useEffect(() => {
-    document.title = companySetting?.app_name ?? 'Sistem Manajemen Spare Part'
+    document.title = companySetting?.app_name ?? 'Spare Parts Management System'
   }, [companySetting?.app_name])
 
   const visibleNavSections = useMemo(
@@ -268,7 +268,7 @@ export function AppLayout() {
           ) : (
             <div
               className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-primary text-primary-foreground"
-              title={companySetting?.app_name ?? 'Sistem Manajemen Spare Part'}
+              title={companySetting?.app_name ?? 'Spare Parts Management System'}
             >
               <Wrench className="size-4" />
             </div>
@@ -334,29 +334,41 @@ export function AppLayout() {
                     {section.label}
                   </TooltipContent>
                 </Tooltip>
-                <PopoverContent side="right" align="start" sideOffset={12} className="w-56">
+                <PopoverContent side="right" align="start" sideOffset={12} className="w-64">
                   <div className="mb-1 border-b border-warning/30 px-2 pb-1.5">
                     <p className="text-xs font-medium tracking-wide text-muted-foreground uppercase">
                       {section.label}
                     </p>
                   </div>
                   <div className="flex flex-col gap-0.5">
-                    {section.items.map((item) => (
-                      <NavLink
-                        key={item.to}
-                        to={item.to}
-                        end={item.end}
-                        onClick={() => setOpenGroup(null)}
-                        className={cn(
-                          'flex items-center gap-2.5 rounded-md px-2 py-2 text-sm font-medium transition-colors',
-                          isItemActive(item, section.items)
-                            ? 'bg-sidebar-primary/10 text-sidebar-primary'
-                            : 'text-foreground/80 hover:bg-accent hover:text-accent-foreground',
+                    {section.items.map((item, index) => (
+                      <Fragment key={item.to}>
+                        {item.subgroup !== section.items[index - 1]?.subgroup && item.subgroup && (
+                          <p
+                            className={cn(
+                              'px-2 pt-2 text-[10px] font-medium tracking-wide text-muted-foreground uppercase',
+                              index > 0 && 'mt-1 border-t pt-2',
+                            )}
+                          >
+                            {item.subgroup}
+                          </p>
                         )}
-                      >
-                        <item.icon className="size-4 shrink-0" />
-                        {item.label}
-                      </NavLink>
+                        <NavLink
+                          key={item.to}
+                          to={item.to}
+                          end={item.end}
+                          onClick={() => setOpenGroup(null)}
+                          className={cn(
+                            'flex items-center gap-2.5 rounded-md px-2 py-2 text-sm font-medium transition-colors',
+                            isItemActive(item, section.items)
+                              ? 'bg-sidebar-primary/10 text-sidebar-primary'
+                              : 'text-foreground/80 hover:bg-accent hover:text-accent-foreground',
+                          )}
+                        >
+                          <item.icon className="size-4 shrink-0" />
+                          {item.label}
+                        </NavLink>
+                      </Fragment>
                     ))}
                   </div>
                 </PopoverContent>
@@ -366,8 +378,8 @@ export function AppLayout() {
         </nav>
       </aside>
       <div className="flex min-w-0 flex-1 flex-col">
-        <header className="flex shrink-0 items-center gap-4 border-b-2 border-warning/40 bg-background/95 px-6 py-3 backdrop-blur supports-backdrop-filter:bg-background/60">
-          <div className="flex flex-1 items-center gap-2.5">
+        <header className="relative grid shrink-0 grid-cols-[minmax(0,1fr)_auto] gap-x-2 border-b-2 border-warning/40 bg-background/95 px-3 py-2 backdrop-blur supports-backdrop-filter:bg-background/60 sm:flex sm:items-center sm:gap-4 sm:px-6 sm:py-3">
+          <div className="flex min-w-0 items-center gap-2 sm:flex-1">
             <span className="relative flex size-2 shrink-0">
               <span className="absolute inline-flex size-full animate-ping rounded-full bg-success opacity-75" />
               <span className="relative inline-flex size-2 rounded-full bg-success" />
@@ -375,20 +387,19 @@ export function AppLayout() {
             <BranchSelector />
             <div ref={setHeaderExtraSlot} className="flex items-center gap-2" />
           </div>
-          <div className="flex flex-1 justify-center">
-            <GlobalSearch />
-          </div>
-          <div className="flex flex-1 items-center justify-end gap-2">
+          {showGlobalSearch && (
+            <div className="hidden w-full justify-center sm:flex sm:flex-1">
+              <GlobalSearch />
+            </div>
+          )}
+          <div className="flex items-center justify-end gap-1 sm:flex-1 sm:gap-2">
+            {showGlobalSearch && (
+              <div className="sm:hidden">
+                <GlobalSearch />
+              </div>
+            )}
             <ThemeToggle />
-            <Button
-              variant="outline"
-              size="icon-sm"
-              aria-label="Notifikasi"
-              title="Notifikasi"
-              onClick={() => toast.info('Fitur notifikasi akan segera hadir.')}
-            >
-              <Bell />
-            </Button>
+            <NotificationsPopover />
             <ProfileMenu
               name={user?.name}
               email={user?.email}
@@ -420,6 +431,59 @@ export function AppLayout() {
           const Icon = section.icon ?? item.icon
           const label = section.label ?? item.label
           const active = isSectionActive(section)
+          if (section.label === 'Inventory & Assets') {
+            return (
+              <Popover key={section.label}>
+                <PopoverTrigger
+                  render={
+                    <button
+                      type="button"
+                      className={cn(
+                        'flex flex-1 flex-col items-center justify-center gap-0.5 text-[10px] font-medium',
+                        active ? 'text-sidebar-primary' : 'text-sidebar-foreground/70',
+                      )}
+                    />
+                  }
+                >
+                  <Icon className="size-5" />
+                  {label}
+                </PopoverTrigger>
+                <PopoverContent side="top" align="start" sideOffset={12} className="w-64">
+                  <div className="flex flex-col gap-0.5">
+                    {section.items.map((navItem, index) => (
+                      <Fragment key={navItem.to}>
+                        {navItem.subgroup !== section.items[index - 1]?.subgroup && navItem.subgroup && (
+                          <p
+                            className={cn(
+                              'px-2 pt-2 text-[10px] font-medium tracking-wide text-muted-foreground uppercase',
+                              index > 0 && 'mt-1 border-t pt-2',
+                            )}
+                          >
+                            {navItem.subgroup}
+                          </p>
+                        )}
+                        <NavLink
+                          key={navItem.to}
+                          to={navItem.to}
+                          end={navItem.end}
+                          onClick={() => setMobileMoreOpen(false)}
+                          className={cn(
+                            'flex items-center gap-2.5 rounded-md px-2 py-2 text-sm font-medium transition-colors',
+                            isItemActive(navItem, section.items)
+                              ? 'bg-sidebar-primary/10 text-sidebar-primary'
+                              : 'text-foreground/80 hover:bg-accent hover:text-accent-foreground',
+                          )}
+                        >
+                          <navItem.icon className="size-4 shrink-0" />
+                          {navItem.label}
+                        </NavLink>
+                      </Fragment>
+                    ))}
+                  </div>
+                </PopoverContent>
+              </Popover>
+            )
+          }
           return (
             <NavLink
               key={section.label ?? item.to}
@@ -448,7 +512,7 @@ export function AppLayout() {
             }
           >
             <MoreHorizontal className="size-5" />
-            Lainnya
+            More
           </PopoverTrigger>
           <PopoverContent side="top" align="end" sideOffset={12} className="max-h-[70svh] w-64 overflow-y-auto">
             <div className="flex flex-col gap-2.5">

@@ -1,7 +1,9 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { Eye, Pencil, Trash2, Truck } from 'lucide-react'
+import { Eye, Pencil, Plus, Search, Trash2, Truck } from 'lucide-react'
+import { useState } from 'react'
 import { Link } from 'react-router'
 import { toast } from 'sonner'
+import { InventoryAssetsNavigation } from '@/components/InventoryAssetsNavigation'
 import { deleteSupplier, fetchSuppliers } from '@/features/suppliers/api'
 import { SupplierFormDialog } from '@/features/suppliers/SupplierFormDialog'
 import { useBranchStore } from '@/stores/branch-store'
@@ -21,6 +23,7 @@ import {
 } from '@/components/ui/alert-dialog'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 
@@ -35,6 +38,7 @@ export function SuppliersPage() {
   const activeBranchId = useBranchStore((state) => state.activeBranchId)
   const canManage = useCanManage()
   const queryClient = useQueryClient()
+  const [search, setSearch] = useState('')
 
   const { data: suppliers, isLoading } = useQuery({
     queryKey: ['suppliers', activeBranchId],
@@ -49,6 +53,11 @@ export function SuppliersPage() {
       toast.success('Supplier berhasil dihapus.')
     },
   })
+  const filteredSuppliers = suppliers?.filter((supplier) =>
+    [supplier.name, supplier.contact_person, supplier.phone, supplier.email]
+      .filter(Boolean)
+      .some((value) => value?.toLowerCase().includes(search.trim().toLowerCase()) ?? false),
+  )
 
   if (!activeBranchId) {
     return <p className="text-muted-foreground">Pilih plant terlebih dahulu.</p>
@@ -57,10 +66,32 @@ export function SuppliersPage() {
   return (
     <div className="flex flex-col gap-4">
       <PageHeader
-        title="Supplier"
+        title="Suppliers"
         description="Daftar pemasok yang terdaftar untuk plant ini."
-        action={canManage && <SupplierFormDialog branchId={activeBranchId} trigger={<Button>Tambah Supplier</Button>} />}
+        action={<InventoryAssetsNavigation />}
       />
+      <div className="flex flex-wrap items-center gap-2">
+        <div className="relative min-w-40 flex-1">
+          <Search className="pointer-events-none absolute top-1/2 left-2.5 size-4 -translate-y-1/2 text-muted-foreground" />
+          <Input
+            placeholder="Cari nama, kontak, telepon, atau email supplier"
+            value={search}
+            onChange={(event) => setSearch(event.target.value)}
+            className="pl-9"
+          />
+        </div>
+        {canManage && (
+          <SupplierFormDialog
+            branchId={activeBranchId}
+            trigger={
+              <Button>
+                <Plus />
+                Supplier
+              </Button>
+            }
+          />
+        )}
+      </div>
 
       {isLoading ? (
         <div className="flex flex-col gap-2">
@@ -68,12 +99,29 @@ export function SuppliersPage() {
             <Skeleton key={i} className="h-10 w-full" />
           ))}
         </div>
-      ) : suppliers?.length === 0 ? (
+      ) : filteredSuppliers?.length === 0 ? (
         <EmptyState
           icon={Truck}
-          title="Belum ada supplier di plant ini"
-          description="Tambahkan supplier supaya bisa dipilih saat menerima stok atau mengelola part."
-          action={canManage && <SupplierFormDialog branchId={activeBranchId} trigger={<Button size="sm">Tambah Supplier</Button>} />}
+          title={search ? 'Supplier tidak ditemukan' : 'Belum ada supplier di plant ini'}
+          description={
+            search
+              ? 'Coba kata kunci lain.'
+              : 'Tambahkan supplier supaya bisa dipilih saat menerima stok atau mengelola part.'
+          }
+          action={
+            !search &&
+            canManage && (
+              <SupplierFormDialog
+                branchId={activeBranchId}
+                trigger={
+                  <Button size="sm">
+                    <Plus />
+                    Supplier
+                  </Button>
+                }
+              />
+            )
+          }
         />
       ) : (
         <Table>
@@ -88,7 +136,7 @@ export function SuppliersPage() {
             </TableRow>
           </TableHeader>
           <TableBody>
-            {suppliers?.map((supplier) => (
+            {filteredSuppliers?.map((supplier) => (
               <TableRow key={supplier.id}>
                 <TableCell className="font-medium">{supplier.name}</TableCell>
                 <TableCell className="text-muted-foreground">{supplier.contact_person ?? '-'}</TableCell>

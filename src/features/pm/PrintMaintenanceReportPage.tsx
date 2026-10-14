@@ -2,9 +2,9 @@ import { useQuery } from '@tanstack/react-query'
 import { useLocation } from 'react-router'
 import { fetchCompanySetting } from '@/features/settings/api'
 import { MaintenanceReportPrintSection, type MaintenanceReportSection } from '@/features/pm/MaintenanceReportPrintSection'
-import { Button } from '@/components/ui/button'
 import { EmptyState } from '@/components/EmptyState'
 import { ClipboardList } from 'lucide-react'
+import { PrintPageActions } from '@/components/PrintPageActions'
 
 interface PrintMaintenanceReportLocationState {
   title: string
@@ -14,7 +14,6 @@ interface PrintMaintenanceReportLocationState {
   periodLabel: string
   runtimeHours: number | null
   supervisorName?: string | null
-  scanUrl?: string | null
   sections: MaintenanceReportSection[]
 }
 
@@ -55,9 +54,7 @@ export function PrintMaintenanceReportPage() {
         }
       `}</style>
 
-      <div className="flex justify-end print:hidden">
-        <Button onClick={() => window.print()}>Cetak</Button>
-      </div>
+      <PrintPageActions />
 
       <div id="maintenance-report-print-area">
         <MaintenanceReportPrintSection
@@ -68,7 +65,6 @@ export function PrintMaintenanceReportPage() {
           periodLabel={state.periodLabel}
           runtimeHours={state.runtimeHours}
           supervisorName={state.supervisorName}
-          scanUrl={state.scanUrl}
           sections={state.sections}
           companySetting={companySetting}
         />

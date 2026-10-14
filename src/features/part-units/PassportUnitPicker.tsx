@@ -1,4 +1,5 @@
-import { useMemo } from 'react'
+import { ChevronDown } from 'lucide-react'
+import { useMemo, useState } from 'react'
 import { Checkbox } from '@/components/ui/checkbox'
 import type { PartUnit } from '@/types/relations'
 
@@ -32,6 +33,8 @@ function batchLabel(arrivedAt: string | null): { key: string; label: string } {
  * left to put a reprinted label on.
  */
 export function PassportUnitPicker({ units, loading, excludedUnitIds, onToggleUnit }: PassportUnitPickerProps) {
+  const [expandedBatchKeys, setExpandedBatchKeys] = useState<Set<string>>(new Set())
+
   const batches = useMemo(() => {
     const byKey = new Map<string, Batch>()
     units
@@ -54,25 +57,60 @@ export function PassportUnitPicker({ units, loading, excludedUnitIds, onToggleUn
 
   return (
     <div className="flex flex-col gap-1">
-      {batches.map((batch, index) => {
+      {batches.map((batch) => {
         const selectedInBatch = batch.units.filter((u) => !excludedUnitIds.has(u.id))
+        const allSelected = selectedInBatch.length === batch.units.length
+        const noneSelected = selectedInBatch.length === 0
+        const expanded = expandedBatchKeys.has(batch.key)
+
+        function toggleBatch() {
+          batch.units.forEach((unit) => {
+            const selected = !excludedUnitIds.has(unit.id)
+            if (allSelected && selected) onToggleUnit(unit.id)
+            else if (!allSelected && !selected) onToggleUnit(unit.id)
+          })
+        }
+
         return (
-          <details key={batch.key} open={index === 0} className="rounded border border-neutral-200">
-            <summary className="flex cursor-pointer list-none items-center justify-between gap-2 px-2 py-1.5 text-xs font-medium">
-              <span>{batch.label}</span>
-              <span className="shrink-0 text-muted-foreground">
-                {selectedInBatch.length}/{batch.units.length} unit dipilih
-              </span>
-            </summary>
-            <div className="flex flex-col gap-1 border-t px-2 py-1.5">
-              {batch.units.map((unit) => (
-                <label key={unit.id} className="flex items-center gap-2 text-xs">
-                  <Checkbox checked={!excludedUnitIds.has(unit.id)} onCheckedChange={() => onToggleUnit(unit.id)} />
-                  <span className="font-mono">{unit.unit_code ?? `#${unit.id}`}</span>
-                </label>
-              ))}
+          <div key={batch.key} className="rounded border border-neutral-200">
+            <div className="flex items-center gap-2 px-2 py-1.5">
+              <Checkbox
+                checked={allSelected}
+                aria-checked={noneSelected || allSelected ? allSelected : 'mixed'}
+                onCheckedChange={toggleBatch}
+                aria-label={`Pilih semua unit tanggal ${batch.label}`}
+              />
+              <button
+                type="button"
+                className="flex min-w-0 flex-1 items-center justify-between gap-2 text-left text-xs font-medium"
+                aria-expanded={expanded}
+                onClick={() =>
+                  setExpandedBatchKeys((prev) => {
+                    const next = new Set(prev)
+                    if (next.has(batch.key)) next.delete(batch.key)
+                    else next.add(batch.key)
+                    return next
+                  })
+                }
+              >
+                <span>{batch.label}</span>
+                <span className="flex shrink-0 items-center gap-1 text-muted-foreground">
+                  {selectedInBatch.length}/{batch.units.length} unit
+                  <ChevronDown className={`size-3.5 transition-transform ${expanded ? 'rotate-180' : ''}`} />
+                </span>
+              </button>
             </div>
-          </details>
+            {expanded && (
+              <div className="flex flex-col gap-1 border-t px-2 py-1.5">
+                {batch.units.map((unit) => (
+                  <label key={unit.id} className="flex items-center gap-2 text-xs">
+                    <Checkbox checked={!excludedUnitIds.has(unit.id)} onCheckedChange={() => onToggleUnit(unit.id)} />
+                    <span className="font-mono">{unit.unit_code ?? `#${unit.id}`}</span>
+                  </label>
+                ))}
+              </div>
+            )}
+          </div>
         )
       })}
     </div>

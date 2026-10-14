@@ -12,7 +12,6 @@ import { Label } from '@/components/ui/label'
 
 const machineSchema = z.object({
   name: z.string().min(1, 'Nama wajib diisi').max(255),
-  category: z.string().optional(),
 })
 
 type MachineFormValues = z.infer<typeof machineSchema>
@@ -37,19 +36,19 @@ export function MachineFormDialog({ lineId, machine, trigger }: MachineFormDialo
     resolver: zodResolver(machineSchema),
     defaultValues: {
       name: machine?.name ?? '',
-      category: machine?.category ?? '',
     },
   })
 
   useEffect(() => {
     if (open) {
-      reset({ name: machine?.name ?? '', category: machine?.category ?? '' })
+      reset({ name: machine?.name ?? '' })
     }
   }, [open, machine, reset])
 
   const mutation = useMutation({
-    mutationFn: (values: MachineFormValues) =>
-      isEdit ? updateMachine(machine!.id, values) : createMachine(lineId, values),
+    mutationFn: (values: MachineFormValues) => {
+      return isEdit ? updateMachine(machine!.id, values) : createMachine(lineId, values)
+    },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['machines', lineId] })
       toast.success(isEdit ? 'Mesin berhasil diperbarui.' : 'Mesin berhasil ditambahkan.')
@@ -81,10 +80,6 @@ export function MachineFormDialog({ lineId, machine, trigger }: MachineFormDialo
         <Label htmlFor="name">Nama</Label>
         <Input id="name" {...register('name')} />
         {errors.name && <p className="text-sm text-destructive">{errors.name.message}</p>}
-      </div>
-      <div className="flex flex-col gap-2">
-        <Label htmlFor="category">Kategori</Label>
-        <Input id="category" placeholder="Produksi" {...register('category')} />
       </div>
     </FormSheet>
   )
