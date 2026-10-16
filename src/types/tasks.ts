@@ -130,6 +130,8 @@ export interface Task {
   equipment_id: number
   equipment_name?: string
   machine_name?: string
+  line_id?: number | null
+  line_code?: string | null
   line_name?: string
   branch_name?: string
   assigned_to: number | null

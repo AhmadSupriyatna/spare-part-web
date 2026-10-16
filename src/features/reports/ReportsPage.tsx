@@ -1,9 +1,10 @@
-import { ArrowLeft, ArrowRight, ClipboardCheck, Factory, FileWarning, Gauge, PackageSearch, Wrench } from 'lucide-react'
+import { ArrowLeft, ArrowRight, CalendarDays, ClipboardCheck, Factory, FileWarning, Gauge, PackageSearch, Wrench } from 'lucide-react'
 import { useEffect } from 'react'
 import { Link, useNavigate, useParams, useSearchParams } from 'react-router'
 import { LineReportsPage } from '@/features/lines/LineReportsPage'
 import { MachineReportTab } from '@/features/reports/MachineReportTab'
 import { MaintenanceReportView } from '@/features/pm/MaintenanceReportView'
+import { PmScheduleReport } from '@/features/pm/PmScheduleReport'
 import { Fp3ListPage } from '@/features/fp3/Fp3ListPage'
 import { RepairReportView } from '@/features/part-repairs/RepairReportView'
 import { StockLedgerPage } from '@/features/part-stocks/StockLedgerPage'
@@ -19,6 +20,13 @@ const reportOptions = [
     description: 'Choose a machine or production line, then view its weekly or monthly work order reports.',
     icon: ClipboardCheck,
     className: 'bg-primary/10 text-primary',
+  },
+  {
+    slug: 'pm-schedule',
+    title: 'PM Schedule',
+    description: 'Print an annual January–December schedule by production line for Task Library and Part Lifetime work orders.',
+    icon: CalendarDays,
+    className: 'bg-amber-500/10 text-amber-600 dark:text-amber-400',
   },
   {
     slug: 'mesin',
@@ -61,6 +69,7 @@ type ReportSlug = (typeof reportOptions)[number]['slug']
 
 const legacyReportSlugs: Record<string, ReportSlug | null> = {
   pemeriksaan: 'pemeriksaan',
+  'pm-schedule': 'pm-schedule',
   line: 'line',
   mesin: 'mesin',
   stok: 'stok',
@@ -136,6 +145,7 @@ export function ReportsPage() {
         ) : (
           <p className="text-sm text-muted-foreground">Pilih plant terlebih dahulu.</p>
         ))}
+      {selectedReport.slug === 'pm-schedule' && <PmScheduleReport />}
       {selectedReport.slug === 'fp3' && <Fp3ListPage showPageHeader={false} />}
       {selectedReport.slug === 'line' && <LineReportsPage showPageHeader={false} />}
       {selectedReport.slug === 'mesin' &&
