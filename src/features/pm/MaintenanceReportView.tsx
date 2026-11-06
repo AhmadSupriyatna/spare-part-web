@@ -200,7 +200,7 @@ export function MaintenanceReportView({ branchId }: { branchId: number }) {
 
       navigate('/pm/maintenance-report/print', {
         state: {
-          title: scope === 'line' ? 'Laporan Pemeriksaan Line' : 'Laporan Pemeriksaan Mesin',
+          title: scope === 'line' ? 'Line Maintenance Report ' : 'Machine Maintenance Report ',
           branchName: activeBranch?.name ?? null,
           machineName: scope === 'machine' ? (selectedMachine?.name ?? null) : null,
           lineName: selectedLine?.name ?? null,
